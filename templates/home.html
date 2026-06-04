@@ -2,11 +2,17 @@
 {% block title %}Nookplay — El pasatiempo diario del bar{% endblock %}
 {% block content %}
 <div class="nook home">
-  <div class="nook-logo">N</div>
-  <h1 class="nook-title">Nookplay</h1>
+  <div class="nook-logo-wrap">
+    <img src="/static/logo.svg" alt="Nookplay">
+  </div>
   <p class="nook-sub">El pasatiempo diario de tu bar.<br>Escanea el QR de tu tarjeta para jugar.</p>
-  <hr class="divider" style="margin: 32px 0;">
-  <p style="font-size:13px;color:#aaa;text-align:center;">¿Tienes un bar y quieres ofrecer Nookplay a tus clientes?<br>
-  <a href="mailto:hola@nookplay.app" style="color:#666;">hola@nookplay.app</a></p>
+  <hr class="divider" style="margin: 28px 0;">
+  <p style="font-size:13px;color:var(--text-muted);text-align:center;">
+    ¿Tienes un bar y quieres ofrecer Nookplay?<br>
+    <a href="mailto:hola@nookplay.app" style="color:var(--brand);">hola@nookplay.app</a>
+  </p>
+  <div class="nook-footer" style="margin-top:32px;">
+    <span>by Yamasoto</span>
+  </div>
 </div>
 {% endblock %}
