@@ -200,5 +200,35 @@ def game():
 
 if __name__ == '__main__':
     init_db()
+    migrate_db()
     app.run(debug=True, host='0.0.0.0', port=5000)
 
+
+# Migration: add brand columns to bars table if not exist
+def migrate_db():
+    db = get_db()
+    try:
+        db.execute("ALTER TABLE bars ADD COLUMN color_primary TEXT DEFAULT '#C4622D'")
+    except: pass
+    try:
+        db.execute("ALTER TABLE bars ADD COLUMN color_primary_text TEXT DEFAULT '#FFFFFF'")
+    except: pass
+    try:
+        db.execute("ALTER TABLE bars ADD COLUMN color_bg TEXT DEFAULT '#F7F2EB'")
+    except: pass
+    try:
+        db.execute("ALTER TABLE bars ADD COLUMN color_bg_subtle TEXT DEFAULT '#F0EBE3'")
+    except: pass
+    try:
+        db.execute("ALTER TABLE bars ADD COLUMN color_accent_dark TEXT DEFAULT '#1A1A1A'")
+    except: pass
+    # Update Yellow colors
+    db.execute("""UPDATE bars SET
+        color_primary='#FEE25A',
+        color_primary_text='#000000',
+        color_bg='#FFFBEA',
+        color_bg_subtle='#FFF8D6',
+        color_accent_dark='#1A1A1A'
+        WHERE slug='yellow'""")
+    db.commit()
+    db.close()

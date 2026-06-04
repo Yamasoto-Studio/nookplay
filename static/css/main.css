@@ -2,18 +2,24 @@
    Nookplay — Design System
    Brand: #C4622D (terracota)
    Background: #F7F2EB (crema)
-   Text: #1A1A1A
 ───────────────────────────────────────────── */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
-  --brand: #C4622D;
-  --brand-light: #F0E0D4;
-  --brand-dark: #A04E22;
-  --bg: #F7F2EB;
-  --bg-card: #FFFFFF;
-  --bg-subtle: #F0EBE3;
+  /* Nookplay brand */
+  --nook-brand: #C4622D;
+  --nook-brand-light: #F0E0D4;
+
+  /* Bar theme (overridden per bar) */
+  --bar-primary: #C4622D;
+  --bar-primary-text: #FFFFFF;
+  --bar-bg: #F7F2EB;
+  --bar-bg-card: #FFFFFF;
+  --bar-bg-subtle: #F0EBE3;
+  --bar-accent-dark: #1A1A1A;
+
+  /* Neutrals */
   --text: #1A1A1A;
   --text-secondary: #6B6059;
   --text-muted: #A89B91;
@@ -21,6 +27,7 @@
   --border-strong: #C4B8AE;
   --success: #3A7D44;
   --danger: #B03030;
+
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
@@ -30,67 +37,59 @@
 
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  background: var(--bg);
+  background: var(--bar-bg);
   min-height: 100vh;
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding: 20px 16px 40px;
+  padding: 0;
 }
 
 /* ── Card ── */
 .nook {
   max-width: 420px;
   width: 100%;
-  background: var(--bg-card);
-  border-radius: var(--radius-lg);
-  padding: 28px 22px 36px;
-  box-shadow: 0 2px 24px rgba(0,0,0,0.06);
+  min-height: 100vh;
+  background: var(--bar-bg-card);
+  padding: 0 0 40px;
+  display: flex;
+  flex-direction: column;
 }
 
-.nook.home { margin-top: 60px; text-align: center; }
+/* ── Top bar: Nookplay wordmark ── */
+.nook-topbar {
+  text-align: center;
+  padding: 14px 20px 0;
+}
 
-/* ── Bar header ── */
-.bar-header {
+.nook-topbar img {
+  height: 13px;
+  width: auto;
+  opacity: 0.35;
+}
+
+/* ── Bar hero ── */
+.bar-hero {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 24px;
-  padding-bottom: 16px;
+  justify-content: center;
+  padding: 24px 20px 28px;
+  background: var(--bar-bg);
   border-bottom: 1px solid var(--border);
 }
 
-.bar-identity {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.bar-hero-logo {
+  width: 100px;
+  height: 100px;
+  object-fit: contain;
+  border-radius: 20px;
 }
 
-.bar-dot {
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  background: var(--brand);
-  flex-shrink: 0;
-}
-
-.bar-name {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-}
-
-.nookplay-badge {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.nookplay-badge img {
-  height: 14px;
-  width: auto;
-  opacity: 0.5;
+/* ── Content area ── */
+.nook-content {
+  flex: 1;
+  padding: 28px 22px 0;
 }
 
 /* ── Screens ── */
@@ -102,75 +101,53 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* ── Home / Code entry ── */
-.nook-logo-wrap {
-  margin: 0 auto 20px;
-  width: 100%;
-  display: flex;
-  justify-content: center;
-}
-
-.nook-logo-wrap img {
-  height: 32px;
-  width: auto;
-}
-
+/* ── Code entry ── */
 .nook-title {
-  font-size: 24px;
-  font-weight: 600;
-  color: var(--text);
-  text-align: center;
-  line-height: 1.25;
-  margin-bottom: 8px;
+  font-size: 22px; font-weight: 700;
+  color: var(--text); text-align: center;
+  line-height: 1.25; margin-bottom: 8px;
 }
 
 .nook-sub {
-  font-size: 15px;
-  color: var(--text-secondary);
-  text-align: center;
-  line-height: 1.65;
+  font-size: 15px; color: var(--text-secondary);
+  text-align: center; line-height: 1.65;
   margin-bottom: 28px;
 }
 
-/* ── Code input ── */
 .code-input-wrap { margin-bottom: 12px; }
 
 .code-input {
-  width: 100%;
-  padding: 14px 16px;
+  width: 100%; padding: 14px 16px;
   border: 1.5px solid var(--border);
   border-radius: var(--radius-md);
-  font-size: 20px;
-  font-weight: 600;
-  letter-spacing: 4px;
-  text-align: center;
+  font-size: 20px; font-weight: 600;
+  letter-spacing: 4px; text-align: center;
   text-transform: uppercase;
   font-family: 'Inter', monospace;
-  background: var(--bg);
-  color: var(--text);
-  outline: none;
+  background: var(--bar-bg);
+  color: var(--text); outline: none;
   transition: border-color 0.15s;
 }
-
-.code-input:focus { border-color: var(--brand); }
+.code-input:focus { border-color: var(--bar-primary); }
 .code-error { font-size: 13px; color: var(--danger); margin-top: 6px; text-align: center; min-height: 18px; }
 .code-hint { font-size: 12px; color: var(--text-muted); text-align: center; margin-top: 10px; }
 
 /* ── Buttons ── */
 .btn-primary {
   width: 100%; padding: 14px;
-  background: var(--brand); color: #fff;
+  background: var(--bar-accent-dark);
+  color: #fff;
   border: none; border-radius: var(--radius-md);
   font-size: 15px; font-weight: 600;
-  cursor: pointer; transition: background 0.15s;
-  font-family: inherit; letter-spacing: 0.3px;
+  cursor: pointer; transition: opacity 0.15s;
+  font-family: inherit;
 }
-.btn-primary:hover:not(:disabled) { background: var(--brand-dark); }
+.btn-primary:hover:not(:disabled) { opacity: 0.85; }
 .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .btn-secondary {
   width: 100%; padding: 12px;
-  background: var(--bg-subtle); color: var(--text);
+  background: var(--bar-bg-subtle); color: var(--text);
   border: none; border-radius: var(--radius-md);
   font-size: 14px; font-weight: 500;
   cursor: pointer; font-family: inherit;
@@ -178,14 +155,16 @@ body {
 
 .btn-danger {
   width: 100%; padding: 14px;
-  background: #FFF0F0; color: var(--danger);
-  border: 1px solid #FFCCCC; border-radius: var(--radius-md);
-  font-size: 14px; font-weight: 600;
+  background: var(--bar-primary);
+  color: var(--bar-primary-text);
+  border: none; border-radius: var(--radius-md);
+  font-size: 14px; font-weight: 700;
   cursor: pointer; margin-top: 8px;
   transition: opacity 0.15s; font-family: inherit;
+  letter-spacing: 0.3px;
 }
 .btn-danger:disabled { opacity: 0.35; cursor: not-allowed; }
-.btn-danger:not(:disabled):hover { background: #FFE4E4; }
+.btn-danger:not(:disabled):hover { opacity: 0.88; }
 
 .btn-share {
   width: 100%; padding: 11px;
@@ -194,76 +173,51 @@ body {
   font-size: 13px; cursor: pointer;
   margin-top: 8px; font-family: inherit;
 }
-.btn-share:hover { background: var(--bg-subtle); }
+.btn-share:hover { background: var(--bar-bg-subtle); }
 
-/* ── Game elements ── */
+/* ── Game ── */
 .tag {
-  display: inline-block;
-  font-size: 10px; letter-spacing: 1.5px;
-  text-transform: uppercase; padding: 3px 10px;
-  border-radius: 20px; margin-bottom: 12px;
-  font-weight: 600;
-  background: var(--brand-light);
-  color: var(--brand-dark);
+  display: inline-block; font-size: 10px;
+  letter-spacing: 1.5px; text-transform: uppercase;
+  padding: 3px 10px; border-radius: 20px;
+  margin-bottom: 12px; font-weight: 600;
+  background: var(--bar-primary);
+  color: var(--bar-primary-text);
 }
 
-.headline {
-  font-size: 21px; font-weight: 700;
-  line-height: 1.25; margin-bottom: 6px;
-  color: var(--text);
-}
-
+.headline { font-size: 21px; font-weight: 700; line-height: 1.25; margin-bottom: 6px; color: var(--text); }
 .location { font-size: 12px; color: var(--text-muted); margin-bottom: 16px; }
+.divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+.body-text { font-size: 15px; line-height: 1.75; color: var(--text); margin-bottom: 4px; }
+.section-label { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-muted); font-weight: 600; margin-bottom: 10px; }
 
-.divider {
-  border: none;
-  border-top: 1px solid var(--border);
-  margin: 16px 0;
-}
-
-.body-text {
-  font-size: 15px; line-height: 1.75;
-  color: var(--text); margin-bottom: 4px;
-}
-
-.section-label {
-  font-size: 10px; letter-spacing: 1.5px;
-  text-transform: uppercase; color: var(--text-muted);
-  font-weight: 600; margin-bottom: 10px;
-}
-
-/* ── Clues ── */
 .clue-btn {
   width: 100%; text-align: left;
-  background: var(--bg-subtle); border: 1px solid var(--border);
+  background: var(--bar-bg-subtle); border: 1px solid var(--border);
   border-radius: var(--radius-sm); padding: 12px 14px;
   margin-bottom: 8px; cursor: pointer;
   font-size: 14px; color: var(--text-muted);
   display: flex; align-items: flex-start; gap: 10px;
   transition: all 0.15s; font-family: inherit;
 }
-.clue-btn.revealed {
-  color: var(--text); border-color: var(--border-strong);
-  background: var(--bg-card); cursor: default;
-}
-.clue-btn:not(.revealed):hover { background: #EAE4DC; }
+.clue-btn.revealed { color: var(--text); border-color: var(--border-strong); background: var(--bar-bg-card); cursor: default; }
+.clue-btn:not(.revealed):hover { filter: brightness(0.97); }
 .clue-icon { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
 
-/* ── Suspects ── */
 .suspect-btn {
   width: 100%; text-align: left;
-  background: var(--bg-card); border: 1px solid var(--border);
+  background: var(--bar-bg-card); border: 1px solid var(--border);
   border-radius: var(--radius-md); padding: 12px 14px;
   margin-bottom: 8px; cursor: pointer;
   display: flex; align-items: center; gap: 12px;
   transition: border-color 0.15s; font-family: inherit;
 }
 .suspect-btn:hover { border-color: var(--border-strong); }
-.suspect-btn.selected { border: 2px solid var(--brand); background: #FDF6F2; }
+.suspect-btn.selected { border: 2px solid var(--bar-accent-dark); background: var(--bar-bg); }
 
 .suspect-avatar {
   width: 38px; height: 38px; border-radius: 50%;
-  background: var(--brand-light); color: var(--brand-dark);
+  background: var(--bar-primary); color: var(--bar-primary-text);
   display: flex; align-items: center; justify-content: center;
   font-size: 12px; font-weight: 700; flex-shrink: 0;
 }
@@ -271,61 +225,39 @@ body {
 .suspect-name { font-size: 14px; font-weight: 600; color: var(--text); }
 .suspect-role { font-size: 12px; color: var(--text-secondary); margin-top: 2px; line-height: 1.4; }
 
-/* ── Result ── */
 .result-big { font-size: 30px; font-weight: 700; margin-bottom: 6px; }
 .result-big.correct { color: var(--success); }
 .result-big.wrong { color: var(--danger); }
 .result-sub { font-size: 15px; color: var(--text-secondary); margin-bottom: 16px; line-height: 1.6; }
 
 .reveal-card {
-  background: var(--bg-subtle); border: 1px solid var(--border);
+  background: var(--bar-bg-subtle); border: 1px solid var(--border);
   border-radius: var(--radius-md); padding: 14px 16px; margin: 16px 0;
 }
-.reveal-label {
-  font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
-  color: var(--text-muted); margin-bottom: 4px; font-weight: 600;
-}
-.reveal-name { font-size: 19px; font-weight: 700; color: var(--danger); }
+.reveal-label { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px; font-weight: 600; }
+.reveal-name { font-size: 19px; font-weight: 700; color: var(--bar-accent-dark); }
 
-.tomorrow {
-  font-size: 12px; color: var(--text-muted);
-  text-align: center; margin-top: 20px;
-  padding-top: 16px;
-  border-top: 1px solid var(--border);
-  line-height: 1.6;
-}
+.tomorrow { font-size: 12px; color: var(--text-muted); text-align: center; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); line-height: 1.6; }
 
-/* ── Footer brand ── */
+/* ── Footer ── */
 .nook-footer {
   text-align: center;
-  margin-top: 24px;
-  padding-top: 16px;
-  border-top: 1px solid var(--border);
+  padding: 24px 20px 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
 }
 
-.nook-footer img {
-  height: 16px;
-  width: auto;
-  opacity: 0.4;
-}
-
-.nook-footer span {
-  font-size: 10px;
-  color: var(--text-muted);
-  letter-spacing: 0.5px;
-}
+.nook-footer img { height: 18px; width: auto; opacity: 0.45; }
+.nook-footer span { font-size: 10px; color: var(--text-muted); letter-spacing: 0.5px; }
 
 /* ── Loading ── */
 .loading { text-align: center; padding: 40px 0; color: var(--text-muted); font-size: 15px; }
 .loading-spinner {
   width: 32px; height: 32px; border-radius: 50%;
-  border: 3px solid var(--border); border-top-color: var(--brand);
-  animation: spin 0.8s linear infinite;
-  margin: 0 auto 16px;
+  border: 3px solid var(--border); border-top-color: var(--bar-primary);
+  animation: spin 0.8s linear infinite; margin: 0 auto 16px;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 .error-msg { text-align: center; padding: 40px 0; color: var(--danger); font-size: 15px; }

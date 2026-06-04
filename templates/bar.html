@@ -2,34 +2,48 @@
 {% block title %}{{ bar.name }} — Nookplay{% endblock %}
 {% block content %}
 
+<style>
+  :root {
+    --bar-primary: {{ bar.color_primary }};
+    --bar-primary-text: {{ bar.color_primary_text }};
+    --bar-bg: {{ bar.color_bg }};
+    --bar-bg-card: #FFFFFF;
+    --bar-bg-subtle: {{ bar.color_bg_subtle }};
+    --bar-accent-dark: {{ bar.color_accent_dark }};
+  }
+</style>
+
 <div class="nook">
 
-  <div class="bar-header">
-    <div class="bar-identity">
-      <div class="bar-dot"></div>
-      <span class="bar-name">{{ bar.name }}</span>
-    </div>
-    <div class="nookplay-badge">
-      <img src="/static/logo.svg" alt="Nookplay">
-    </div>
+  <!-- Nookplay wordmark -->
+  <div class="nook-topbar">
+    <img src="/static/logo.svg" alt="Nookplay">
   </div>
 
-  <!-- CÓDIGO -->
-  <div class="screen active" id="s-code">
-    <h1 class="nook-title">El Pasatiempo<br>del Día</h1>
-    <p class="nook-sub">Introduce el código de tu tarjeta para acceder al juego de hoy.</p>
-    <div class="code-input-wrap">
-      <input type="text" id="code-input" class="code-input" placeholder="YELLOW01" maxlength="10" autocomplete="off" autocapitalize="characters">
-      <div class="code-error" id="code-error"></div>
-    </div>
-    <button class="btn-primary" onclick="validateCode()">Entrar</button>
-    <p class="code-hint">El código está impreso en tu tarjeta.</p>
+  <!-- Bar hero -->
+  <div class="bar-hero">
+    <img class="bar-hero-logo" src="/static/bars/{{ bar.slug }}/logo.png" alt="{{ bar.name }}" onerror="this.style.display='none'">
   </div>
 
-  <!-- JUEGO -->
-  <div class="screen" id="s-game"></div>
+  <!-- Content -->
+  <div class="nook-content">
 
-  <!-- FOOTER -->
+    <div class="screen active" id="s-code">
+      <h1 class="nook-title" style="margin-top:8px;">El Pasatiempo<br>del Día</h1>
+      <p class="nook-sub">Introduce el código de tu tarjeta para acceder al juego de hoy.</p>
+      <div class="code-input-wrap">
+        <input type="text" id="code-input" class="code-input" placeholder="YELLOW01" maxlength="10" autocomplete="off" autocapitalize="characters">
+        <div class="code-error" id="code-error"></div>
+      </div>
+      <button class="btn-primary" onclick="validateCode()">Entrar</button>
+      <p class="code-hint">El código está impreso en tu tarjeta.</p>
+    </div>
+
+    <div class="screen" id="s-game"></div>
+
+  </div>
+
+  <!-- Footer -->
   <div class="nook-footer">
     <img src="/static/logo.svg" alt="Nookplay">
     <span>by Yamasoto</span>
@@ -46,7 +60,6 @@ async function validateCode() {
   const code = document.getElementById('code-input').value.trim().toUpperCase();
   const errorEl = document.getElementById('code-error');
   errorEl.textContent = '';
-
   if (!code) { errorEl.textContent = 'Introduce tu código.'; return; }
 
   const btn = document.querySelector('#s-code .btn-primary');
@@ -140,7 +153,6 @@ function renderGame(g) {
     document.getElementById('sn' + i).textContent = s.nombre;
     document.getElementById('sr' + i).textContent = s.descripcion;
   });
-
   window._selected = -1;
 }
 
@@ -160,7 +172,6 @@ function pickSuspect(idx) {
 
 async function accuse() {
   if (window._selected === -1 || !currentGame) return;
-
   const correct = window._selected === currentGame.culpable;
   const culpableName = currentGame.sospechosos[currentGame.culpable].nombre;
   const accusedName = currentGame.sospechosos[window._selected].nombre;
@@ -185,9 +196,7 @@ async function accuse() {
   `;
 
   document.getElementById('r-headline').textContent = correct ? 'Caso resuelto.' : 'Fallaste.';
-  document.getElementById('r-sub').textContent = correct
-    ? 'Acertaste. Buen detective.'
-    : 'Te equivocaste. Acusaste a ' + accusedName + '.';
+  document.getElementById('r-sub').textContent = correct ? 'Acertaste. Buen detective.' : 'Te equivocaste. Acusaste a ' + accusedName + '.';
   document.getElementById('r-culpable').textContent = culpableName;
   document.getElementById('r-explicacion').textContent = currentGame.explicacion;
 }
