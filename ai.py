@@ -1,11 +1,12 @@
-import anthropic
+import requests
 import json
 from datetime import date
+import os
 
 def generate_game(bar_name, bar_slug):
-    """Generate daily game content using Claude API."""
+    """Generate daily game content using Anthropic API directly."""
     today = str(date.today())
-    client = anthropic.Anthropic()
+    api_key = os.environ.get('ANTHROPIC_API_KEY')
 
     prompt = f"""Eres el escritor de un juego de misterio diario para bares españoles. Genera un caso policial breve, entretenido y bien construido.
 
@@ -38,14 +39,24 @@ Devuelve SOLO un objeto JSON válido, sin markdown ni explicaciones:
   "explicacion": "2-3 frases revelando cómo y por qué se cometió el crimen. Satisfactorio y con giro."
 }}
 
-El campo culpable es el índice (0, 1 o 2) del sospechoso culpable. Varía el índice para que no sea siempre el mismo."""
+El campo culpable es el índice (0, 1 o 2) del sospechoso culpable. Varía el índice."""
 
-    message = client.messages.create(
-        model="claude-sonnet-4-20250514",
-        max_tokens=1000,
-        messages=[{"role": "user", "content": prompt}]
+    response = requests.post(
+        'https://api.anthropic.com/v1/messages',
+        headers={
+            'x-api-key': api_key,
+            'anthropic-version': '2023-06-01',
+            'content-type': 'application/json'
+        },
+        json={
+            'model': 'claude-sonnet-4-20250514',
+            'max_tokens': 1000,
+            'messages': [{'role': 'user', 'content': prompt}]
+        },
+        timeout=60
     )
 
-    text = message.content[0].text.strip()
+    data = response.json()
+    text = data['content'][0]['text'].strip()
     text = text.replace('```json', '').replace('```', '').strip()
     return json.loads(text)
