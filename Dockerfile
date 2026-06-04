@@ -7,6 +7,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+ARG CACHEBUST=1
+RUN echo "Cache bust: $CACHEBUST"
+
 RUN python init_db.py
 
 EXPOSE 80
