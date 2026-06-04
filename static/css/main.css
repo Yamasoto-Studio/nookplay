@@ -50,11 +50,10 @@ body {
   max-width: 420px;
   width: 100%;
   min-height: 100vh;
-  background: var(--bar-bg-card);
+  background: var(--bar-bg);
   padding: 0 0 40px;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 4px 32px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04);
 }
 
 /* ── Top bar: Nookplay wordmark ── */
@@ -91,7 +90,14 @@ body {
 /* ── Content area ── */
 .nook-content {
   flex: 1;
-  padding: 28px 22px 0;
+  padding: 16px 16px 0;
+}
+
+.nook-card {
+  background: #FFFFFF;
+  border-radius: var(--radius-lg);
+  padding: 24px 20px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.07), 0 1px 4px rgba(0,0,0,0.04);
 }
 
 /* ── Screens ── */
