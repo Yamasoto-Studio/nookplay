@@ -1,0 +1,180 @@
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #f0ede8;
+  min-height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 20px;
+}
+
+.nook {
+  max-width: 420px;
+  width: 100%;
+  background: #fff;
+  border-radius: 20px;
+  padding: 28px 22px 36px;
+  box-shadow: 0 4px 32px rgba(0,0,0,0.07);
+}
+
+.nook.home {
+  margin-top: 60px;
+  text-align: center;
+}
+
+/* Bar header */
+.bar-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f0ede8;
+}
+.bar-dot { width: 8px; height: 8px; border-radius: 50%; background: #e8c547; }
+.bar-name { font-size: 11px; font-weight: 600; color: #999; letter-spacing: 1.5px; text-transform: uppercase; }
+
+/* Screens */
+.screen { display: none; }
+.screen.active { display: block; }
+
+/* Logo */
+.nook-logo {
+  width: 52px; height: 52px; border-radius: 14px;
+  background: #1a1a2e; color: #e8c547;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px; font-weight: 700;
+  margin: 0 auto 16px;
+}
+.nook-title {
+  font-size: 26px; font-weight: 700; color: #111;
+  text-align: center; line-height: 1.2; margin-bottom: 10px;
+}
+.nook-sub {
+  font-size: 15px; color: #888; text-align: center;
+  line-height: 1.6; margin-bottom: 28px;
+}
+
+/* Code input */
+.code-input-wrap { margin-bottom: 12px; }
+.code-input {
+  width: 100%; padding: 14px 16px;
+  border: 1.5px solid #eee; border-radius: 12px;
+  font-size: 18px; font-weight: 600; letter-spacing: 3px;
+  text-align: center; text-transform: uppercase;
+  font-family: 'Inter', monospace;
+  outline: none; transition: border-color 0.15s;
+}
+.code-input:focus { border-color: #1a1a2e; }
+.code-error { font-size: 13px; color: #cc2222; margin-top: 6px; text-align: center; min-height: 18px; }
+.code-hint { font-size: 12px; color: #bbb; text-align: center; margin-top: 10px; }
+
+/* Buttons */
+.btn-primary {
+  width: 100%; padding: 14px;
+  background: #1a1a2e; color: #fff;
+  border: none; border-radius: 12px;
+  font-size: 15px; font-weight: 600;
+  cursor: pointer; transition: background 0.15s;
+  font-family: inherit;
+}
+.btn-primary:hover:not(:disabled) { background: #2d2d4e; }
+.btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-secondary {
+  width: 100%; padding: 12px;
+  background: #f5f5f5; color: #333;
+  border: none; border-radius: 12px;
+  font-size: 14px; font-weight: 500;
+  cursor: pointer; font-family: inherit;
+}
+
+.btn-danger {
+  width: 100%; padding: 14px;
+  background: #fff0f0; color: #cc2222;
+  border: 1px solid #ffcccc; border-radius: 12px;
+  font-size: 14px; font-weight: 600;
+  cursor: pointer; margin-top: 8px;
+  transition: opacity 0.15s; font-family: inherit;
+}
+.btn-danger:disabled { opacity: 0.35; cursor: not-allowed; }
+.btn-danger:not(:disabled):hover { background: #ffe4e4; }
+
+.btn-share {
+  width: 100%; padding: 11px;
+  background: transparent; color: #888;
+  border: 1px solid #ddd; border-radius: 10px;
+  font-size: 13px; cursor: pointer;
+  margin-top: 8px; font-family: inherit;
+}
+.btn-share:hover { background: #fafafa; }
+
+/* Game elements */
+.tag {
+  display: inline-block; font-size: 10px; letter-spacing: 1.5px;
+  text-transform: uppercase; padding: 3px 10px;
+  border-radius: 20px; margin-bottom: 12px;
+  font-weight: 600; background: #eef3ff; color: #3366cc;
+}
+.headline { font-size: 21px; font-weight: 700; line-height: 1.25; margin-bottom: 6px; color: #111; }
+.location { font-size: 12px; color: #999; margin-bottom: 16px; }
+.divider { border: none; border-top: 1px solid #f0ede8; margin: 16px 0; }
+.body-text { font-size: 15px; line-height: 1.75; color: #333; margin-bottom: 4px; }
+.section-label { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: #aaa; font-weight: 600; margin-bottom: 10px; }
+
+.clue-btn {
+  width: 100%; text-align: left;
+  background: #fafafa; border: 1px solid #eee; border-radius: 10px;
+  padding: 12px 14px; margin-bottom: 8px; cursor: pointer;
+  font-size: 14px; color: #aaa;
+  display: flex; align-items: flex-start; gap: 10px;
+  transition: all 0.15s; font-family: inherit;
+}
+.clue-btn.revealed { color: #333; border-color: #ddd; background: #fff; cursor: default; }
+.clue-btn:not(.revealed):hover { background: #f5f5f5; }
+.clue-icon { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+
+.suspect-btn {
+  width: 100%; text-align: left;
+  background: #fff; border: 1px solid #eee; border-radius: 12px;
+  padding: 12px 14px; margin-bottom: 8px; cursor: pointer;
+  display: flex; align-items: center; gap: 12px;
+  transition: border-color 0.15s; font-family: inherit;
+}
+.suspect-btn:hover { border-color: #ccc; }
+.suspect-btn.selected { border: 2px solid #1a1a2e; background: #fafafa; }
+.suspect-avatar {
+  width: 38px; height: 38px; border-radius: 50%;
+  background: #f0ede8; color: #1a1a2e;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; flex-shrink: 0;
+}
+.suspect-name { font-size: 14px; font-weight: 600; color: #111; }
+.suspect-role { font-size: 12px; color: #888; margin-top: 2px; line-height: 1.4; }
+
+/* Result */
+.result-big { font-size: 30px; font-weight: 700; margin-bottom: 6px; }
+.result-big.correct { color: #22aa55; }
+.result-big.wrong { color: #cc2222; }
+.result-sub { font-size: 15px; color: #666; margin-bottom: 16px; line-height: 1.6; }
+.reveal-card {
+  background: #fafafa; border: 1px solid #eee;
+  border-radius: 12px; padding: 14px 16px; margin: 16px 0;
+}
+.reveal-label { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: #aaa; margin-bottom: 4px; font-weight: 600; }
+.reveal-name { font-size: 19px; font-weight: 700; color: #cc2222; }
+.tomorrow { font-size: 12px; color: #bbb; text-align: center; margin-top: 20px; padding-top: 16px; border-top: 1px solid #f0ede8; line-height: 1.6; }
+
+/* Loading */
+.loading { text-align: center; padding: 40px 0; color: #aaa; font-size: 15px; }
+.loading-spinner {
+  width: 32px; height: 32px; border-radius: 50%;
+  border: 3px solid #eee; border-top-color: #1a1a2e;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 16px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.error-msg { text-align: center; padding: 40px 0; color: #cc2222; font-size: 15px; }

@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+{% block title %}{{ bar.name }} — Nookplay{% endblock %}
+{% block content %}
+
+<div class="nook">
+
+  <!-- BAR HEADER -->
+  <div class="bar-header">
+    <div class="bar-dot"></div>
+    <span class="bar-name">{{ bar.name }}</span>
+  </div>
+
+  <!-- SCREEN: CODE ENTRY -->
+  <div class="screen active" id="s-code">
+    <div class="nook-logo">N</div>
+    <h1 class="nook-title">El Pasatiempo<br>del Día</h1>
+    <p class="nook-sub">Introduce el código de tu tarjeta para acceder al juego de hoy.</p>
+    <div class="code-input-wrap">
+      <input type="text" id="code-input" class="code-input" placeholder="Ej. YELLOW01" maxlength="10" autocomplete="off" autocapitalize="characters">
+      <div class="code-error" id="code-error"></div>
+    </div>
+    <button class="btn-primary" onclick="validateCode()">Entrar</button>
+    <p class="code-hint">El código está impreso en tu tarjeta.</p>
+  </div>
+
+  <!-- SCREEN: GAME (injected by JS) -->
+  <div class="screen" id="s-game"></div>
+
+</div>
+
+<script>
+const BAR_SLUG = "{{ bar.slug }}";
+let validatedCode = null;
+
+// ── Code validation ──────────────────────────────────────────────────────
+
+async function validateCode() {
+  const code = document.getElementById('code-input').value.trim().toUpperCase();
+  const errorEl = document.getElementById('code-error');
+  errorEl.textContent = '';
+
+  if (!code) {
+    errorEl.textContent = 'Introduce tu código.';
+    return;
+  }
+
+  const btn = document.querySelector('#s-code .btn-primary');
+  btn.textContent = 'Comprobando...';
+  btn.disabled = true;
+
+  const res = await fetch('/api/validate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code, bar_slug: BAR_SLUG })
+  });
+  const data = await res.json();
+
+  if (data.valid) {
+    validatedCode = code;
+    loadGame();
+  } else {
+    errorEl.textContent = data.message;
+    btn.textContent = 'Entrar';
+    btn.disabled = false;
+  }
+}
+
+document.getElementById('code-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') validateCode();
+});
+
+// ── Game loader ──────────────────────────────────────────────────────────
+
+async function loadGame() {
+  showScreen('s-game');
+  document.getElementById('s-game').innerHTML = `
+    <div class="loading">
+      <div class="loading-spinner"></div>
+      <p>Preparando el caso de hoy...</p>
+    </div>`;
+
+  try {
+    const res = await fetch('/api/game', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: validatedCode, bar_slug: BAR_SLUG })
+    });
+    const game = await res.json();
+    renderGame(game);
+  } catch(e) {
+    document.getElementById('s-game').innerHTML = `
+      <div class="error-msg">
+        <p>No se pudo cargar el juego.</p>
+        <button class="btn-secondary" onclick="location.reload()">Reintentar</button>
+      </div>`;
+  }
+}
+
+// ── Game renderer ────────────────────────────────────────────────────────
+
+function renderGame(g) {
+  const el = document.getElementById('s-game');
+  el.innerHTML = `
+    <span class="tag">Caso del día</span>
+    <h2 class="headline">${g.titular}</h2>
+    <p class="location">📍 ${g.lugar}</p>
+    <hr class="divider">
+    <p class="body-text">${g.introduccion}</p>
+    <hr class="divider">
+    <div class="section-label">Pistas — toca para revelar</div>
+    ${g.pistas.map((p,i) => `
+      <button class="clue-btn" id="c${i}" onclick="revealClue(${i}, this)">
+        <span class="clue-icon">🔒</span>
+        <span class="clue-text">Pista ${i+1} — toca para revelar</span>
+      </button>
+    `).join('')}
+    <hr class="divider">
+    <div class="section-label">Sospechosos</div>
+    ${g.sospechosos.map((s,i) => `
+      <button class="suspect-btn" onclick="pickSuspect(${i}, this)">
+        <div class="suspect-avatar">${s.nombre.charAt(0)}${s.nombre.split(' ')[1]?.charAt(0)||''}</div>
+        <div>
+          <div class="suspect-name">${s.nombre}</div>
+          <div class="suspect-role">${s.descripcion}</div>
+        </div>
+      </button>
+    `).join('')}
+    <button class="btn-danger" id="accuse-btn" disabled onclick="accuse(${g.culpable}, ${JSON.stringify(g.sospechosos).replace(/</g,'\\u003c')}, '${escHtml(g.explicacion)}')">
+      🔨 Acusar al culpable
+    </button>
+  `;
+
+  window._clues = g.pistas;
+  window._selected = -1;
+}
+
+function escHtml(s) {
+  return s.replace(/'/g, "\\'").replace(/"/g, '\\"');
+}
+
+function revealClue(i, el) {
+  if (el.classList.contains('revealed')) return;
+  el.classList.add('revealed');
+  el.querySelector('.clue-icon').textContent = '👁️';
+  el.querySelector('.clue-text').textContent = window._clues[i];
+}
+
+function pickSuspect(idx, el) {
+  document.querySelectorAll('.suspect-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  window._selected = idx;
+  document.getElementById('accuse-btn').disabled = false;
+}
+
+async function accuse(culpable, sospechosos, explicacion) {
+  const correct = window._selected === culpable;
+  const culpableName = sospechosos[culpable].nombre;
+  const accusedName = sospechosos[window._selected].nombre;
+
+  // Register play
+  await fetch('/api/play', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code: validatedCode, bar_slug: BAR_SLUG, correct })
+  });
+
+  const el = document.getElementById('s-game');
+  el.innerHTML = `
+    <div class="result-big ${correct ? 'correct' : 'wrong'}">
+      ${correct ? 'Caso resuelto.' : 'Fallaste.'}
+    </div>
+    <p class="result-sub">
+      ${correct
+        ? 'Acertaste. Buen detective.'
+        : `Te equivocaste. Acusaste a ${accusedName}.`}
+    </p>
+    <div class="reveal-card">
+      <div class="reveal-label">El culpable</div>
+      <div class="reveal-name">${culpableName}</div>
+    </div>
+    <p class="body-text">${explicacion}</p>
+    <button class="btn-share" onclick="shareResult(${correct}, '${accusedName}', '${culpableName}')">
+      📤 Compartir resultado
+    </button>
+    <div class="tomorrow">Mañana hay un caso nuevo aquí.<br>Vuelve a tomar un café.</div>
+  `;
+}
+
+function shareResult(correct, accused, culpable) {
+  const emoji = correct ? '✅' : '❌';
+  const txt = `🔍 El Crimen del Día — {{ bar.name }}\n\n${emoji} Acusé a ${accused}\nEl culpable era: ${culpable}\n\n¿Puedes tú resolverlo? Pasa por el bar y escanea el QR.\nnookplay.app`;
+  if (navigator.share) { navigator.share({ text: txt }); }
+  else { navigator.clipboard.writeText(txt).then(() => alert('¡Copiado!')); }
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+</script>
+
+{% endblock %}
