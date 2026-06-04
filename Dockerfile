@@ -9,6 +9,6 @@ COPY . .
 
 RUN python -c "from app import init_db; init_db()"
 
-EXPOSE 5000
+EXPOSE 80
 
-CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:5000", "--workers", "2"]
+CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:80", "--workers", "2"]
