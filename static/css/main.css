@@ -59,13 +59,14 @@ body {
 /* ── Top bar: Nookplay wordmark ── */
 .nook-topbar {
   text-align: center;
-  padding: 14px 20px 0;
+  padding: 16px 20px 0;
+  background: var(--bar-bg);
 }
 
 .nook-topbar img {
-  height: 13px;
+  height: 18px;
   width: auto;
-  opacity: 0.35;
+  opacity: 1;
 }
 
 /* ── Bar hero ── */
@@ -74,16 +75,17 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 24px 20px 28px;
+  padding: 20px 24px 24px;
   background: var(--bar-bg);
   border-bottom: 1px solid var(--border);
 }
 
 .bar-hero-logo {
-  width: 100px;
-  height: 100px;
+  width: 100%;
+  max-width: 320px;
+  height: auto;
   object-fit: contain;
-  border-radius: 20px;
+  border-radius: 12px;
 }
 
 /* ── Content area ── */
@@ -242,15 +244,29 @@ body {
 /* ── Footer ── */
 .nook-footer {
   text-align: center;
-  padding: 24px 20px 0;
+  padding: 28px 20px 8px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 
-.nook-footer img { height: 18px; width: auto; opacity: 0.45; }
-.nook-footer span { font-size: 10px; color: var(--text-muted); letter-spacing: 0.5px; }
+.nook-footer-brand img {
+  height: 20px;
+  width: auto;
+  opacity: 1;
+  display: block;
+}
+
+.nook-footer-by {
+  font-size: 11px;
+  color: var(--text-secondary);
+  letter-spacing: 0.5px;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.nook-footer-by:hover { color: var(--text); }
 
 /* ── Loading ── */
 .loading { text-align: center; padding: 40px 0; color: var(--text-muted); font-size: 15px; }
