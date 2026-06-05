@@ -1,18 +1,499 @@
 {% extends "base.html" %}
-{% block title %}Nookplay — El pasatiempo diario del bar{% endblock %}
+{% block title %}Nookplay — El pasatiempo diario, en tu mesa{% endblock %}
 {% block content %}
-<div class="nook home">
-  <div class="nook-logo-wrap">
-    <img src="/static/logo.svg" alt="Nookplay">
+
+<style>
+  :root {
+    --brand: #C4622D;
+    --brand-light: #F0E0D4;
+    --bg: #F7F2EB;
+    --text: #1A1A1A;
+    --text-secondary: #6B6059;
+    --text-muted: #A89B91;
+    --border: #E5DDD5;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+
+  /* NAV */
+  .landing-nav {
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 100;
+  }
+
+  .landing-nav img { height: 20px; width: auto; }
+
+  .nav-cta {
+    background: var(--brand);
+    color: #fff;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    font-family: inherit;
+  }
+
+  /* HERO */
+  .hero {
+    text-align: center;
+    padding: 80px 24px 60px;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .hero-logo {
+    height: 36px;
+    width: auto;
+    margin-bottom: 32px;
+  }
+
+  .hero h1 {
+    font-size: 42px;
+    font-weight: 700;
+    line-height: 1.15;
+    color: var(--text);
+    margin-bottom: 16px;
+    letter-spacing: -1px;
+  }
+
+  .hero h1 span { color: var(--brand); }
+
+  .hero p {
+    font-size: 18px;
+    color: var(--text-secondary);
+    line-height: 1.65;
+    margin-bottom: 32px;
+    max-width: 460px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .hero-btns {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .btn-hero {
+    background: var(--brand);
+    color: #fff;
+    border: none;
+    padding: 14px 28px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    font-family: inherit;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-demo {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+    padding: 14px 28px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: none;
+    font-family: inherit;
+  }
+
+  /* SECTIONS */
+  .section {
+    padding: 64px 24px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .section-divider {
+    height: 1px;
+    background: var(--border);
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .section-tag {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--brand);
+    margin-bottom: 12px;
+  }
+
+  .section h2 {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 12px;
+    letter-spacing: -0.5px;
+  }
+
+  .section-sub {
+    font-size: 16px;
+    color: var(--text-secondary);
+    line-height: 1.65;
+    margin-bottom: 32px;
+    max-width: 520px;
+  }
+
+  /* MAP */
+  .map-container {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    height: 280px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+
+  .map-placeholder {
+    width: 100%;
+    height: 100%;
+    background: #EEF0E8;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+  }
+
+  .map-dot-big {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--brand);
+    box-shadow: 0 0 0 8px rgba(196, 98, 45, 0.15);
+  }
+
+  .map-label {
+    font-size: 13px;
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+
+  .map-count {
+    background: var(--brand);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 20px;
+  }
+
+  /* HOW IT WORKS */
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+  }
+
+  .step {
+    text-align: center;
+    padding: 24px 16px;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+  }
+
+  .step-num {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--brand);
+    color: #fff;
+    font-size: 16px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 14px;
+  }
+
+  .step h3 {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+
+  .step p {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+
+  /* GAMES */
+  .games-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+
+  .game-card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+  }
+
+  .game-card.active { border-color: var(--brand); }
+  .game-card.coming { opacity: 0.55; }
+
+  .game-icon {
+    font-size: 28px;
+    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    border-radius: 10px;
+  }
+
+  .game-info h3 {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+
+  .game-info p {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+
+  .game-badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 20px;
+    margin-top: 6px;
+    background: var(--brand-light);
+    color: var(--brand);
+  }
+
+  .game-badge-soon {
+    background: var(--bg);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+  }
+
+  /* CTA FINAL */
+  .cta-section {
+    background: var(--text);
+    padding: 64px 24px;
+    text-align: center;
+  }
+
+  .cta-section h2 {
+    font-size: 30px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 12px;
+    letter-spacing: -0.5px;
+  }
+
+  .cta-section p {
+    font-size: 16px;
+    color: rgba(255,255,255,0.6);
+    margin-bottom: 28px;
+    line-height: 1.65;
+  }
+
+  .btn-whatsapp {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: #25D366;
+    color: #fff;
+    border: none;
+    padding: 14px 28px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    font-family: inherit;
+  }
+
+  /* FOOTER */
+  .landing-footer {
+    background: var(--bg);
+    border-top: 1px solid var(--border);
+    padding: 20px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .landing-footer img { height: 14px; opacity: 0.5; }
+
+  .landing-footer a {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-decoration: none;
+  }
+
+  .landing-footer a:hover { color: var(--text-secondary); }
+
+  @media (max-width: 600px) {
+    .hero h1 { font-size: 30px; }
+    .steps { grid-template-columns: 1fr; }
+    .games-grid { grid-template-columns: 1fr; }
+  }
+</style>
+
+<!-- NAV -->
+<nav class="landing-nav">
+  <img src="/static/logo.svg" alt="Nookplay">
+  <a href="https://wa.me/34659064284?text=Hola%2C%20me%20interesa%20a%C3%B1adir%20Nookplay%20a%20mi%20local." class="nav-cta" target="_blank">
+    Quiero Nookplay
+  </a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <img class="hero-logo" src="/static/logo.svg" alt="Nookplay">
+  <h1>El pasatiempo diario,<br><span>en tu mesa</span></h1>
+  <p>Convierte el tiempo de espera de tus clientes en una experiencia de juego única. Un caso nuevo cada día, personalizado para tu local.</p>
+  <div class="hero-btns">
+    <a href="https://wa.me/34659064284?text=Hola%2C%20me%20interesa%20a%C3%B1adir%20Nookplay%20a%20mi%20local." class="btn-hero" target="_blank">
+      Quiero Nookplay en mi local
+    </a>
+    <a href="/yellow" class="btn-demo">Ver demo</a>
   </div>
-  <p class="nook-sub">El pasatiempo diario,<br>en tu mesa.</p>
-  <hr class="divider" style="margin: 28px 0;">
-  <p style="font-size:13px;color:var(--text-muted);text-align:center;">
-    ¿Tienes un bar y quieres ofrecer Nookplay?<br>
-    <a href="mailto:hola@nookplay.app" style="color:var(--brand);">hola@nookplay.app</a>
-  </p>
-  <div class="nook-footer" style="margin-top:32px;">
-    <span>by Yamasoto</span>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- MAPA -->
+<section class="section">
+  <div class="section-tag">Locales adheridos</div>
+  <h2>Ya en tu ciudad</h2>
+  <p class="section-sub">Cada punto en el mapa es un local donde los clientes juegan cada día mientras toman algo.</p>
+  <div class="map-container">
+    <div class="map-placeholder">
+      <div class="map-dot-big"></div>
+      <div class="map-label">Yellow Specialty Koffee · Viladecans</div>
+      <div class="map-count">1 local adherido</div>
+    </div>
   </div>
-</div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- CÓMO FUNCIONA -->
+<section class="section">
+  <div class="section-tag">Cómo funciona</div>
+  <h2>Tres pasos. Un café.</h2>
+  <p class="section-sub">Sin apps, sin registros. Solo una tarjeta en la mesa y el móvil en el bolsillo.</p>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <h3>La tarjeta en la mesa</h3>
+      <p>El cliente ve una tarjeta con QR en su mesa. La curiosidad hace el resto.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <h3>Escanea y juega</h3>
+      <p>Escanea el QR, introduce el código de su tarjeta y accede al juego del día.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <h3>Un caso nuevo cada día</h3>
+      <p>La IA genera contenido fresco cada mañana. El cliente siempre encuentra algo nuevo.</p>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- JUEGOS -->
+<section class="section">
+  <div class="section-tag">Actividades</div>
+  <h2>Más que un juego</h2>
+  <p class="section-sub">Un menú de pasatiempos que crece. Tu local decide qué ofrece.</p>
+  <div class="games-grid">
+    <div class="game-card active">
+      <div class="game-icon">🔍</div>
+      <div class="game-info">
+        <h3>El Crimen del Día</h3>
+        <p>Un caso policial nuevo cada día. Pistas, sospechosos y una resolución sorprendente.</p>
+        <span class="game-badge">Disponible</span>
+      </div>
+    </div>
+    <div class="game-card coming">
+      <div class="game-icon">♊</div>
+      <div class="game-info">
+        <h3>Tu Horóscopo</h3>
+        <p>Predicciones del día con humor y personalidad. Nunca el mismo dos veces.</p>
+        <span class="game-badge game-badge-soon">Próximamente</span>
+      </div>
+    </div>
+    <div class="game-card coming">
+      <div class="game-icon">🌍</div>
+      <div class="game-info">
+        <h3>¿Dónde en el mundo?</h3>
+        <p>Una foto, un lugar del mundo. ¿Puedes adivinar dónde está?</p>
+        <span class="game-badge game-badge-soon">Próximamente</span>
+      </div>
+    </div>
+    <div class="game-card coming">
+      <div class="game-icon">📖</div>
+      <div class="game-info">
+        <h3>Microficción</h3>
+        <p>Una historia inacabada. Tú eliges cómo termina.</p>
+        <span class="game-badge game-badge-soon">Próximamente</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA FINAL -->
+<section class="cta-section">
+  <h2>¿Tienes un local?</h2>
+  <p>Bares, cafeterías, restaurantes, cervecerías.<br>Si tienes mesas, tienes Nookplay.</p>
+  <a href="https://wa.me/34659064284?text=Hola%2C%20me%20interesa%20a%C3%B1adir%20Nookplay%20a%20mi%20local." class="btn-whatsapp" target="_blank">
+    Hablamos por WhatsApp
+  </a>
+</section>
+
+<!-- FOOTER -->
+<footer class="landing-footer">
+  <img src="/static/logo.svg" alt="Nookplay">
+  <a href="https://www.yamasoto.com/" target="_blank">by Yamasoto</a>
+</footer>
+
 {% endblock %}
