@@ -15,39 +15,44 @@
 
 <div class="nook">
 
-  <!-- Nookplay wordmark -->
   <div class="nook-topbar">
-    <a href="#"><img src="/static/logo.svg" alt="Nookplay"></a>
+    <a href="/"><img src="/static/logo.svg" alt="Nookplay"></a>
   </div>
 
-  <!-- Bar hero -->
   <div class="bar-hero">
     <img class="bar-hero-logo" src="/static/clientes/{{ bar.slug }}/logo_header.png" alt="{{ bar.name }}" onerror="this.style.display='none'">
   </div>
 
-  <!-- Content -->
   <div class="nook-content">
     <div class="nook-card">
 
-    <div class="screen active" id="s-code">
-      <h1 class="nook-title" style="margin-top:8px;">Disfruta del Pasatiempo<br>del Día</h1>
-      <p class="nook-sub">Introduce el código de tu tarjeta para acceder al juego de hoy.</p>
-      <div class="code-input-wrap">
-        <input type="text" id="code-input" class="code-input" placeholder="YELLOW01" maxlength="10" autocomplete="off" autocapitalize="characters">
-        <div class="code-error" id="code-error"></div>
+      <!-- PANTALLA: CÓDIGO -->
+      <div class="screen active" id="s-code">
+        <h1 class="nook-title">Disfruta del Pasatiempo<br>del Día</h1>
+        <p class="nook-sub">Introduce el código de tu tarjeta para acceder al juego de hoy.</p>
+        <div class="code-input-wrap">
+          <input type="text" id="code-input" class="code-input" placeholder="YELLOW01" maxlength="10" autocomplete="off" autocapitalize="characters">
+          <div class="code-error" id="code-error"></div>
+        </div>
+        <button class="btn-primary" onclick="validateCode()">Entrar</button>
+        <p class="code-hint">El código está impreso en tu tarjeta.</p>
       </div>
-      <button class="btn-primary" onclick="validateCode()">Entrar</button>
-      <p class="code-hint">El código está impreso en tu tarjeta.</p>
+
+      <!-- PANTALLA: MENÚ DE ACTIVIDADES -->
+      <div class="screen" id="s-menu">
+        <p class="menu-welcome" id="menu-welcome"></p>
+        <div class="section-label" style="margin-bottom: 12px;">Elige tu pasatiempo</div>
+        <div id="activities-list"></div>
+      </div>
+
+      <!-- PANTALLA: JUEGO -->
+      <div class="screen" id="s-game"></div>
+
     </div>
+  </div>
 
-    <div class="screen" id="s-game"></div>
-
-    </div><!-- /nook-card -->
-  </div><!-- /nook-content -->
-
-  <!-- Footer -->
   <div class="nook-footer">
-    <a href="#" class="nook-footer-brand"><img src="/static/logo.svg" alt="Nookplay"></a>
+    <a href="/" class="nook-footer-brand"><img src="/static/logo.svg" alt="Nookplay"></a>
     <a href="https://www.yamasoto.com/" target="_blank" class="nook-footer-by">by Yamasoto</a>
   </div>
 
@@ -55,8 +60,34 @@
 
 <script>
 const BAR_SLUG = "{{ bar.slug }}";
+const BAR_NAME = "{{ bar.name }}";
+const BAR_WELCOME = "{{ bar.welcome_message }}";
 let validatedCode = null;
 let currentGame = null;
+
+const ACTIVITIES = [
+  {
+    id: 'crimen',
+    name: 'El Crimen del Día',
+    desc: 'Resuelve un misterio en el tiempo de un café',
+    icon: '🔍',
+    active: true
+  },
+  {
+    id: 'horoscopo',
+    name: 'Tu Horóscopo',
+    desc: 'Las estrellas tienen algo que decirte hoy',
+    icon: '♊',
+    active: false
+  },
+  {
+    id: 'donde',
+    name: '¿Dónde en el mundo?',
+    desc: 'Adivina el lugar a partir de una foto',
+    icon: '🌍',
+    active: false
+  }
+];
 
 async function validateCode() {
   const code = document.getElementById('code-input').value.trim().toUpperCase();
@@ -77,7 +108,7 @@ async function validateCode() {
 
   if (data.valid) {
     validatedCode = code;
-    loadGame();
+    showMenu();
   } else {
     errorEl.textContent = data.message;
     btn.textContent = 'Entrar';
@@ -88,6 +119,32 @@ async function validateCode() {
 document.getElementById('code-input').addEventListener('keydown', e => {
   if (e.key === 'Enter') validateCode();
 });
+
+function showMenu() {
+  const welcome = BAR_WELCOME || `Bienvenido al ${BAR_NAME}. Elige tu pasatiempo de hoy.`;
+  document.getElementById('menu-welcome').textContent = welcome;
+
+  const list = document.getElementById('activities-list');
+  list.innerHTML = ACTIVITIES.map(a => `
+    <div class="activity-card ${a.active ? '' : 'activity-dim'}" ${a.active ? `onclick="startActivity('${a.id}')"` : ''}>
+      <div class="activity-icon">${a.icon}</div>
+      <div class="activity-info">
+        <div class="activity-name">${a.name}</div>
+        <div class="activity-desc">${a.desc}</div>
+      </div>
+      ${a.active
+        ? '<div class="activity-badge">Hoy</div>'
+        : '<div class="activity-badge activity-badge-dim">Próximamente</div>'
+      }
+    </div>
+  `).join('');
+
+  showScreen('s-menu');
+}
+
+function startActivity(id) {
+  if (id === 'crimen') loadGame();
+}
 
 async function loadGame() {
   showScreen('s-game');
@@ -109,7 +166,7 @@ async function loadGame() {
     document.getElementById('s-game').innerHTML = `
       <div class="error-msg">
         <p>No se pudo cargar el juego.</p>
-        <button class="btn-secondary" onclick="location.reload()">Reintentar</button>
+        <button class="btn-secondary" onclick="showMenu()">Volver</button>
       </div>`;
   }
 }
@@ -117,6 +174,7 @@ async function loadGame() {
 function renderGame(g) {
   const el = document.getElementById('s-game');
   el.innerHTML = `
+    <button class="btn-back" onclick="showMenu()">← Volver al menú</button>
     <span class="tag">Caso del día</span>
     <h2 class="headline" id="g-titular"></h2>
     <p class="location">📍 <span id="g-lugar"></span></p>
@@ -194,6 +252,7 @@ async function accuse() {
     </div>
     <p class="body-text" id="r-explicacion"></p>
     <button class="btn-share" onclick="shareResult()">📤 Compartir resultado</button>
+    <button class="btn-menu" onclick="showMenu()">← Volver al menú</button>
     <div class="tomorrow">Mañana hay un caso nuevo aquí.<br>Vuelve a tomar un café.</div>
   `;
 
@@ -208,7 +267,7 @@ function shareResult() {
   const accusedName = currentGame.sospechosos[window._selected].nombre;
   const culpableName = currentGame.sospechosos[currentGame.culpable].nombre;
   const emoji = correct ? '✅' : '❌';
-  const txt = `🔍 El Crimen del Día — {{ bar.name }}\n\n${emoji} Acusé a ${accusedName}\nEl culpable era: ${culpableName}\n\n¿Puedes tú resolverlo?\nnookplay.app`;
+  const txt = `🔍 El Crimen del Día — ${BAR_NAME}\n\n${emoji} Acusé a ${accusedName}\nEl culpable era: ${culpableName}\n\n¿Puedes tú resolverlo?\nnookplay.app`;
   if (navigator.share) { navigator.share({ text: txt }); }
   else { navigator.clipboard.writeText(txt).then(() => alert('¡Copiado!')); }
 }

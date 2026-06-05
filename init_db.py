@@ -12,7 +12,8 @@ db.executescript('''
         color_primary_text TEXT DEFAULT '#FFFFFF',
         color_bg TEXT DEFAULT '#F7F2EB',
         color_bg_subtle TEXT DEFAULT '#F0EBE3',
-        color_accent_dark TEXT DEFAULT '#1A1A1A'
+        color_accent_dark TEXT DEFAULT '#1A1A1A',
+        welcome_message TEXT DEFAULT ''
     );
     CREATE TABLE IF NOT EXISTS codes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -31,8 +32,8 @@ db.executescript('''
 
 bar = db.execute("SELECT id FROM bars WHERE slug = 'yellow'").fetchone()
 if not bar:
-    db.execute("""INSERT INTO bars (slug, name, color_primary, color_primary_text, color_bg, color_bg_subtle, color_accent_dark)
-        VALUES ('yellow', 'Yellow Specialty Koffee', '#FEE25A', '#000000', '#FFFBEA', '#FFF8D6', '#1A1A1A')""")
+    db.execute("""INSERT INTO bars (slug, name, color_primary, color_primary_text, color_bg, color_bg_subtle, color_accent_dark, welcome_message)
+        VALUES ('yellow', 'Yellow Specialty Koffee', '#FEE25A', '#000000', '#FFFBEA', '#FFF8D6', '#1A1A1A', 'Bienvenido al Yellow. Elige tu pasatiempo de hoy.')""")
     db.commit()
     bar_id = db.execute("SELECT id FROM bars WHERE slug = 'yellow'").fetchone()[0]
     for i in range(1, 11):
@@ -40,7 +41,8 @@ if not bar:
 else:
     db.execute("""UPDATE bars SET
         color_primary='#FEE25A', color_primary_text='#000000',
-        color_bg='#FFFBEA', color_bg_subtle='#FFF8D6', color_accent_dark='#1A1A1A'
+        color_bg='#FFFBEA', color_bg_subtle='#FFF8D6', color_accent_dark='#1A1A1A',
+        welcome_message='Bienvenido al Yellow. Elige tu pasatiempo de hoy.'
         WHERE slug='yellow'""")
 
 db.commit()

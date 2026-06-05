@@ -222,13 +222,17 @@ def migrate_db():
     try:
         db.execute("ALTER TABLE bars ADD COLUMN color_accent_dark TEXT DEFAULT '#1A1A1A'")
     except: pass
+    try:
+        db.execute("ALTER TABLE bars ADD COLUMN welcome_message TEXT DEFAULT ''")
+    except: pass
     # Update Yellow colors
     db.execute("""UPDATE bars SET
         color_primary='#FEE25A',
         color_primary_text='#000000',
         color_bg='#FFFBEA',
         color_bg_subtle='#FFF8D6',
-        color_accent_dark='#1A1A1A'
+        color_accent_dark='#1A1A1A',
+        welcome_message='Bienvenido al Yellow. Elige tu pasatiempo de hoy.'
         WHERE slug='yellow'""")
     db.commit()
     db.close()

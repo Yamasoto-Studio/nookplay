@@ -283,3 +283,113 @@ body {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 .error-msg { text-align: center; padding: 40px 0; color: var(--danger); font-size: 15px; }
+
+/* ── Activity menu ── */
+.menu-welcome {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text);
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+
+.activity-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--bar-bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.1s;
+}
+
+.activity-card:hover {
+  border-color: var(--bar-primary);
+  transform: translateX(3px);
+}
+
+.activity-dim {
+  opacity: 0.45;
+  cursor: default;
+  background: var(--bar-bg-subtle);
+}
+
+.activity-dim:hover {
+  border-color: var(--border);
+  transform: none;
+}
+
+.activity-icon {
+  font-size: 28px;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bar-bg);
+  border-radius: var(--radius-sm);
+}
+
+.activity-info { flex: 1; }
+
+.activity-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+
+.activity-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.activity-badge {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  padding: 3px 8px;
+  border-radius: 20px;
+  background: var(--bar-primary);
+  color: var(--bar-primary-text);
+  flex-shrink: 0;
+}
+
+.activity-badge-dim {
+  background: var(--bar-bg-subtle);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+/* ── Back button ── */
+.btn-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 16px;
+  font-family: inherit;
+}
+.btn-back:hover { color: var(--text); }
+
+.btn-menu {
+  width: 100%; padding: 12px;
+  background: var(--bar-bg-subtle);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-size: 14px; font-weight: 500;
+  cursor: pointer; margin-top: 8px;
+  font-family: inherit;
+}
+.btn-menu:hover { background: var(--bar-bg); }
