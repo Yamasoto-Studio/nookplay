@@ -393,3 +393,33 @@ body {
   font-family: inherit;
 }
 .btn-menu:hover { background: var(--bar-bg); }
+
+/* ── Landing page overrides ── */
+body.landing {
+  display: block !important;
+  align-items: unset !important;
+  justify-content: unset !important;
+  padding: 0 !important;
+}
+
+.btn-primary, .btn-secondary, .btn-whatsapp, .nav-cta {
+  display: inline-block;
+  width: auto;
+}
+
+.hero-btns {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.section-tag, .section h2, .section-sub {
+  text-align: left;
+}
+
+@media (max-width: 768px) {
+  .section-tag, .section h2, .section-sub {
+    text-align: center;
+  }
+}
