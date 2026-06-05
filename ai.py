@@ -103,15 +103,17 @@ ESCENARIO: {ambiente}
 
 REGLAS ABSOLUTAS DE CALIDAD:
 1. El culpable debe tener motivo claro, medio físico posible y oportunidad real
-2. Las 3 pistas deben ser coherentes entre sí y apuntar inequívocamente al culpable — pero solo en retrospectiva
-3. Una pista debe ser un detalle cotidiano aparentemente irrelevante que lo cambia todo
-4. El giro final debe ser sorprendente pero inevitable — al leerlo el jugador piensa "¡cómo no lo vi!"
-5. Los tres sospechosos deben ser igualmente creíbles antes de revelar las pistas
-6. Nunca uses veneno como arma — es demasiado predecible
-7. El crimen puede ser un robo, una desaparición, un sabotaje, un chantaje o un asesinato
-8. El tono es elegante, ligeramente irónico, adulto pero accesible
-9. La resolución debe tener un detalle de humor negro sutil
-10. El escenario debe estar vivo — detalles sensoriales, atmósfera, época si procede
+2. Incluye exactamente 4 pistas — no 3
+3. REGLA DE ORO DE LAS PISTAS: cada pista debe poder interpretarse de DOS maneras distintas antes de conocer al culpable. Una pista debe apuntar erróneamente hacia un inocente. Solo en retrospectiva todas apuntan al culpable
+4. Una pista debe ser un detalle cotidiano aparentemente irrelevante que lo cambia todo
+5. El giro final debe ser sorprendente pero inevitable — al leerlo el jugador piensa "¡cómo no lo vi!"
+6. Los tres sospechosos deben ser IGUALMENTE creíbles — el jugador no debe poder descartar a ninguno antes de leer todas las pistas
+7. Nunca uses veneno como arma — es demasiado predecible
+8. El crimen puede ser un robo, una desaparición, un sabotaje, un chantaje o un asesinato
+9. El tono es elegante, ligeramente irónico, adulto pero accesible
+10. La resolución debe tener un detalle de humor negro sutil
+11. El escenario debe estar vivo — detalles sensoriales, atmósfera, época si procede
+12. NUNCA menciones explícitamente que una pista es "la clave" o "lo más importante" — deja que el jugador lo descubra
 
 Devuelve SOLO un objeto JSON válido, sin markdown:
 {{
@@ -119,9 +121,10 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
   "lugar": "Lugar específico y evocador dentro del escenario",
   "introduccion": "4-5 frases que establezcan el escenario, el crimen y la atmósfera. Concreto, sensorial, con un detalle llamativo que enganche. Sin revelar nada clave.",
   "pistas": [
-    "Pista 1: detalle físico concreto del escenario o los personajes",
-    "Pista 2: dato sobre comportamiento o coartada de alguien",
-    "Pista 3: el detalle aparentemente irrelevante que lo revela todo"
+    "Pista 1: detalle físico o sensorial del escenario — puede apuntar a cualquiera",
+    "Pista 2: comportamiento o coartada — parece exculpar al culpable pero no lo hace",
+    "Pista 3: detalle aparentemente irrelevante de un objeto o hábito personal",
+    "Pista 4: dato que parece apuntar a un inocente pero confirma al culpable en retrospectiva"
   ],
   "sospechosos": [
     {{"nombre": "Nombre Apellido evocador", "descripcion": "Ocupación precisa, rasgo de carácter y motivo sospechoso en una frase. Debe sonar real."}},
