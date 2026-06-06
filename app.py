@@ -1,11 +1,14 @@
-from flask import Flask, render_template, request, jsonify
-from datetime import date
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session
+from datetime import date, datetime, timedelta
 import sqlite3
 import os
 import json
-from ai import generate_game, generate_impostor
+import random
+import string
+from ai import generate_game, generate_impostor, build_bar_context
 
 app = Flask(__name__)
+app.secret_key = os.environ.get('SECRET_KEY', 'nookplay-secret-2026')
 
 # --------------------------------------------------------------------------
 # Database
@@ -19,48 +22,316 @@ def get_db():
 def init_db():
     db = get_db()
     db.executescript('''
+        -- Tabla principal de bares
         CREATE TABLE IF NOT EXISTS bars (
-            id          INTEGER PRIMARY KEY AUTOINCREMENT,
-            slug        TEXT UNIQUE NOT NULL,
-            name        TEXT NOT NULL,
-            active      INTEGER DEFAULT 1,
-            created_at  TEXT DEFAULT (date('now'))
+            id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+            slug                TEXT UNIQUE NOT NULL,
+            name                TEXT NOT NULL,
+            type                TEXT DEFAULT '',
+            logo_path           TEXT DEFAULT '',
+
+            -- Ubicación
+            address             TEXT DEFAULT '',
+            city                TEXT DEFAULT '',
+            province            TEXT DEFAULT '',
+            zip_code            TEXT DEFAULT '',
+            country             TEXT DEFAULT 'España',
+            latitude            REAL,
+            longitude           REAL,
+            google_place_id     TEXT DEFAULT '',
+
+            -- Para la IA
+            description         TEXT DEFAULT '',
+            owner_name          TEXT DEFAULT '',
+            staff_names         TEXT DEFAULT '',
+            bar_vibe            TEXT DEFAULT '',
+
+            -- Experiencia del cliente
+            welcome_message     TEXT DEFAULT '',
+            promo_active        INTEGER DEFAULT 0,
+
+            -- Acceso (código semanal)
+            access_code         TEXT DEFAULT '',
+            access_code_updated_at TEXT DEFAULT '',
+            whatsapp_phone      TEXT DEFAULT '',
+
+            -- Colores de marca
+            color_primary       TEXT DEFAULT '#C4622D',
+            color_primary_text  TEXT DEFAULT '#FFFFFF',
+            color_bg            TEXT DEFAULT '#F7F2EB',
+            color_bg_subtle     TEXT DEFAULT '#F0EBE3',
+            color_accent_dark   TEXT DEFAULT '#1A1A1A',
+
+            -- Meta
+            active              INTEGER DEFAULT 1,
+            created_at          TEXT DEFAULT (datetime('now')),
+            updated_at          TEXT DEFAULT (datetime('now'))
         );
 
-        CREATE TABLE IF NOT EXISTS codes (
+        -- Productos promocionados (hasta 3 por bar)
+        CREATE TABLE IF NOT EXISTS bar_products (
             id          INTEGER PRIMARY KEY AUTOINCREMENT,
-            code        TEXT UNIQUE NOT NULL,
-            bar_id      INTEGER NOT NULL,
+            bar_id      INTEGER NOT NULL REFERENCES bars(id) ON DELETE CASCADE,
+            position    INTEGER DEFAULT 1,
+            title       TEXT NOT NULL,
+            description TEXT DEFAULT '',
+            price       TEXT DEFAULT '',
+            image_path  TEXT DEFAULT '',
             active      INTEGER DEFAULT 1,
-            FOREIGN KEY (bar_id) REFERENCES bars(id)
+            created_at  TEXT DEFAULT (datetime('now'))
         );
 
+        -- Historial de códigos semanales
+        CREATE TABLE IF NOT EXISTS access_codes (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            bar_id      INTEGER NOT NULL REFERENCES bars(id) ON DELETE CASCADE,
+            code        TEXT NOT NULL,
+            valid_from  TEXT NOT NULL,
+            valid_until TEXT NOT NULL,
+            sent_at     TEXT DEFAULT '',
+            created_at  TEXT DEFAULT (datetime('now'))
+        );
+
+        -- Log de accesos (solo analytics, no bloquea)
+        CREATE TABLE IF NOT EXISTS access_log (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            bar_id      INTEGER NOT NULL REFERENCES bars(id) ON DELETE CASCADE,
+            code_used   TEXT NOT NULL,
+            accessed_at TEXT DEFAULT (datetime('now'))
+        );
+
+        -- Caché diaria de juegos generados por la IA
+        CREATE TABLE IF NOT EXISTS generated_games (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            bar_id          INTEGER NOT NULL REFERENCES bars(id) ON DELETE CASCADE,
+            game_type       TEXT NOT NULL,
+            game_date       TEXT NOT NULL,
+            content         TEXT NOT NULL,
+            generated_at    TEXT DEFAULT (datetime('now')),
+            UNIQUE(bar_id, game_type, game_date)
+        );
+
+        -- Partidas jugadas
         CREATE TABLE IF NOT EXISTS plays (
             id          INTEGER PRIMARY KEY AUTOINCREMENT,
             code        TEXT NOT NULL,
             bar_slug    TEXT NOT NULL,
             played_on   TEXT NOT NULL,
-            correct     INTEGER DEFAULT 0
+            correct     INTEGER DEFAULT 0,
+            game_type   TEXT DEFAULT 'crimen',
+            choice      INTEGER DEFAULT -1,
+            elapsed     INTEGER DEFAULT 0
+        );
+
+        -- Usuarios admin (superadmin + bar_admin)
+        CREATE TABLE IF NOT EXISTS admin_users (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            email           TEXT UNIQUE NOT NULL,
+            password_hash   TEXT NOT NULL,
+            role            TEXT DEFAULT 'bar_admin',
+            bar_id          INTEGER REFERENCES bars(id),
+            created_at      TEXT DEFAULT (datetime('now'))
         );
     ''')
     db.commit()
+    db.close()
 
-    # Insert demo bar and codes if not exists
+def migrate_db():
+    """Añade columnas nuevas a tablas existentes sin perder datos."""
+    db = get_db()
+    migrations = [
+        # Nuevas columnas en bars
+        "ALTER TABLE bars ADD COLUMN type TEXT DEFAULT ''",
+        "ALTER TABLE bars ADD COLUMN logo_path TEXT DEFAULT ''",
+        "ALTER TABLE bars ADD COLUMN address TEXT DEFAULT ''",
+        "ALTER TABLE bars ADD COLUMN city TEXT DEFAULT ''",
+        "ALTER TABLE bars ADD COLUMN province TEXT DEFAULT ''",
+        "ALTER TABLE bars ADD COLUMN zip_code TEXT DEFAULT ''",
+        "ALTER TABLE bars ADD COLUMN country TEXT DEFAULT 'España'",
+        "ALTER TABLE bars ADD COLUMN latitude REAL",
+        "ALTER TABLE bars ADD COLUMN longitude REAL",
+        "ALTER TABLE bars ADD COLUMN google_place_id TEXT DEFAULT ''",
+        "ALTER TABLE bars ADD COLUMN description TEXT DEFAULT ''",
+        "ALTER TABLE bars ADD COLUMN owner_name TEXT DEFAULT ''",
+        "ALTER TABLE bars ADD COLUMN staff_names TEXT DEFAULT ''",
+        "ALTER TABLE bars ADD COLUMN bar_vibe TEXT DEFAULT ''",
+        "ALTER TABLE bars ADD COLUMN promo_active INTEGER DEFAULT 0",
+        "ALTER TABLE bars ADD COLUMN access_code TEXT DEFAULT ''",
+        "ALTER TABLE bars ADD COLUMN access_code_updated_at TEXT DEFAULT ''",
+        "ALTER TABLE bars ADD COLUMN whatsapp_phone TEXT DEFAULT ''",
+        "ALTER TABLE bars ADD COLUMN color_primary TEXT DEFAULT '#C4622D'",
+        "ALTER TABLE bars ADD COLUMN color_primary_text TEXT DEFAULT '#FFFFFF'",
+        "ALTER TABLE bars ADD COLUMN color_bg TEXT DEFAULT '#F7F2EB'",
+        "ALTER TABLE bars ADD COLUMN color_bg_subtle TEXT DEFAULT '#F0EBE3'",
+        "ALTER TABLE bars ADD COLUMN color_accent_dark TEXT DEFAULT '#1A1A1A'",
+        "ALTER TABLE bars ADD COLUMN welcome_message TEXT DEFAULT ''",
+        "ALTER TABLE bars ADD COLUMN updated_at TEXT DEFAULT (datetime('now'))",
+        # Nuevas columnas en plays
+        "ALTER TABLE plays ADD COLUMN game_type TEXT DEFAULT 'crimen'",
+        "ALTER TABLE plays ADD COLUMN choice INTEGER DEFAULT -1",
+        "ALTER TABLE plays ADD COLUMN elapsed INTEGER DEFAULT 0",
+    ]
+    for sql in migrations:
+        try:
+            db.execute(sql)
+        except:
+            pass  # Columna ya existe, ignorar
+
+    # Crear tablas nuevas si no existen
+    db.executescript('''
+        CREATE TABLE IF NOT EXISTS bar_products (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            bar_id      INTEGER NOT NULL,
+            position    INTEGER DEFAULT 1,
+            title       TEXT NOT NULL,
+            description TEXT DEFAULT '',
+            price       TEXT DEFAULT '',
+            image_path  TEXT DEFAULT '',
+            active      INTEGER DEFAULT 1,
+            created_at  TEXT DEFAULT (datetime('now'))
+        );
+        CREATE TABLE IF NOT EXISTS access_codes (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            bar_id      INTEGER NOT NULL,
+            code        TEXT NOT NULL,
+            valid_from  TEXT NOT NULL,
+            valid_until TEXT NOT NULL,
+            sent_at     TEXT DEFAULT '',
+            created_at  TEXT DEFAULT (datetime('now'))
+        );
+        CREATE TABLE IF NOT EXISTS access_log (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            bar_id      INTEGER NOT NULL,
+            code_used   TEXT NOT NULL,
+            accessed_at TEXT DEFAULT (datetime('now'))
+        );
+        CREATE TABLE IF NOT EXISTS generated_games (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            bar_id          INTEGER NOT NULL,
+            game_type       TEXT NOT NULL,
+            game_date       TEXT NOT NULL,
+            content         TEXT NOT NULL,
+            generated_at    TEXT DEFAULT (datetime('now'))
+        );
+        CREATE TABLE IF NOT EXISTS admin_users (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            email           TEXT UNIQUE NOT NULL,
+            password_hash   TEXT NOT NULL,
+            role            TEXT DEFAULT 'bar_admin',
+            bar_id          INTEGER,
+            created_at      TEXT DEFAULT (datetime('now'))
+        );
+    ''')
+
+    # Actualizar datos de Yellow con info completa
+    db.execute("""
+        UPDATE bars SET
+            name                = 'Yellow Specialty Koffee',
+            type                = 'Cafetería de especialidad',
+            city                = 'Viladecans',
+            province            = 'Barcelona',
+            country             = 'España',
+            description         = 'Cafetería moderna de café de especialidad. Local acogedor con clientela variada: familias, profesionales y amigos del barrio. Especializados en café de origen etíope, frappés artesanos y repostería propia.',
+            owner_name          = 'Lorena',
+            staff_names         = 'Carla',
+            bar_vibe            = 'acogedor, moderno, especialidad, barrio',
+            welcome_message     = 'Bienvenido al Yellow. Elige tu pasatiempo de hoy.',
+            color_primary       = '#FEE25A',
+            color_primary_text  = '#000000',
+            color_bg            = '#FFFBEA',
+            color_bg_subtle     = '#FFF8D6',
+            color_accent_dark   = '#1A1A1A'
+        WHERE slug = 'yellow'
+    """)
+    db.commit()
+
+    # Insertar Yellow si no existe
     existing = db.execute("SELECT id FROM bars WHERE slug = 'yellow'").fetchone()
     if not existing:
-        db.execute("INSERT INTO bars (slug, name) VALUES ('yellow', 'Yellow Specialty Koffee')")
+        db.execute("""
+            INSERT INTO bars (slug, name, type, city, province, description, owner_name, staff_names,
+                bar_vibe, welcome_message, color_primary, color_primary_text, color_bg, color_bg_subtle, color_accent_dark)
+            VALUES ('yellow', 'Yellow Specialty Koffee', 'Cafetería de especialidad', 'Viladecans', 'Barcelona',
+                'Cafetería moderna de café de especialidad. Local acogedor con clientela variada.',
+                'Lorena', 'Carla', 'acogedor, moderno, especialidad',
+                'Bienvenido al Yellow. Elige tu pasatiempo de hoy.',
+                '#FEE25A', '#000000', '#FFFBEA', '#FFF8D6', '#1A1A1A')
+        """)
         db.commit()
-        bar_id = db.execute("SELECT id FROM bars WHERE slug = 'yellow'").fetchone()['id']
-        demo_codes = ['YELLOW01', 'YELLOW02', 'YELLOW03', 'YELLOW04', 'YELLOW05',
-                      'YELLOW06', 'YELLOW07', 'YELLOW08', 'YELLOW09', 'YELLOW10']
-        for c in demo_codes:
-            db.execute("INSERT INTO codes (code, bar_id) VALUES (?, ?)", (c, bar_id))
-        db.commit()
+
+    # Insertar productos de Yellow si no existen
+    bar_row = db.execute("SELECT id FROM bars WHERE slug = 'yellow'").fetchone()
+    if bar_row:
+        bar_id = bar_row['id']
+        existing_products = db.execute("SELECT id FROM bar_products WHERE bar_id = ?", (bar_id,)).fetchone()
+        if not existing_products:
+            products = [
+                (bar_id, 1, 'Café de finca etíope', 'Single origin tostado en casa. Notas de fruta y chocolate.', '2,50 €'),
+                (bar_id, 2, 'Frappé artesano', 'Preparado al momento con café de especialidad y leche fresca.', '4,00 €'),
+                (bar_id, 3, 'Leche con tostada', 'Pan artesano con mantequilla y mermelada casera.', '3,00 €'),
+            ]
+            for p in products:
+                db.execute("INSERT INTO bar_products (bar_id, position, title, description, price) VALUES (?,?,?,?,?)", p)
+            db.commit()
+
+    # Generar código semanal para Yellow si no tiene
+    if bar_row:
+        bar_id = bar_row['id']
+        current_code = db.execute("SELECT access_code FROM bars WHERE id = ?", (bar_id,)).fetchone()
+        if current_code and not current_code['access_code']:
+            new_code = generate_weekly_code()
+            today = date.today()
+            monday = today - timedelta(days=today.weekday())
+            sunday = monday + timedelta(days=6)
+            db.execute("UPDATE bars SET access_code = ?, access_code_updated_at = ? WHERE id = ?",
+                      (new_code, str(monday), bar_id))
+            db.execute("INSERT INTO access_codes (bar_id, code, valid_from, valid_until) VALUES (?,?,?,?)",
+                      (bar_id, new_code, str(monday), str(sunday)))
+            db.commit()
 
     db.close()
 
 # --------------------------------------------------------------------------
-# Routes
+# Helpers — Código semanal
+# --------------------------------------------------------------------------
+
+def generate_weekly_code():
+    """Genera un código de 5 caracteres alfanumérico legible."""
+    chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'  # Sin caracteres confusos (0,O,1,I)
+    return ''.join(random.choices(chars, k=5))
+
+def get_current_code(bar_id):
+    """Devuelve el código válido esta semana para un bar."""
+    db = get_db()
+    today = str(date.today())
+    result = db.execute("""
+        SELECT code FROM access_codes
+        WHERE bar_id = ? AND valid_from <= ? AND valid_until >= ?
+        ORDER BY created_at DESC LIMIT 1
+    """, (bar_id, today, today)).fetchone()
+    db.close()
+    return result['code'] if result else None
+
+def rotate_weekly_codes():
+    """Genera nuevos códigos para todos los bares activos. Llamar cada lunes."""
+    db = get_db()
+    bars = db.execute("SELECT id, slug, whatsapp_phone FROM bars WHERE active = 1").fetchall()
+    today = date.today()
+    monday = today - timedelta(days=today.weekday())
+    sunday = monday + timedelta(days=6)
+
+    for bar in bars:
+        new_code = generate_weekly_code()
+        db.execute("UPDATE bars SET access_code = ?, access_code_updated_at = ? WHERE id = ?",
+                  (new_code, str(monday), bar['id']))
+        db.execute("INSERT INTO access_codes (bar_id, code, valid_from, valid_until) VALUES (?,?,?,?)",
+                  (bar['id'], new_code, str(monday), str(sunday)))
+
+    db.commit()
+    db.close()
+
+# --------------------------------------------------------------------------
+# Routes — Públicas
 # --------------------------------------------------------------------------
 
 @app.route('/')
@@ -71,10 +342,39 @@ def home():
 def bar(bar_slug):
     db = get_db()
     bar = db.execute("SELECT * FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
+    if not bar:
+        db.close()
+        return render_template('404.html'), 404
+    products = db.execute(
+        "SELECT * FROM bar_products WHERE bar_id = ? AND active = 1 ORDER BY position",
+        (bar['id'],)
+    ).fetchall()
+    db.close()
+    return render_template('bar.html', bar=bar, products=products)
+
+@app.route('/<bar_slug>/crimen')
+def crimen_page(bar_slug):
+    db = get_db()
+    bar = db.execute("SELECT * FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
     db.close()
     if not bar:
         return render_template('404.html'), 404
-    return render_template('bar.html', bar=bar)
+    code = request.args.get('code', '')
+    return render_template('games/crimen.html', bar=bar, code=code)
+
+@app.route('/<bar_slug>/impostor')
+def impostor_page(bar_slug):
+    db = get_db()
+    bar = db.execute("SELECT * FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
+    db.close()
+    if not bar:
+        return render_template('404.html'), 404
+    code = request.args.get('code', '')
+    return render_template('games/impostor.html', bar=bar, code=code)
+
+# --------------------------------------------------------------------------
+# API — Validación de acceso
+# --------------------------------------------------------------------------
 
 @app.route('/api/validate', methods=['POST'])
 def validate_code():
@@ -84,21 +384,148 @@ def validate_code():
     today = str(date.today())
 
     db = get_db()
+    bar = db.execute("SELECT * FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
 
-    # Check code exists and belongs to this bar
-    result = db.execute('''
-        SELECT c.code, b.slug, b.name, c.active
-        FROM codes c
-        JOIN bars b ON c.bar_id = b.id
-        WHERE c.code = ? AND b.slug = ? AND c.active = 1 AND b.active = 1
-    ''', (code, bar_slug)).fetchone()
-
-    if not result:
+    if not bar:
         db.close()
-        return jsonify({'valid': False, 'message': 'Código no válido.'})
+        return jsonify({'valid': False, 'message': 'Local no encontrado.'})
 
+    # Buscar código válido esta semana
+    valid = db.execute("""
+        SELECT code FROM access_codes
+        WHERE bar_id = ? AND code = ? AND valid_from <= ? AND valid_until >= ?
+    """, (bar['id'], code, today, today)).fetchone()
+
+    if not valid:
+        db.close()
+        return jsonify({'valid': False, 'message': 'Código no válido o caducado.'})
+
+    # Registrar acceso (solo analytics)
+    db.execute("INSERT INTO access_log (bar_id, code_used) VALUES (?, ?)", (bar['id'], code))
+    db.commit()
     db.close()
-    return jsonify({'valid': True, 'bar_name': result['name']})
+
+    return jsonify({'valid': True, 'bar_name': bar['name']})
+
+# --------------------------------------------------------------------------
+# API — Juegos
+# --------------------------------------------------------------------------
+
+_game_cache = {}
+
+@app.route('/api/game', methods=['POST'])
+def game():
+    data = request.get_json()
+    code = data.get('code', '').strip().upper()
+    bar_slug = data.get('bar_slug', '').strip()
+    today = str(date.today())
+
+    db = get_db()
+    bar = db.execute("SELECT * FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
+    if not bar:
+        db.close()
+        return jsonify({'error': 'Bar no encontrado'}), 404
+
+    # Verificar código válido
+    valid = db.execute("""
+        SELECT code FROM access_codes
+        WHERE bar_id = ? AND code = ? AND valid_from <= ? AND valid_until >= ?
+    """, (bar['id'], code, today, today)).fetchone()
+    if not valid:
+        db.close()
+        return jsonify({'error': 'Código no válido'}), 403
+
+    # Buscar en caché BD
+    cached = db.execute("""
+        SELECT content FROM generated_games
+        WHERE bar_id = ? AND game_type = 'crimen' AND game_date = ?
+    """, (bar['id'], today)).fetchone()
+
+    if cached:
+        db.close()
+        return jsonify(json.loads(cached['content']))
+
+    # Generar nuevo juego con contexto dinámico desde BD
+    bar_context = build_bar_context(dict(bar))
+    products = db.execute(
+        "SELECT title FROM bar_products WHERE bar_id = ? AND active = 1 ORDER BY position",
+        (bar['id'],)
+    ).fetchall()
+    bar_context['productos'] = [p['title'] for p in products]
+    db.close()
+
+    try:
+        game_data = generate_game(bar_context, bar_slug)
+        # Guardar en caché BD
+        db2 = get_db()
+        bar2 = db2.execute("SELECT id FROM bars WHERE slug = ?", (bar_slug,)).fetchone()
+        try:
+            db2.execute(
+                "INSERT INTO generated_games (bar_id, game_type, game_date, content) VALUES (?,?,?,?)",
+                (bar2['id'], 'crimen', today, json.dumps(game_data))
+            )
+            db2.commit()
+        except:
+            pass
+        db2.close()
+        return jsonify(game_data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/impostor', methods=['POST'])
+def impostor():
+    data = request.get_json()
+    code = data.get('code', '').strip().upper()
+    bar_slug = data.get('bar_slug', '').strip()
+    today = str(date.today())
+
+    db = get_db()
+    bar = db.execute("SELECT * FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
+    if not bar:
+        db.close()
+        return jsonify({'error': 'Bar no encontrado'}), 404
+
+    valid = db.execute("""
+        SELECT code FROM access_codes
+        WHERE bar_id = ? AND code = ? AND valid_from <= ? AND valid_until >= ?
+    """, (bar['id'], code, today, today)).fetchone()
+    if not valid:
+        db.close()
+        return jsonify({'error': 'Código no válido'}), 403
+
+    cached = db.execute("""
+        SELECT content FROM generated_games
+        WHERE bar_id = ? AND game_type = 'impostor' AND game_date = ?
+    """, (bar['id'], today)).fetchone()
+
+    if cached:
+        db.close()
+        return jsonify(json.loads(cached['content']))
+
+    bar_context = build_bar_context(dict(bar))
+    db.close()
+
+    try:
+        game_data = generate_impostor(bar_context['nombre'], bar_slug)
+        db2 = get_db()
+        bar2 = db2.execute("SELECT id FROM bars WHERE slug = ?", (bar_slug,)).fetchone()
+        try:
+            db2.execute(
+                "INSERT INTO generated_games (bar_id, game_type, game_date, content) VALUES (?,?,?,?)",
+                (bar2['id'], 'impostor', today, json.dumps(game_data))
+            )
+            db2.commit()
+        except:
+            pass
+        db2.close()
+        return jsonify(game_data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# --------------------------------------------------------------------------
+# API — Stats
+# --------------------------------------------------------------------------
 
 @app.route('/api/play', methods=['POST'])
 def register_play():
@@ -106,28 +533,48 @@ def register_play():
     code = data.get('code', '').strip().upper()
     bar_slug = data.get('bar_slug', '').strip()
     correct = data.get('correct', False)
-    today = str(date.today())
-
-    db = get_db()
-
-    # Double-check not already played
-    played = db.execute(
-        "SELECT id FROM plays WHERE code = ? AND played_on = ?",
-        (code, today)
-    ).fetchone()
-
     game_type = data.get('game_type', 'crimen')
     choice = data.get('choice', -1)
     elapsed = data.get('elapsed', 0)
+    today = str(date.today())
+
+    db = get_db()
+    played = db.execute(
+        "SELECT id FROM plays WHERE code = ? AND played_on = ? AND game_type = ?",
+        (code, today, game_type)
+    ).fetchone()
+
     if not played:
         db.execute(
-            "INSERT INTO plays (code, bar_slug, played_on, correct, game_type, choice, elapsed) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO plays (code, bar_slug, played_on, correct, game_type, choice, elapsed) VALUES (?,?,?,?,?,?,?)",
             (code, bar_slug, today, 1 if correct else 0, game_type, choice, elapsed)
         )
         db.commit()
-
     db.close()
     return jsonify({'ok': True})
+
+@app.route('/api/stats/<bar_slug>/<game_type>')
+def game_stats(bar_slug, game_type):
+    today = str(date.today())
+    db = get_db()
+    try:
+        total = db.execute(
+            "SELECT COUNT(*) as n FROM plays WHERE bar_slug = ? AND played_on = ? AND game_type = ?",
+            (bar_slug, today, game_type)
+        ).fetchone()['n']
+        correct = db.execute(
+            "SELECT COUNT(*) as n FROM plays WHERE bar_slug = ? AND played_on = ? AND game_type = ? AND correct = 1",
+            (bar_slug, today, game_type)
+        ).fetchone()['n']
+        avg_row = db.execute(
+            "SELECT AVG(elapsed) as avg_e FROM plays WHERE bar_slug = ? AND played_on = ? AND game_type = ? AND elapsed > 0",
+            (bar_slug, today, game_type)
+        ).fetchone()
+        avg_elapsed = round(avg_row['avg_e']) if avg_row and avg_row['avg_e'] else None
+    except:
+        total = 0; correct = 0; avg_elapsed = None
+    db.close()
+    return jsonify({'total': total, 'correct': correct, 'avg_elapsed': avg_elapsed})
 
 @app.route('/api/stats/<bar_slug>')
 def stats(bar_slug):
@@ -146,151 +593,120 @@ def stats(bar_slug):
         (bar_slug,)
     ).fetchone()['n']
     db.close()
-    return jsonify({
-        'today': total_today,
-        'correct_today': correct_today,
-        'total': total_all
-    })
+    return jsonify({'today': total_today, 'correct_today': correct_today, 'total': total_all})
 
-# Simple daily cache: one game per bar per day (avoids calling AI every request)
-_game_cache = {}
+# --------------------------------------------------------------------------
+# Admin — Panel del bar (acceso privado)
+# --------------------------------------------------------------------------
 
-@app.route('/api/game', methods=['POST'])
-def game():
-    data = request.get_json()
-    code = data.get('code', '').strip().upper()
-    bar_slug = data.get('bar_slug', '').strip()
-    today = str(date.today())
-
-    # Verify code is valid and not yet played
-    db = get_db()
-    result = db.execute('''
-        SELECT b.name FROM codes c
-        JOIN bars b ON c.bar_id = b.id
-        WHERE c.code = ? AND b.slug = ? AND c.active = 1 AND b.active = 1
-    ''', (code, bar_slug)).fetchone()
-    db.close()
-
-    if not result:
-        return jsonify({'error': 'Invalid code'}), 403
-
-    # Return cached game for today if exists
-    cache_key = f"{bar_slug}_{today}"
-    if cache_key in _game_cache:
-        return jsonify(_game_cache[cache_key])
-
-    # Generate new game
-    try:
-        game_data = generate_game(result['name'], bar_slug)
-        _game_cache[cache_key] = game_data
-        return jsonify(game_data)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-
-@app.route('/<bar_slug>/impostor')
-def impostor_page(bar_slug):
+@app.route('/admin/<bar_slug>', methods=['GET'])
+def admin_bar(bar_slug):
+    # Por ahora acceso directo — en siguiente fase añadiremos login
     db = get_db()
     bar = db.execute("SELECT * FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
-    db.close()
     if not bar:
+        db.close()
         return render_template('404.html'), 404
-    return render_template('impostor.html', bar=bar)
-
-@app.route('/api/impostor-stats/<bar_slug>')
-def impostor_stats(bar_slug):
+    products = db.execute(
+        "SELECT * FROM bar_products WHERE bar_id = ? ORDER BY position",
+        (bar['id'],)
+    ).fetchall()
+    # Código actual
     today = str(date.today())
-    db = get_db()
-    try:
-        total = db.execute(
-            "SELECT COUNT(*) as n FROM plays WHERE bar_slug = ? AND played_on = ? AND game_type = 'impostor'",
-            (bar_slug, today)
-        ).fetchone()['n']
-        correct = db.execute(
-            "SELECT COUNT(*) as n FROM plays WHERE bar_slug = ? AND played_on = ? AND game_type = 'impostor' AND correct = 1",
-            (bar_slug, today)
-        ).fetchone()['n']
-        try:
-            avg_row = db.execute(
-                "SELECT AVG(elapsed) as avg_e FROM plays WHERE bar_slug = ? AND played_on = ? AND game_type = 'impostor' AND elapsed > 0",
-                (bar_slug, today)
-            ).fetchone()
-            avg_elapsed = round(avg_row['avg_e']) if avg_row and avg_row['avg_e'] else None
-        except:
-            avg_elapsed = None
-    except:
-        total = 0
-        correct = 0
-        avg_elapsed = None
+    current_code = db.execute("""
+        SELECT code, valid_from, valid_until FROM access_codes
+        WHERE bar_id = ? AND valid_from <= ? AND valid_until >= ?
+        ORDER BY created_at DESC LIMIT 1
+    """, (bar['id'], today, today)).fetchone()
     db.close()
-    return jsonify({'total': total, 'correct': correct, 'avg_elapsed': avg_elapsed})
+    return render_template('admin/bar_edit.html', bar=bar, products=products, current_code=current_code)
 
-@app.route('/api/impostor', methods=['POST'])
-def impostor():
-    data = request.get_json()
-    code = data.get('code', '').strip().upper()
-    bar_slug = data.get('bar_slug', '').strip()
-    today = str(date.today())
-
-    db = get_db()
-    result = db.execute('''
-        SELECT b.name FROM codes c
-        JOIN bars b ON c.bar_id = b.id
-        WHERE c.code = ? AND b.slug = ? AND c.active = 1 AND b.active = 1
-    ''', (code, bar_slug)).fetchone()
-    db.close()
-
-    if not result:
-        return jsonify({'error': 'Invalid code'}), 403
-
-    cache_key = f"{bar_slug}_impostor_{today}"
-    if cache_key in _game_cache:
-        return jsonify(_game_cache[cache_key])
-
-    try:
-        game_data = generate_impostor(result['name'], bar_slug)
-        _game_cache[cache_key] = game_data
-        return jsonify(game_data)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-@app.route('/<bar_slug>/crimen')
-def crimen_page(bar_slug):
+@app.route('/admin/<bar_slug>/save', methods=['POST'])
+def admin_bar_save(bar_slug):
     db = get_db()
     bar = db.execute("SELECT * FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
-    db.close()
     if not bar:
-        return render_template('404.html'), 404
-    return render_template('games/crimen.html', bar=bar)
+        db.close()
+        return jsonify({'ok': False, 'error': 'Bar no encontrado'}), 404
 
-@app.route('/api/stats/<bar_slug>/<game_type>')
-def game_stats(bar_slug, game_type):
-    today = str(date.today())
-    db = get_db()
-    try:
-        total = db.execute(
-            "SELECT COUNT(*) as n FROM plays WHERE bar_slug = ? AND played_on = ? AND game_type = ?",
-            (bar_slug, today, game_type)
-        ).fetchone()['n']
-        correct = db.execute(
-            "SELECT COUNT(*) as n FROM plays WHERE bar_slug = ? AND played_on = ? AND game_type = ? AND correct = 1",
-            (bar_slug, today, game_type)
-        ).fetchone()['n']
-        try:
-            avg_row = db.execute(
-                "SELECT AVG(elapsed) as avg_e FROM plays WHERE bar_slug = ? AND played_on = ? AND game_type = ? AND elapsed > 0",
-                (bar_slug, today, game_type)
-            ).fetchone()
-            avg_elapsed = round(avg_row['avg_e']) if avg_row and avg_row['avg_e'] else None
-        except:
-            avg_elapsed = None
-    except:
-        total = 0; correct = 0; avg_elapsed = None
+    data = request.get_json()
+
+    db.execute("""
+        UPDATE bars SET
+            name            = ?,
+            type            = ?,
+            address         = ?,
+            city            = ?,
+            province        = ?,
+            zip_code        = ?,
+            description     = ?,
+            owner_name      = ?,
+            staff_names     = ?,
+            bar_vibe        = ?,
+            welcome_message = ?,
+            promo_active    = ?,
+            whatsapp_phone  = ?,
+            updated_at      = datetime('now')
+        WHERE slug = ?
+    """, (
+        data.get('name', bar['name']),
+        data.get('type', ''),
+        data.get('address', ''),
+        data.get('city', ''),
+        data.get('province', ''),
+        data.get('zip_code', ''),
+        data.get('description', ''),
+        data.get('owner_name', ''),
+        data.get('staff_names', ''),
+        data.get('bar_vibe', ''),
+        data.get('welcome_message', ''),
+        1 if data.get('promo_active') else 0,
+        data.get('whatsapp_phone', ''),
+        bar_slug
+    ))
+
+    # Guardar productos (hasta 3)
+    products = data.get('products', [])
+    db.execute("DELETE FROM bar_products WHERE bar_id = ?", (bar['id'],))
+    for i, p in enumerate(products[:3]):
+        if p.get('title', '').strip():
+            db.execute("""
+                INSERT INTO bar_products (bar_id, position, title, description, price, active)
+                VALUES (?, ?, ?, ?, ?, 1)
+            """, (bar['id'], i + 1, p['title'], p.get('description', ''), p.get('price', '')))
+
+    db.commit()
     db.close()
-    return jsonify({'total': total, 'correct': correct, 'avg_elapsed': avg_elapsed})
+    return jsonify({'ok': True})
 
+# --------------------------------------------------------------------------
+# Admin — Rotación manual de código (para pruebas)
+# --------------------------------------------------------------------------
+
+@app.route('/admin/<bar_slug>/rotate-code', methods=['POST'])
+def admin_rotate_code(bar_slug):
+    db = get_db()
+    bar = db.execute("SELECT id FROM bars WHERE slug = ?", (bar_slug,)).fetchone()
+    if not bar:
+        db.close()
+        return jsonify({'ok': False}), 404
+
+    new_code = generate_weekly_code()
+    today = date.today()
+    monday = today - timedelta(days=today.weekday())
+    sunday = monday + timedelta(days=6)
+
+    db.execute("UPDATE bars SET access_code = ?, access_code_updated_at = ? WHERE id = ?",
+              (new_code, str(monday), bar['id']))
+    db.execute("INSERT INTO access_codes (bar_id, code, valid_from, valid_until) VALUES (?,?,?,?)",
+              (bar['id'], new_code, str(monday), str(sunday)))
+    db.commit()
+    db.close()
+    return jsonify({'ok': True, 'code': new_code})
+
+# --------------------------------------------------------------------------
+# Misc
+# --------------------------------------------------------------------------
 
 @app.route('/static/og.png')
 def og_image():
@@ -301,56 +717,9 @@ def og_image():
 # Run
 # --------------------------------------------------------------------------
 
-if __name__ == '__main__':
-    init_db()
-    migrate_db()
-    app.run(debug=True, host='0.0.0.0', port=5000)
-
-
-# Migration: add brand columns to bars table if not exist
-def migrate_db():
-    db = get_db()
-    # Bar columns
-    try:
-        db.execute("ALTER TABLE bars ADD COLUMN color_primary TEXT DEFAULT '#C4622D'")
-    except: pass
-    try:
-        db.execute("ALTER TABLE bars ADD COLUMN color_primary_text TEXT DEFAULT '#FFFFFF'")
-    except: pass
-    try:
-        db.execute("ALTER TABLE bars ADD COLUMN color_bg TEXT DEFAULT '#F7F2EB'")
-    except: pass
-    try:
-        db.execute("ALTER TABLE bars ADD COLUMN color_bg_subtle TEXT DEFAULT '#F0EBE3'")
-    except: pass
-    try:
-        db.execute("ALTER TABLE bars ADD COLUMN color_accent_dark TEXT DEFAULT '#1A1A1A'")
-    except: pass
-    try:
-        db.execute("ALTER TABLE bars ADD COLUMN welcome_message TEXT DEFAULT ''")
-    except: pass
-    try:
-        db.execute("ALTER TABLE plays ADD COLUMN game_type TEXT DEFAULT 'crimen'")
-    except: pass
-    try:
-        db.execute("ALTER TABLE plays ADD COLUMN choice INTEGER DEFAULT -1")
-    except: pass
-    try:
-        db.execute("ALTER TABLE plays ADD COLUMN elapsed INTEGER DEFAULT 0")
-    except: pass
-    # Update Yellow colors
-    db.execute("""UPDATE bars SET
-        color_primary='#FEE25A',
-        color_primary_text='#000000',
-        color_bg='#FFFBEA',
-        color_bg_subtle='#FFF8D6',
-        color_accent_dark='#1A1A1A',
-        welcome_message='Bienvenido al Yellow. Elige tu pasatiempo de hoy.'
-        WHERE slug='yellow'""")
-    db.commit()
-    db.close()
-
-
 with app.app_context():
     init_db()
     migrate_db()
+
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0', port=5000)

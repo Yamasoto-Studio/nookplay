@@ -29,18 +29,43 @@
       <!-- PANTALLA: CÓDIGO -->
       <div class="screen active" id="s-code">
         <h1 class="nook-title">Disfruta del Pasatiempo<br>del Día</h1>
-        <p class="nook-sub">Introduce el código de tu tarjeta para acceder al juego de hoy.</p>
+        <p class="nook-sub">Introduce el código de tu ticket para acceder al juego de hoy.</p>
         <div class="code-input-wrap">
-          <input type="text" id="code-input" class="code-input" placeholder="YELLOW01" maxlength="10" autocomplete="off" autocapitalize="characters">
+          <input type="text" id="code-input" class="code-input" placeholder="Ej: AB3K7" maxlength="6"
+            autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false">
           <div class="code-error" id="code-error"></div>
         </div>
         <button class="btn-primary" onclick="validateCode()">Entrar</button>
-        <p class="code-hint">El código está impreso en tu tarjeta.</p>
+        <p class="code-hint">
+          🧾 El código está impreso en tu ticket de compra.<br>
+          <small>Cambia cada semana. Solo válido si has consumido hoy.</small>
+        </p>
       </div>
 
       <!-- PANTALLA: MENÚ DE ACTIVIDADES -->
       <div class="screen" id="s-menu">
         <p class="menu-welcome" id="menu-welcome"></p>
+
+        {% if bar.promo_active and products %}
+        <div class="promo-banner" id="promo-banner">
+          <div class="promo-label">🎁 Hoy en {{ bar.name }}</div>
+          <div class="promo-products">
+            {% for product in products %}
+            <div class="promo-item">
+              {% if product.image_path %}
+              <img src="{{ product.image_path }}" alt="{{ product.title }}" class="promo-img" onerror="this.style.display='none'">
+              {% endif %}
+              <div class="promo-info">
+                <div class="promo-title">{{ product.title }}</div>
+                {% if product.description %}<div class="promo-desc">{{ product.description }}</div>{% endif %}
+                {% if product.price %}<div class="promo-price">{{ product.price }}</div>{% endif %}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
         <div class="section-label" style="margin-bottom: 12px;">Elige tu pasatiempo</div>
         <div id="activities-list"></div>
       </div>
@@ -58,6 +83,67 @@
 
 </div>
 
+<style>
+/* Promo banner */
+.promo-banner {
+  background: var(--bar-bg-subtle);
+  border: 1.5px solid var(--bar-primary);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+}
+.promo-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--bar-accent-dark);
+  opacity: 0.5;
+  margin-bottom: 10px;
+}
+.promo-products {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.promo-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.promo-img {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.promo-info {
+  flex: 1;
+}
+.promo-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--bar-accent-dark);
+}
+.promo-desc {
+  font-size: 12px;
+  color: var(--bar-accent-dark);
+  opacity: 0.6;
+  margin-top: 2px;
+}
+.promo-price {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--bar-primary-text);
+  background: var(--bar-primary);
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 20px;
+  margin-top: 4px;
+}
+</style>
+
 <script>
 const BAR_SLUG = "{{ bar.slug }}";
 const BAR_NAME = "{{ bar.name }}";
@@ -65,12 +151,11 @@ const BAR_WELCOME = "{{ bar.welcome_message }}";
 let validatedCode = null;
 let currentGame = null;
 
-// Check if code is already in URL (returning from a game)
+// Si el código ya está en la URL (volviendo de un juego)
 const urlParams = new URLSearchParams(window.location.search);
 const urlCode = urlParams.get('code');
 if (urlCode) {
   validatedCode = urlCode;
-  // Show menu directly without asking for code again
   window.addEventListener('DOMContentLoaded', () => showMenu());
 }
 
@@ -109,31 +194,42 @@ async function validateCode() {
   const code = document.getElementById('code-input').value.trim().toUpperCase();
   const errorEl = document.getElementById('code-error');
   errorEl.textContent = '';
-  if (!code) { errorEl.textContent = 'Introduce tu código.'; return; }
+  if (!code) { errorEl.textContent = 'Introduce el código de tu ticket.'; return; }
 
   const btn = document.querySelector('#s-code .btn-primary');
   btn.textContent = 'Comprobando...';
   btn.disabled = true;
 
-  const res = await fetch('/api/validate', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ code, bar_slug: BAR_SLUG })
-  });
-  const data = await res.json();
+  try {
+    const res = await fetch('/api/validate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, bar_slug: BAR_SLUG })
+    });
+    const data = await res.json();
 
-  if (data.valid) {
-    validatedCode = code;
-    showMenu();
-  } else {
-    errorEl.textContent = data.message;
+    if (data.valid) {
+      validatedCode = code;
+      showMenu();
+    } else {
+      errorEl.textContent = data.message || 'Código no válido.';
+      btn.textContent = 'Entrar';
+      btn.disabled = false;
+    }
+  } catch(e) {
+    errorEl.textContent = 'Error de conexión. Inténtalo de nuevo.';
     btn.textContent = 'Entrar';
     btn.disabled = false;
   }
 }
 
-document.getElementById('code-input').addEventListener('keydown', e => {
-  if (e.key === 'Enter') validateCode();
+document.addEventListener('DOMContentLoaded', () => {
+  const input = document.getElementById('code-input');
+  if (input) {
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') validateCode();
+    });
+  }
 });
 
 function showMenu() {
@@ -161,139 +257,6 @@ function showMenu() {
 function startActivity(id) {
   if (id === 'crimen') window.location = `/${BAR_SLUG}/crimen?code=${validatedCode}`;
   if (id === 'impostor') window.location = `/${BAR_SLUG}/impostor?code=${validatedCode}`;
-}
-
-async function loadGame() {
-  showScreen('s-game');
-  document.getElementById('s-game').innerHTML = `
-    <div class="loading">
-      <div class="loading-spinner"></div>
-      <p>Preparando el caso de hoy...</p>
-    </div>`;
-
-  try {
-    const res = await fetch('/api/game', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code: validatedCode, bar_slug: BAR_SLUG })
-    });
-    currentGame = await res.json();
-    renderGame(currentGame);
-  } catch(e) {
-    document.getElementById('s-game').innerHTML = `
-      <div class="error-msg">
-        <p>No se pudo cargar el juego.</p>
-        <button class="btn-secondary" onclick="showMenu()">Volver</button>
-      </div>`;
-  }
-}
-
-function renderGame(g) {
-  const el = document.getElementById('s-game');
-  el.innerHTML = `
-    <button class="btn-back" onclick="showMenu()">← Volver al menú</button>
-    <span class="tag">Caso del día</span>
-    <h2 class="headline" id="g-titular"></h2>
-    <p class="location">📍 <span id="g-lugar"></span></p>
-    <hr class="divider">
-    <p class="body-text" id="g-intro"></p>
-    <hr class="divider">
-    <div class="section-label">Pistas — toca para revelar</div>
-    ${g.pistas.map((p,i) => `
-      <button class="clue-btn" id="c${i}" onclick="revealClue(${i}, this)">
-        <span class="clue-icon">🔒</span>
-        <span class="clue-text">Pista ${i+1} — toca para revelar</span>
-      </button>
-    `).join('')}
-    <hr class="divider">
-    <div class="section-label">Sospechosos</div>
-    ${g.sospechosos.map((s,i) => `
-      <button class="suspect-btn" id="sp${i}" onclick="pickSuspect(${i})">
-        <div class="suspect-avatar" id="av${i}"></div>
-        <div>
-          <div class="suspect-name" id="sn${i}"></div>
-          <div class="suspect-role" id="sr${i}"></div>
-        </div>
-      </button>
-    `).join('')}
-    <button class="btn-danger" id="accuse-btn" disabled onclick="accuse()">
-      🔨 Acusar al culpable
-    </button>
-  `;
-
-  document.getElementById('g-titular').textContent = g.titular;
-  document.getElementById('g-lugar').textContent = g.lugar;
-  document.getElementById('g-intro').textContent = g.introduccion;
-  g.sospechosos.forEach((s, i) => {
-    const initials = s.nombre.split(' ').map(w => w.charAt(0)).slice(0,2).join('');
-    document.getElementById('av' + i).textContent = initials;
-    document.getElementById('sn' + i).textContent = s.nombre;
-    document.getElementById('sr' + i).textContent = s.descripcion;
-  });
-  window._selected = -1;
-}
-
-function revealClue(i, el) {
-  if (el.classList.contains('revealed')) return;
-  el.classList.add('revealed');
-  el.querySelector('.clue-icon').textContent = '👁️';
-  el.querySelector('.clue-text').textContent = currentGame.pistas[i];
-}
-
-function pickSuspect(idx) {
-  document.querySelectorAll('.suspect-btn').forEach(b => b.classList.remove('selected'));
-  document.getElementById('sp' + idx).classList.add('selected');
-  window._selected = idx;
-  document.getElementById('accuse-btn').disabled = false;
-}
-
-async function accuse() {
-  if (window._selected === -1 || !currentGame) return;
-  const correct = window._selected === currentGame.culpable;
-  const culpableName = currentGame.sospechosos[currentGame.culpable].nombre;
-  const accusedName = currentGame.sospechosos[window._selected].nombre;
-
-  await fetch('/api/play', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ code: validatedCode, bar_slug: BAR_SLUG, correct })
-  });
-
-  const el = document.getElementById('s-game');
-  el.innerHTML = `
-    <div class="result-big ${correct ? 'correct' : 'wrong'}" id="r-headline"></div>
-    <p class="result-sub" id="r-sub"></p>
-    <div class="reveal-card">
-      <div class="reveal-label">El culpable</div>
-      <div class="reveal-name" id="r-culpable"></div>
-    </div>
-    <p class="body-text" id="r-explicacion"></p>
-    <button class="btn-share" onclick="shareResult()">📤 Compartir resultado</button>
-    <button class="btn-menu" onclick="goToMenu()">← Volver al menú</button>
-    <div class="tomorrow">Mañana hay un caso nuevo aquí.<br>Vuelve a tomar un café.</div>
-  `;
-
-  document.getElementById('r-headline').textContent = correct ? 'Caso resuelto.' : 'Fallaste.';
-  document.getElementById('r-sub').textContent = correct ? 'Acertaste. Buen detective.' : 'Te equivocaste. Acusaste a ' + accusedName + '.';
-  document.getElementById('r-culpable').textContent = culpableName;
-  document.getElementById('r-explicacion').textContent = currentGame.explicacion;
-}
-
-function shareResult() {
-  const correct = window._selected === currentGame.culpable;
-  const accusedName = currentGame.sospechosos[window._selected].nombre;
-  const culpableName = currentGame.sospechosos[currentGame.culpable].nombre;
-  const emoji = correct ? '✅' : '❌';
-  const txt = `🔍 El Crimen del Día — ${BAR_NAME}\n\n${emoji} Acusé a ${accusedName}\nEl culpable era: ${culpableName}\n\n¿Puedes tú resolverlo?\nnookplay.app`;
-  if (navigator.share) { navigator.share({ text: txt }); }
-  else { navigator.clipboard.writeText(txt).then(() => alert('¡Copiado!')); }
-}
-
-function goToMenu() {
-  // Update URL with code so menu shows directly on return
-  const newUrl = `/${BAR_SLUG}?code=${validatedCode}`;
-  window.history.replaceState({}, '', newUrl);
-  showMenu();
 }
 
 function showScreen(id) {
