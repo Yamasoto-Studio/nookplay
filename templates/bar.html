@@ -246,8 +246,9 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function showMenu() {
-  const welcome = BAR_WELCOME || `Bienvenido al ${BAR_NAME}. Elige tu pasatiempo de hoy.`;
-  document.getElementById('menu-welcome').textContent = welcome;
+  const welcomeEl = document.getElementById('menu-welcome');
+  const customMsg = BAR_WELCOME || `Bienvenido al ${BAR_NAME}.`;
+  welcomeEl.innerHTML = `${customMsg}<br><span class="menu-welcome-sub">Elige tu pasatiempo de hoy.</span>`;
 
   const list = document.getElementById('activities-list');
   list.innerHTML = ACTIVITIES.map(a => `
