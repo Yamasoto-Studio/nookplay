@@ -74,6 +74,13 @@ const ACTIVITIES = [
     active: true
   },
   {
+    id: 'impostor',
+    name: 'El Impostor',
+    desc: 'Cuatro datos. Uno es mentira. ¿Cuál?',
+    icon: '🕵️',
+    active: true
+  },
+  {
     id: 'horoscopo',
     name: 'Tu Horóscopo',
     desc: 'Las estrellas tienen algo que decirte hoy',
@@ -144,6 +151,7 @@ function showMenu() {
 
 function startActivity(id) {
   if (id === 'crimen') loadGame();
+  if (id === 'impostor') window.location = `/${BAR_SLUG}/impostor?code=${validatedCode}`;
 }
 
 async function loadGame() {

@@ -3,7 +3,7 @@ from datetime import date
 import sqlite3
 import os
 import json
-from ai import generate_game
+from ai import generate_game, generate_impostor
 
 app = Flask(__name__)
 
@@ -194,6 +194,61 @@ def game():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
+
+@app.route('/<bar_slug>/impostor')
+def impostor_page(bar_slug):
+    db = get_db()
+    bar = db.execute("SELECT * FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
+    db.close()
+    if not bar:
+        return render_template('404.html'), 404
+    return render_template('impostor.html', bar=bar)
+
+@app.route('/api/impostor-stats/<bar_slug>')
+def impostor_stats(bar_slug):
+    today = str(date.today())
+    db = get_db()
+    total = db.execute(
+        "SELECT COUNT(*) as n FROM plays WHERE bar_slug = ? AND played_on = ? AND game_type = 'impostor'",
+        (bar_slug, today)
+    ).fetchone()['n']
+    correct = db.execute(
+        "SELECT COUNT(*) as n FROM plays WHERE bar_slug = ? AND played_on = ? AND game_type = 'impostor' AND correct = 1",
+        (bar_slug, today)
+    ).fetchone()['n']
+    db.close()
+    return jsonify({'total': total, 'correct': correct})
+
+@app.route('/api/impostor', methods=['POST'])
+def impostor():
+    data = request.get_json()
+    code = data.get('code', '').strip().upper()
+    bar_slug = data.get('bar_slug', '').strip()
+    today = str(date.today())
+
+    db = get_db()
+    result = db.execute('''
+        SELECT b.name FROM codes c
+        JOIN bars b ON c.bar_id = b.id
+        WHERE c.code = ? AND b.slug = ? AND c.active = 1 AND b.active = 1
+    ''', (code, bar_slug)).fetchone()
+    db.close()
+
+    if not result:
+        return jsonify({'error': 'Invalid code'}), 403
+
+    cache_key = f"{bar_slug}_impostor_{today}"
+    if cache_key in _game_cache:
+        return jsonify(_game_cache[cache_key])
+
+    try:
+        game_data = generate_impostor(result['name'], bar_slug)
+        _game_cache[cache_key] = game_data
+        return jsonify(game_data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 # --------------------------------------------------------------------------
 # Run
 # --------------------------------------------------------------------------
@@ -224,6 +279,12 @@ def migrate_db():
     except: pass
     try:
         db.execute("ALTER TABLE bars ADD COLUMN welcome_message TEXT DEFAULT ''")
+    except: pass
+    try:
+        db.execute("ALTER TABLE plays ADD COLUMN game_type TEXT DEFAULT 'crimen'")
+    except: pass
+    try:
+        db.execute("ALTER TABLE plays ADD COLUMN choice INTEGER DEFAULT -1")
     except: pass
     # Update Yellow colors
     db.execute("""UPDATE bars SET

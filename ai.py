@@ -160,3 +160,85 @@ El índice culpable varía cada día: hoy usa {get_day_seed(bar_slug) % 3}."""
     text = data['content'][0]['text'].strip()
     text = text.replace('```json', '').replace('```', '').strip()
     return json.loads(text)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# El Impostor generator
+# ─────────────────────────────────────────────────────────────────────────────
+
+CATEGORIAS_IMPOSTOR = [
+    "ciencia y física cuántica",
+    "historia medieval europea",
+    "gastronomía y origen de platos",
+    "geografía y países del mundo",
+    "arte y pintores clásicos",
+    "deportes y récords mundiales",
+    "tecnología e inventos",
+    "mitología griega y romana",
+    "cine y directores",
+    "naturaleza y animales",
+    "música y compositores",
+    "arquitectura y monumentos",
+]
+
+def generate_impostor(bar_name, bar_slug):
+    today = str(date.today())
+    api_key = os.environ.get('ANTHROPIC_API_KEY')
+    seed = get_day_seed(bar_slug)
+    categoria = CATEGORIAS_IMPOSTOR[(seed + 5) % len(CATEGORIAS_IMPOSTOR)]
+
+    prompt = f"""Eres un divulgador cultural experto, riguroso y con humor seco. Creas contenido educativo que sorprende.
+
+FECHA: {today}
+CATEGORÍA: {categoria}
+
+Tu misión: crear un reto "El Impostor" donde el jugador debe encontrar el dato falso entre 4 afirmaciones.
+
+REGLAS DE CALIDAD:
+1. Las 3 afirmaciones verdaderas deben ser datos reales, verificables y sorprendentes — no obviedades
+2. El dato falso debe ser MUY creíble — casi verdadero, plausible, del mismo nivel que los verdaderos
+3. El dato falso no debe ser absurdo ni ridículo — debe engañar incluso a alguien informado
+4. Al revelar la respuesta, el jugador debe pensar "casi lo sabía" o "qué interesante"
+5. Evita datos demasiado conocidos (el agua hierve a 100°, la Torre Eiffel está en París)
+6. El tema debe tener un ángulo sorprendente o poco conocido
+7. Tono: inteligente, con una pizca de humor en la explicación, nunca condescendiente
+
+Devuelve SOLO un objeto JSON válido, sin markdown:
+{{
+  "tema": "Título del tema en 4-6 palabras (ej: 'Los pulpos y su cerebro distribuido')",
+  "intro": "Una frase que contextualice el tema y genere curiosidad. Máx 20 palabras.",
+  "afirmaciones": [
+    "Afirmación verdadera 1 — dato sorprendente y real",
+    "Afirmación verdadera 2 — dato sorprendente y real", 
+    "Afirmación FALSA — dato plausible pero incorrecto",
+    "Afirmación verdadera 3 — dato sorprendente y real"
+  ],
+  "falsa": 2,
+  "explicacion_falsa": "Por qué es falsa y cuál es el dato real correcto. 2-3 frases. Con el tono de quien revela un secreto bien guardado.",
+  "dato_bonus": "Un dato extra sobre el tema que no aparecía en las afirmaciones. Sorprendente. 1-2 frases."
+}}
+
+El índice "falsa" es la posición (0-3) de la afirmación falsa. Varía cada día: hoy usa {(seed + 5) % 4}."""
+
+    response = requests.post(
+        'https://api.anthropic.com/v1/messages',
+        headers={{
+            'x-api-key': api_key,
+            'anthropic-version': '2023-06-01',
+            'content-type': 'application/json'
+        }},
+        json={{
+            'model': 'claude-sonnet-4-5',
+            'max_tokens': 1000,
+            'messages': [{'role': 'user', 'content': prompt}]
+        }},
+        timeout=60
+    )
+
+    data = response.json()
+    if 'content' not in data:
+        raise Exception(f"API error: {data.get('error', data)}")
+
+    text = data['content'][0]['text'].strip()
+    text = text.replace('```json', '').replace('```', '').strip()
+    return json.loads(text)
