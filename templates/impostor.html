@@ -1,5 +1,8 @@
 {% extends "base.html" %}
 {% block title %}El Impostor — {{ bar.name }}{% endblock %}
+{% block og_title %}¿Puedes encontrar al impostor? — {{ bar.name }}{% endblock %}
+{% block og_description %}Cuatro datos. Uno es mentira. ¿Cuál es? Juega en {{ bar.name }} con Nookplay.{% endblock %}
+{% block og_url %}/{{ bar.slug }}/impostor{% endblock %}
 {% block content %}
 
 <style>
@@ -14,7 +17,7 @@
 
 <div class="nook">
   <div class="nook-topbar">
-    <a href="/{{ bar.slug }}"><img src="/static/logo.svg" alt="Nookplay"></a>
+    <a href="/{{ bar.slug }}?code={{ '{{CODE}}' }}"><img src="/static/logo.svg" alt="Nookplay"></a>
   </div>
   <div class="bar-hero">
     <img class="bar-hero-logo" src="/static/clientes/{{ bar.slug }}/logo_header.png" alt="{{ bar.name }}" onerror="this.style.display='none'">
@@ -22,7 +25,6 @@
   <div class="nook-content">
     <div class="nook-card">
 
-      <!-- LOADING -->
       <div class="screen active" id="s-loading">
         <div class="loading">
           <div class="loading-spinner"></div>
@@ -30,7 +32,6 @@
         </div>
       </div>
 
-      <!-- JUEGO -->
       <div class="screen" id="s-game">
         <div class="impostor-tag">El Impostor</div>
         <h2 class="impostor-tema" id="imp-tema"></h2>
@@ -42,7 +43,6 @@
         </button>
       </div>
 
-      <!-- RESULTADO -->
       <div class="screen" id="s-result">
         <div class="result-big" id="imp-result-headline"></div>
         <p class="result-sub" id="imp-result-sub"></p>
@@ -55,7 +55,39 @@
           <div class="impostor-bonus-label">¿Sabías que...?</div>
           <div class="impostor-bonus" id="imp-bonus"></div>
         </div>
-        <div class="impostor-stats" id="imp-stats"></div>
+
+        <!-- ESTADÍSTICAS ANIMADAS -->
+        <div class="imp-stats-wrap" id="imp-stats-wrap" style="display:none;">
+          <div class="imp-stats-grid">
+            <div class="imp-stat-card">
+              <div class="imp-stat-label">Jugadores hoy</div>
+              <div class="imp-stat-value" id="stat-jugadores">—</div>
+              <div class="imp-stat-sub">en este local</div>
+            </div>
+            <div class="imp-stat-card">
+              <div class="imp-stat-label">Tiempo medio</div>
+              <div class="imp-stat-value" id="stat-tiempo">—</div>
+              <div class="imp-stat-sub">segundos</div>
+            </div>
+          </div>
+          <div class="imp-donut-wrap">
+            <svg width="72" height="72" viewBox="0 0 72 72" aria-hidden="true">
+              <circle cx="36" cy="36" r="28" fill="none" stroke="var(--border)" stroke-width="10"/>
+              <circle cx="36" cy="36" r="28" fill="none" stroke="var(--bar-primary)" stroke-width="10"
+                stroke-dasharray="175.9" stroke-dashoffset="175.9"
+                stroke-linecap="round"
+                transform="rotate(-90 36 36)"
+                id="donut-arc"/>
+              <text x="36" y="40" text-anchor="middle" font-size="13" font-weight="500" fill="var(--text)" id="donut-text">—</text>
+            </svg>
+            <div class="imp-donut-info">
+              <div class="imp-donut-label">Han acertado</div>
+              <div class="imp-donut-pct" id="donut-pct">—%</div>
+              <div class="imp-donut-desc" id="donut-desc"></div>
+            </div>
+          </div>
+        </div>
+
         <button class="btn-share" onclick="shareResult()">📤 Compartir resultado</button>
         <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
         <div class="tomorrow">Mañana, un nuevo impostor te espera.<br>Vuelve a tomar un café.</div>
@@ -70,98 +102,42 @@
 </div>
 
 <style>
-.impostor-tag {
-  display: inline-block;
-  font-size: 10px; font-weight: 600;
-  letter-spacing: 1.5px; text-transform: uppercase;
-  padding: 3px 10px; border-radius: 20px;
-  background: var(--bar-primary); color: var(--bar-primary-text);
-  margin-bottom: 12px;
-}
-.impostor-tema {
-  font-size: 21px; font-weight: 700;
-  line-height: 1.25; margin-bottom: 6px;
-  color: var(--text);
-}
-.impostor-intro {
-  font-size: 14px; color: var(--text-secondary);
-  line-height: 1.6; margin-bottom: 16px;
-}
-.impostor-instruccion {
-  font-size: 13px; color: var(--text-secondary);
-  margin-bottom: 12px;
-}
-.afirmacion-btn {
-  width: 100%; text-align: left;
-  background: var(--bar-bg-subtle);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: 14px 16px;
-  margin-bottom: 10px;
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 14px;
-  color: var(--text);
-  line-height: 1.5;
-  transition: all 0.15s;
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-}
+.impostor-tag { display: inline-block; font-size: 10px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; padding: 3px 10px; border-radius: 20px; background: var(--bar-primary); color: var(--bar-primary-text); margin-bottom: 12px; }
+.impostor-tema { font-size: 21px; font-weight: 700; line-height: 1.25; margin-bottom: 6px; color: var(--text); }
+.impostor-intro { font-size: 14px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 16px; }
+.impostor-instruccion { font-size: 13px; color: var(--text-secondary); margin-bottom: 12px; }
+.afirmacion-btn { width: 100%; text-align: left; background: var(--bar-bg-subtle); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 14px 16px; margin-bottom: 10px; cursor: pointer; font-family: inherit; font-size: 14px; color: var(--text); line-height: 1.5; transition: all 0.15s; display: flex; gap: 10px; align-items: flex-start; }
 .afirmacion-btn:hover { border-color: var(--bar-accent-dark); }
-.afirmacion-btn.selected {
-  border: 2px solid var(--bar-accent-dark);
-  background: var(--bar-bg);
-}
+.afirmacion-btn.selected { border: 2px solid var(--bar-accent-dark); background: var(--bar-bg); }
 .afirmacion-btn.correct { border: 2px solid #22aa55; background: #f0fff4; }
 .afirmacion-btn.wrong { border: 2px solid #cc2222; background: #fff0f0; }
-.afirmacion-num {
-  width: 22px; height: 22px; border-radius: 50%;
-  background: var(--bar-primary); color: var(--bar-primary-text);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 11px; font-weight: 700; flex-shrink: 0;
-  margin-top: 1px;
-}
-.impostor-falsa {
-  font-size: 14px; color: #cc2222; font-weight: 500;
-  line-height: 1.5; margin-top: 4px;
-}
-.impostor-explicacion {
-  font-size: 15px; line-height: 1.75;
-  color: var(--text); margin: 12px 0;
-}
-.impostor-bonus-wrap {
-  background: var(--bar-bg-subtle);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: 12px 14px;
-  margin: 12px 0;
-}
-.impostor-bonus-label {
-  font-size: 10px; font-weight: 600;
-  letter-spacing: 1.5px; text-transform: uppercase;
-  color: var(--text-muted); margin-bottom: 4px;
-}
-.impostor-bonus {
-  font-size: 14px; color: var(--text); line-height: 1.6;
-}
-.impostor-stats {
-  display: none;
-  font-size: 12px; color: var(--text-muted);
-  text-align: center; margin: 12px 0;
-  padding: 10px; background: var(--bar-bg-subtle);
-  border-radius: var(--radius-sm);
-  line-height: 1.6;
-}
+.afirmacion-num { width: 22px; height: 22px; border-radius: 50%; background: var(--bar-primary); color: var(--bar-primary-text); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+.impostor-falsa { font-size: 14px; color: #cc2222; font-weight: 500; line-height: 1.5; margin-top: 4px; }
+.impostor-explicacion { font-size: 15px; line-height: 1.75; color: var(--text); margin: 12px 0; }
+.impostor-bonus-wrap { background: var(--bar-bg-subtle); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px 14px; margin: 12px 0; }
+.impostor-bonus-label { font-size: 10px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px; }
+.impostor-bonus { font-size: 14px; color: var(--text); line-height: 1.6; }
+.imp-stats-wrap { margin: 12px 0; }
+.imp-stats-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 10px; }
+.imp-stat-card { background: var(--bg-subtle); border-radius: var(--radius-md); padding: 12px 14px; }
+.imp-stat-label { font-size: 10px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 500; margin-bottom: 4px; }
+.imp-stat-value { font-size: 24px; font-weight: 500; color: var(--text); line-height: 1; }
+.imp-stat-sub { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+.imp-donut-wrap { display: flex; align-items: center; gap: 16px; background: var(--bg-subtle); border-radius: var(--radius-md); padding: 14px; }
+.imp-donut-info { flex: 1; }
+.imp-donut-label { font-size: 10px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 500; margin-bottom: 4px; }
+.imp-donut-pct { font-size: 28px; font-weight: 500; color: var(--text); line-height: 1; }
+.imp-donut-desc { font-size: 12px; color: var(--text-muted); margin-top: 4px; line-height: 1.4; }
 </style>
 
 <script>
 const BAR_SLUG = "{{ bar.slug }}";
 const BAR_NAME = "{{ bar.name }}";
 const CODE = new URLSearchParams(window.location.search).get('code') || '';
+const CIRCUM = 2 * Math.PI * 28;
 let gameData = null;
 let selected = -1;
-let stats = { counts: [0, 0, 0, 0], total: 0 };
+let startTime = null;
 
 async function init() {
   try {
@@ -172,6 +148,7 @@ async function init() {
     });
     gameData = await res.json();
     renderGame(gameData);
+    startTime = Date.now();
   } catch(e) {
     document.getElementById('s-loading').innerHTML = `
       <div class="error-msg">No se pudo cargar el reto.<br>
@@ -182,7 +159,6 @@ async function init() {
 function renderGame(g) {
   document.getElementById('imp-tema').textContent = g.tema;
   document.getElementById('imp-intro').textContent = g.intro;
-
   const list = document.getElementById('imp-afirmaciones');
   list.innerHTML = g.afirmaciones.map((a, i) => `
     <button class="afirmacion-btn" onclick="selectAfirmacion(${i}, this)">
@@ -190,7 +166,6 @@ function renderGame(g) {
       <span>${a}</span>
     </button>
   `).join('');
-
   showScreen('s-game');
 }
 
@@ -203,64 +178,75 @@ function selectAfirmacion(idx, el) {
 
 async function revelar() {
   if (selected === -1 || !gameData) return;
-
   const correct = selected === gameData.falsa;
+  const elapsed = startTime ? Math.round((Date.now() - startTime) / 1000) : 0;
 
-  // Register play
   await fetch('/api/play', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      code: CODE, bar_slug: BAR_SLUG,
-      correct, game_type: 'impostor',
-      choice: selected
-    })
+    body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG, correct, game_type: 'impostor', choice: selected, elapsed })
   });
 
-  // Get stats
-  try {
-    const sr = await fetch(`/api/impostor-stats/${BAR_SLUG}`);
-    stats = await sr.json();
-  } catch(e) {}
-
-  // Show result
   const headline = document.getElementById('imp-result-headline');
   headline.textContent = correct ? '¡Encontraste al impostor!' : 'Te ha engañado.';
   headline.className = 'result-big ' + (correct ? 'correct' : 'wrong');
-
   document.getElementById('imp-result-sub').textContent = correct
-    ? 'Buen ojo. Ese dato era demasiado bueno para ser verdad.'
+    ? 'Buen ojo. No todo el mundo lo ve.'
     : `El impostor era la afirmación ${gameData.falsa + 1}. Casi nadie lo ve a la primera.`;
-
   document.getElementById('imp-falsa-text').textContent = gameData.afirmaciones[gameData.falsa];
   document.getElementById('imp-explicacion').textContent = gameData.explicacion_falsa;
   document.getElementById('imp-bonus').textContent = gameData.dato_bonus;
 
-  // Stats - only show when there's meaningful data
-  const statsEl = document.getElementById('imp-stats');
-  if (stats.total > 1) {
-    const pct = Math.round((stats.correct / stats.total) * 100);
-    statsEl.innerHTML = `Hoy han jugado <strong>${stats.total}</strong> personas · <strong>${pct}%</strong> encontró al impostor`;
-    statsEl.style.display = 'block';
-  } else {
-    statsEl.style.display = 'none';
-  }
-
-  // Color afirmaciones
   document.querySelectorAll('.afirmacion-btn').forEach((btn, i) => {
     if (i === gameData.falsa) btn.classList.add('correct');
     else if (i === selected && !correct) btn.classList.add('wrong');
   });
 
   showScreen('s-result');
+  loadStats();
+}
+
+async function loadStats() {
+  try {
+    const res = await fetch(`/api/impostor-stats/${BAR_SLUG}`);
+    const stats = await res.json();
+    if (stats.total >= 1) {
+      const pct = Math.round((stats.correct / stats.total) * 100);
+      document.getElementById('stat-jugadores').textContent = stats.total;
+      document.getElementById('stat-tiempo').textContent = stats.avg_elapsed || '—';
+      document.getElementById('donut-pct').textContent = pct + '%';
+      document.getElementById('donut-text').textContent = pct + '%';
+      const desc = pct >= 70 ? 'Hoy la mayoría lo encontró.' : pct >= 40 ? 'Está costando. El impostor engaña bien.' : 'Casi nadie lo ha pillado hoy.';
+      document.getElementById('donut-desc').textContent = desc;
+      const offset = CIRCUM * (1 - pct / 100);
+      const arc = document.getElementById('donut-arc');
+      setTimeout(() => {
+        arc.style.transition = 'stroke-dashoffset 1s ease';
+        arc.setAttribute('stroke-dashoffset', offset.toFixed(1));
+      }, 300);
+      document.getElementById('imp-stats-wrap').style.display = 'block';
+    }
+  } catch(e) {}
 }
 
 function shareResult() {
   const correct = selected === gameData.falsa;
-  const emoji = correct ? '✅' : '❌';
-  const txt = `🕵️ El Impostor — ${BAR_NAME}\n\nTema: ${gameData.tema}\n\n${emoji} ${correct ? '¡Encontré el dato falso!' : 'Me engañó el impostor'}\n\n¿Puedes tú encontrarlo?\nnookplay.app`;
-  if (navigator.share) navigator.share({ text: txt });
-  else navigator.clipboard.writeText(txt).then(() => alert('¡Copiado!'));
+  const pct = document.getElementById('donut-pct').textContent;
+  const falsa = gameData.afirmaciones[gameData.falsa];
+  const shortFalsa = falsa.length > 50 ? falsa.substring(0, 50) + '...' : falsa;
+
+  let txt;
+  if (correct) {
+    txt = `🕵️ He cazado al impostor en ${BAR_NAME}\n\n"${shortFalsa}"\n→ Era falso. Solo el ${pct} lo encontró hoy.\n\n¿Puedes tú? → nookplay.app`;
+  } else {
+    txt = `🕵️ El impostor me ha engañado en ${BAR_NAME}\n\n"${shortFalsa}"\n→ Creí que era verdad. Y era mentira.\n\n¿Lo ves tú? → nookplay.app`;
+  }
+
+  if (navigator.share) {
+    navigator.share({ text: txt, url: 'https://nookplay.app' });
+  } else {
+    navigator.clipboard.writeText(txt).then(() => alert('¡Copiado! Compártelo donde quieras.'));
+  }
 }
 
 function showScreen(id) {

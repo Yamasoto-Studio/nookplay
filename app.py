@@ -116,10 +116,13 @@ def register_play():
         (code, today)
     ).fetchone()
 
+    game_type = data.get('game_type', 'crimen')
+    choice = data.get('choice', -1)
+    elapsed = data.get('elapsed', 0)
     if not played:
         db.execute(
-            "INSERT INTO plays (code, bar_slug, played_on, correct) VALUES (?, ?, ?, ?)",
-            (code, bar_slug, today, 1 if correct else 0)
+            "INSERT INTO plays (code, bar_slug, played_on, correct, game_type, choice, elapsed) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (code, bar_slug, today, 1 if correct else 0, game_type, choice, elapsed)
         )
         db.commit()
 
@@ -207,8 +210,13 @@ def impostor_stats(bar_slug):
         "SELECT COUNT(*) as n FROM plays WHERE bar_slug = ? AND played_on = ? AND game_type = 'impostor' AND correct = 1",
         (bar_slug, today)
     ).fetchone()['n']
+    avg_row = db.execute(
+        "SELECT AVG(elapsed) as avg_e FROM plays WHERE bar_slug = ? AND played_on = ? AND game_type = 'impostor' AND elapsed > 0",
+        (bar_slug, today)
+    ).fetchone()
+    avg_elapsed = round(avg_row['avg_e']) if avg_row['avg_e'] else None
     db.close()
-    return jsonify({'total': total, 'correct': correct})
+    return jsonify({'total': total, 'correct': correct, 'avg_elapsed': avg_elapsed})
 
 @app.route('/api/impostor', methods=['POST'])
 def impostor():
@@ -238,6 +246,12 @@ def impostor():
         return jsonify(game_data)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@app.route('/static/og.png')
+def og_image():
+    from flask import send_file
+    return send_file('static/og.svg', mimetype='image/svg+xml')
 
 # --------------------------------------------------------------------------
 # Run
@@ -275,6 +289,9 @@ def migrate_db():
     except: pass
     try:
         db.execute("ALTER TABLE plays ADD COLUMN choice INTEGER DEFAULT -1")
+    except: pass
+    try:
+        db.execute("ALTER TABLE plays ADD COLUMN elapsed INTEGER DEFAULT 0")
     except: pass
     # Update Yellow colors
     db.execute("""UPDATE bars SET
