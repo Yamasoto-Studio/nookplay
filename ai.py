@@ -187,10 +187,11 @@ def generate_impostor(bar_name, bar_slug):
     seed = get_day_seed(bar_slug)
     categoria = CATEGORIAS_IMPOSTOR[(seed + 5) % len(CATEGORIAS_IMPOSTOR)]
 
-    prompt = f"""Eres un divulgador cultural experto, riguroso y con humor seco. Creas contenido educativo que sorprende.
+    falsa_idx = (seed + 5) % 4
+    prompt = """Eres un divulgador cultural experto, riguroso y con humor seco. Creas contenido educativo que sorprende.
 
-FECHA: {today}
-CATEGORÍA: {categoria}
+FECHA: """ + today + """
+CATEGORÍA: """ + categoria + """
 
 Tu misión: crear un reto "El Impostor" donde el jugador debe encontrar el dato falso entre 4 afirmaciones.
 
@@ -203,22 +204,22 @@ REGLAS DE CALIDAD:
 6. El tema debe tener un ángulo sorprendente o poco conocido
 7. Tono: inteligente, con una pizca de humor en la explicación, nunca condescendiente
 
-Devuelve SOLO un objeto JSON válido, sin markdown:
-{{
-  "tema": "Título del tema en 4-6 palabras (ej: 'Los pulpos y su cerebro distribuido')",
-  "intro": "Una frase que contextualice el tema y genere curiosidad. Máx 20 palabras.",
+Devuelve SOLO un objeto JSON válido, sin markdown, con exactamente esta estructura:
+{
+  "tema": "Título del tema en 4-6 palabras",
+  "intro": "Una frase que contextualice el tema. Máx 20 palabras.",
   "afirmaciones": [
-    "Afirmación verdadera 1 — dato sorprendente y real",
-    "Afirmación verdadera 2 — dato sorprendente y real", 
-    "Afirmación FALSA — dato plausible pero incorrecto",
-    "Afirmación verdadera 3 — dato sorprendente y real"
+    "Afirmación 1",
+    "Afirmación 2",
+    "Afirmación 3",
+    "Afirmación 4"
   ],
-  "falsa": 2,
-  "explicacion_falsa": "Por qué es falsa y cuál es el dato real correcto. 2-3 frases. Con el tono de quien revela un secreto bien guardado.",
-  "dato_bonus": "Un dato extra sobre el tema que no aparecía en las afirmaciones. Sorprendente. 1-2 frases."
-}}
+  "falsa": """ + str(falsa_idx) + """,
+  "explicacion_falsa": "Por qué es falsa y cuál es el dato real correcto. 2-3 frases.",
+  "dato_bonus": "Un dato extra sorprendente sobre el tema. 1-2 frases."
+}
 
-El índice "falsa" es la posición (0-3) de la afirmación falsa. Varía cada día: hoy usa {(seed + 5) % 4}."""
+La afirmación en la posición """ + str(falsa_idx) + """ (índice 0-3) debe ser la FALSA."""
 
     response = requests.post(
         'https://api.anthropic.com/v1/messages',
