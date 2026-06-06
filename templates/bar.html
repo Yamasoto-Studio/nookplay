@@ -29,8 +29,7 @@
       <!-- PANTALLA: CÓDIGO -->
       <div class="screen active" id="s-code">
         <p class="menu-welcome" id="code-welcome" style="text-align:center;"></p>
-        <h1 class="nook-title">Disfruta del Pasatiempo<br>del Día</h1>
-        <p class="nook-sub">Introduce el código de tu ticket para acceder al juego de hoy.</p>
+        <p class="nook-sub" style="text-align:center;">Introduce el código de tu ticket.</p>
         <div class="code-input-wrap">
           <input type="text" id="code-input" class="code-input" placeholder="Ej: AB3K7" maxlength="6"
             autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false">
@@ -146,7 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let customMsg = BAR_WELCOME || `Bienvenido al ${BAR_NAME}.`;
     customMsg = customMsg.replace(/[.\s]*Elige tu pasatiempo de hoy.?/gi, '').trim();
     if (!customMsg) customMsg = `Bienvenido al ${BAR_NAME}.`;
-    el.innerHTML = `${customMsg}<br><span class="menu-welcome-sub">Elige tu pasatiempo de hoy.</span>`;
+    el.innerHTML = `${customMsg}<br><span class="menu-welcome-sub">Es tu momento de respiro.</span>`;
   }
 });
 
