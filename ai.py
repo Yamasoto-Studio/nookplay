@@ -209,16 +209,16 @@ La afirmación en la posición """ + str(falsa_idx) + """ (índice 0-3) debe ser
 
     response = requests.post(
         'https://api.anthropic.com/v1/messages',
-        headers={{
+        headers={
             'x-api-key': api_key,
             'anthropic-version': '2023-06-01',
             'content-type': 'application/json'
-        }},
-        json={{
+        },
+        json={
             'model': 'claude-sonnet-4-5',
             'max_tokens': 1000,
             'messages': [{'role': 'user', 'content': prompt}]
-        }},
+        },
         timeout=60
     )
 
