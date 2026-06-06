@@ -24,8 +24,64 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/css/main.css">
+  <style>
+    /* Font size accessibility */
+    html { font-size: 16px; }
+    html.text-lg { font-size: 19px; }
+    html.text-xl { font-size: 22px; }
+
+    .a11y-toggle {
+      position: fixed; bottom: 20px; right: 16px; z-index: 999;
+      display: flex; align-items: center; gap: 6px;
+      background: var(--bar-accent-dark, #1A1A1A);
+      border-radius: 30px; padding: 8px 14px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+    }
+    .a11y-btn {
+      background: transparent; border: none;
+      color: #fff; cursor: pointer; font-family: inherit;
+      font-weight: 600; padding: 2px 6px; border-radius: 6px;
+      font-size: 14px; line-height: 1; opacity: 0.6;
+      transition: opacity 0.15s, background 0.15s;
+    }
+    .a11y-btn.active { opacity: 1; background: rgba(255,255,255,0.15); }
+    .a11y-btn:hover { opacity: 1; }
+    .a11y-sep { color: rgba(255,255,255,0.3); font-size: 12px; }
+  </style>
+  <script>
+    // Restore font size preference
+    const savedSize = localStorage.getItem('nookplay-textsize');
+    if (savedSize) document.documentElement.classList.add(savedSize);
+  </script>
 </head>
 <body>
   {% block content %}{% endblock %}
+<div class="a11y-toggle" role="group" aria-label="Tamaño del texto">
+  <button class="a11y-btn" id="txt-normal" onclick="setTextSize('normal')" aria-label="Texto normal">A</button>
+  <span class="a11y-sep">|</span>
+  <button class="a11y-btn" id="txt-lg" onclick="setTextSize('text-lg')" aria-label="Texto grande" style="font-size:17px;">A</button>
+  <span class="a11y-sep">|</span>
+  <button class="a11y-btn" id="txt-xl" onclick="setTextSize('text-xl')" aria-label="Texto muy grande" style="font-size:20px;">A</button>
+</div>
+
+<script>
+function setTextSize(size) {
+  document.documentElement.classList.remove('text-lg', 'text-xl');
+  if (size !== 'normal') document.documentElement.classList.add(size);
+  localStorage.setItem('nookplay-textsize', size === 'normal' ? '' : size);
+  updateA11yBtns();
+}
+
+function updateA11yBtns() {
+  const current = document.documentElement.classList.contains('text-xl') ? 'text-xl'
+    : document.documentElement.classList.contains('text-lg') ? 'text-lg' : 'normal';
+  document.querySelectorAll('.a11y-btn').forEach(btn => btn.classList.remove('active'));
+  const map = { 'normal': 'txt-normal', 'text-lg': 'txt-lg', 'text-xl': 'txt-xl' };
+  const el = document.getElementById(map[current]);
+  if (el) el.classList.add('active');
+}
+
+document.addEventListener('DOMContentLoaded', updateA11yBtns);
+</script>
 </body>
 </html>

@@ -111,7 +111,7 @@ body {
 
 /* ── Code entry ── */
 .nook-title {
-  font-size: 22px; font-weight: 700;
+  font-size: 24px; font-weight: 700;
   color: var(--text); text-align: center;
   line-height: 1.25; margin-bottom: 8px;
 }
@@ -137,8 +137,8 @@ body {
   transition: border-color 0.15s;
 }
 .code-input:focus { border-color: var(--bar-primary); }
-.code-error { font-size: 13px; color: var(--danger); margin-top: 6px; text-align: center; min-height: 18px; }
-.code-hint { font-size: 12px; color: var(--text-muted); text-align: center; margin-top: 10px; }
+.code-error { font-size: 15px; color: var(--danger); margin-top: 8px; text-align: center; min-height: 20px; font-weight: 500; }
+.code-hint { font-size: 14px; color: var(--text-secondary); text-align: center; margin-top: 12px; line-height: 1.5; }
 
 /* ── Buttons ── */
 .btn-primary {
@@ -178,7 +178,7 @@ body {
   width: 100%; padding: 11px;
   background: transparent; color: var(--text-secondary);
   border: 1px solid var(--border); border-radius: var(--radius-md);
-  font-size: 13px; cursor: pointer;
+  font-size: 15px; cursor: pointer; min-height: 48px;
   margin-top: 8px; font-family: inherit;
 }
 .btn-share:hover { background: var(--bar-bg-subtle); }
@@ -194,10 +194,10 @@ body {
 }
 
 .headline { font-size: 21px; font-weight: 700; line-height: 1.25; margin-bottom: 6px; color: var(--text); }
-.location { font-size: 12px; color: var(--text-muted); margin-bottom: 16px; }
+.location { font-size: 14px; color: var(--text-secondary); margin-bottom: 16px; }
 .divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
-.body-text { font-size: 15px; line-height: 1.75; color: var(--text); margin-bottom: 4px; }
-.section-label { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-muted); font-weight: 600; margin-bottom: 10px; }
+.body-text { font-size: 16px; line-height: 1.8; color: var(--text); margin-bottom: 4px; }
+.section-label { font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color: var(--text-secondary); font-weight: 600; margin-bottom: 12px; }
 
 .clue-btn {
   width: 100%; text-align: left;
@@ -230,22 +230,22 @@ body {
   font-size: 12px; font-weight: 700; flex-shrink: 0;
 }
 
-.suspect-name { font-size: 14px; font-weight: 600; color: var(--text); }
-.suspect-role { font-size: 12px; color: var(--text-secondary); margin-top: 2px; line-height: 1.4; }
+.suspect-name { font-size: 16px; font-weight: 600; color: var(--text); }
+.suspect-role { font-size: 14px; color: var(--text-secondary); margin-top: 3px; line-height: 1.5; }
 
 .result-big { font-size: 30px; font-weight: 700; margin-bottom: 6px; }
 .result-big.correct { color: var(--success); }
 .result-big.wrong { color: var(--danger); }
-.result-sub { font-size: 15px; color: var(--text-secondary); margin-bottom: 16px; line-height: 1.6; }
+.result-sub { font-size: 16px; color: var(--text-secondary); margin-bottom: 16px; line-height: 1.65; }
 
 .reveal-card {
   background: var(--bar-bg-subtle); border: 1px solid var(--border);
   border-radius: var(--radius-md); padding: 14px 16px; margin: 16px 0;
 }
-.reveal-label { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px; font-weight: 600; }
-.reveal-name { font-size: 19px; font-weight: 700; color: var(--bar-accent-dark); }
+.reveal-label { font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 6px; font-weight: 600; }
+.reveal-name { font-size: 20px; font-weight: 700; color: var(--bar-accent-dark); }
 
-.tomorrow { font-size: 12px; color: var(--text-muted); text-align: center; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); line-height: 1.6; }
+.tomorrow { font-size: 14px; color: var(--text-secondary); text-align: center; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); line-height: 1.6; }
 
 /* ── Footer ── */
 .nook-footer {
@@ -265,7 +265,7 @@ body {
 }
 
 .nook-footer-by {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--text-secondary);
   letter-spacing: 0.5px;
   text-decoration: none;
@@ -286,7 +286,7 @@ body {
 
 /* ── Activity menu ── */
 .menu-welcome {
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 500;
   color: var(--text);
   line-height: 1.5;
@@ -300,8 +300,9 @@ body {
   background: var(--bar-bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  padding: 14px;
-  margin-bottom: 10px;
+  padding: 16px 14px;
+  margin-bottom: 12px;
+  min-height: 72px;
   cursor: pointer;
   transition: border-color 0.15s, transform 0.1s;
 }
@@ -337,14 +338,14 @@ body {
 .activity-info { flex: 1; }
 
 .activity-name {
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 600;
   color: var(--text);
   margin-bottom: 2px;
 }
 
 .activity-desc {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--text-secondary);
   line-height: 1.4;
 }

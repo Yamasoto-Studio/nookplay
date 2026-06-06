@@ -6,7 +6,7 @@
 /* ── Game tag (top pill) ── */
 .game-tag {
   display: inline-block;
-  font-size: 10px; font-weight: 600;
+  font-size: 12px; font-weight: 600;
   letter-spacing: 1.5px; text-transform: uppercase;
   padding: 3px 10px; border-radius: 20px;
   background: var(--bar-primary); color: var(--bar-primary-text);
@@ -16,7 +16,7 @@
 /* ── Back button ── */
 .btn-back-game {
   display: inline-flex; align-items: center; gap: 4px;
-  font-size: 12px; color: var(--text-secondary);
+  font-size: 14px; min-height: 44px; color: var(--text-secondary);
   background: transparent; border: none;
   cursor: pointer; padding: 0; margin-bottom: 16px;
   font-family: inherit; text-decoration: none;
@@ -62,7 +62,7 @@
 
 /* ── Tomorrow note ── */
 .tomorrow {
-  font-size: 12px; color: var(--text-muted);
+  font-size: 14px; color: var(--text-muted);
   text-align: center; margin-top: 20px;
   padding-top: 16px; border-top: 1px solid var(--border);
   line-height: 1.6;
@@ -91,7 +91,7 @@
   padding: 12px 14px;
 }
 .stat-label {
-  font-size: 10px; color: var(--text-secondary);
+  font-size: 12px; color: var(--text-secondary);
   text-transform: uppercase; letter-spacing: 0.5px;
   font-weight: 500; margin-bottom: 4px;
 }
@@ -99,7 +99,7 @@
   font-size: 24px; font-weight: 500;
   color: var(--text); line-height: 1;
 }
-.stat-sub { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+.stat-sub { font-size: 13px; color: var(--text-muted); margin-top: 3px; }
 
 .donut-wrap {
   display: flex; align-items: center; gap: 16px;
@@ -108,12 +108,12 @@
 }
 .donut-info { flex: 1; }
 .donut-label {
-  font-size: 10px; color: var(--text-secondary);
+  font-size: 12px; color: var(--text-secondary);
   text-transform: uppercase; letter-spacing: 0.5px;
   font-weight: 500; margin-bottom: 4px;
 }
 .donut-pct { font-size: 28px; font-weight: 500; color: var(--text); line-height: 1; }
-.donut-desc { font-size: 12px; color: var(--text-muted); margin-top: 4px; line-height: 1.4; }
+.donut-desc { font-size: 14px; color: var(--text-muted); margin-top: 4px; line-height: 1.4; }
 
 /* ── Result promo ── */
 .result-promo-wrap {
