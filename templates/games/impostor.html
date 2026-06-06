@@ -1,0 +1,162 @@
+{% extends "game_base.html" %}
+{% block title %}El Impostor — {{ bar.name }}{% endblock %}
+{% block og_title %}¿Puedes encontrar al impostor? — {{ bar.name }}{% endblock %}
+{% block og_description %}Cuatro datos. Uno es mentira. ¿Cuál? Juega en {{ bar.name }} con Nookplay.{% endblock %}
+{% block og_url %}/{{ bar.slug }}/impostor{% endblock %}
+
+{% block game_content %}
+<style>
+.impostor-instruccion { font-size: 13px; color: var(--text-secondary); margin-bottom: 12px; }
+.afirmacion-btn {
+  width: 100%; text-align: left;
+  background: var(--bar-bg-subtle); border: 1px solid var(--border);
+  border-radius: var(--radius-md); padding: 14px 16px; margin-bottom: 10px;
+  cursor: pointer; font-family: inherit; font-size: 14px; color: var(--text);
+  line-height: 1.5; transition: all 0.15s;
+  display: flex; gap: 10px; align-items: flex-start;
+}
+.afirmacion-btn:hover { border-color: var(--bar-accent-dark); }
+.afirmacion-btn.selected { border: 2px solid var(--bar-accent-dark); background: var(--bar-bg); }
+.afirmacion-btn.correct { border: 2px solid #22aa55; background: #f0fff4; }
+.afirmacion-btn.wrong { border: 2px solid #cc2222; background: #fff0f0; }
+.afirmacion-num {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--bar-primary); color: var(--bar-primary-text);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; flex-shrink: 0; margin-top: 1px;
+}
+.impostor-falsa { font-size: 14px; color: #cc2222; font-weight: 500; line-height: 1.5; margin-top: 4px; }
+.impostor-explicacion { font-size: 15px; line-height: 1.75; color: var(--text); margin: 12px 0; }
+.bonus-wrap { background: var(--bar-bg-subtle); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px 14px; margin: 12px 0; }
+.bonus-label { font-size: 10px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px; }
+.bonus-text { font-size: 14px; color: var(--text); line-height: 1.6; }
+</style>
+
+<!-- LOADING -->
+<div class="screen active" id="s-loading">
+  <div class="loading"><div class="loading-spinner"></div><p>Preparando el reto de hoy...</p></div>
+</div>
+
+<!-- JUEGO -->
+<div class="screen" id="s-game">
+  <a href="/{{ bar.slug }}?code={{ code }}" class="btn-back-game">← Volver al menú</a>
+  <div class="game-tag">El Impostor</div>
+  <h2 class="headline" id="imp-tema"></h2>
+  <p class="body-text" id="imp-intro" style="color:var(--text-secondary); font-size:14px; margin-bottom:16px;"></p>
+  <p class="impostor-instruccion">¿Cuál de estas afirmaciones es <strong>falsa</strong>?</p>
+  <div id="imp-afirmaciones"></div>
+  <button class="btn-danger" id="imp-btn" disabled onclick="revelar()">Revelar respuesta</button>
+</div>
+
+<!-- RESULTADO -->
+<div class="screen" id="s-result">
+  <div class="result-big" id="imp-headline"></div>
+  <p class="result-sub" id="imp-sub"></p>
+  <div class="reveal-card">
+    <div class="reveal-label">La afirmación falsa era</div>
+    <div class="impostor-falsa" id="imp-falsa"></div>
+  </div>
+  <div class="impostor-explicacion" id="imp-explicacion"></div>
+  <div class="bonus-wrap">
+    <div class="bonus-label">¿Sabías que...?</div>
+    <div class="bonus-text" id="imp-bonus"></div>
+  </div>
+  {% include "components/stats.html" %}
+  <button class="btn-share" onclick="doShare()">📤 Compartir resultado</button>
+  <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
+  <div class="tomorrow">Mañana, un nuevo impostor te espera.<br>Vuelve a tomar un café.</div>
+</div>
+
+<script>
+const BAR_SLUG = "{{ bar.slug }}";
+const BAR_NAME = "{{ bar.name }}";
+const CODE = new URLSearchParams(window.location.search).get('code') || '';
+let gameData = null;
+let selected = -1;
+let startTime = null;
+
+async function init() {
+  try {
+    const res = await fetch('/api/impostor', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG })
+    });
+    gameData = await res.json();
+    renderGame(gameData);
+    startTime = Date.now();
+  } catch(e) {
+    document.getElementById('s-loading').innerHTML = `
+      <div class="error-msg">No se pudo cargar el reto.<br>
+      <button class="btn-secondary" onclick="location.reload()">Reintentar</button></div>`;
+  }
+}
+
+function renderGame(g) {
+  document.getElementById('imp-tema').textContent = g.tema;
+  document.getElementById('imp-intro').textContent = g.intro;
+  document.getElementById('imp-afirmaciones').innerHTML = g.afirmaciones.map((a, i) => `
+    <button class="afirmacion-btn" onclick="selectAfirmacion(${i}, this)">
+      <div class="afirmacion-num">${i + 1}</div><span>${a}</span>
+    </button>`).join('');
+  showScreen('s-game');
+}
+
+function selectAfirmacion(idx, el) {
+  document.querySelectorAll('.afirmacion-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  selected = idx;
+  document.getElementById('imp-btn').disabled = false;
+}
+
+async function revelar() {
+  if (selected === -1 || !gameData) return;
+  const correct = selected === gameData.falsa;
+  const elapsed = startTime ? Math.round((Date.now() - startTime) / 1000) : 0;
+
+  await fetch('/api/play', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG, correct, game_type: 'impostor', choice: selected, elapsed })
+  });
+
+  const h = document.getElementById('imp-headline');
+  h.textContent = correct ? '¡Encontraste al impostor!' : 'Te ha engañado.';
+  h.className = 'result-big ' + (correct ? 'correct' : 'wrong');
+  document.getElementById('imp-sub').textContent = correct
+    ? 'Buen ojo. No todo el mundo lo ve.'
+    : `El impostor era la afirmación ${gameData.falsa + 1}.`;
+  document.getElementById('imp-falsa').textContent = gameData.afirmaciones[gameData.falsa];
+  document.getElementById('imp-explicacion').textContent = gameData.explicacion_falsa;
+  document.getElementById('imp-bonus').textContent = gameData.dato_bonus;
+
+  document.querySelectorAll('.afirmacion-btn').forEach((btn, i) => {
+    if (i === gameData.falsa) btn.classList.add('correct');
+    else if (i === selected && !correct) btn.classList.add('wrong');
+  });
+
+  showScreen('s-result');
+  window.scrollTo(0, 0);
+  loadStats(BAR_SLUG, 'impostor');
+}
+
+function doShare() {
+  const correct = selected === gameData.falsa;
+  const pct = document.getElementById('donut-pct')?.textContent;
+  shareGame({
+    correct,
+    barName: BAR_NAME,
+    gameTitle: 'El Impostor',
+    detail: gameData.afirmaciones[gameData.falsa],
+    pct: pct !== '—%' ? pct : null
+  });
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+init();
+</script>
+{% endblock %}

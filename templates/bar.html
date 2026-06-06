@@ -159,7 +159,7 @@ function showMenu() {
 }
 
 function startActivity(id) {
-  if (id === 'crimen') loadGame();
+  if (id === 'crimen') window.location = `/${BAR_SLUG}/crimen?code=${validatedCode}`;
   if (id === 'impostor') window.location = `/${BAR_SLUG}/impostor?code=${validatedCode}`;
 }
 

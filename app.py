@@ -256,6 +256,42 @@ def impostor():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/<bar_slug>/crimen')
+def crimen_page(bar_slug):
+    db = get_db()
+    bar = db.execute("SELECT * FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
+    db.close()
+    if not bar:
+        return render_template('404.html'), 404
+    return render_template('games/crimen.html', bar=bar)
+
+@app.route('/api/stats/<bar_slug>/<game_type>')
+def game_stats(bar_slug, game_type):
+    today = str(date.today())
+    db = get_db()
+    try:
+        total = db.execute(
+            "SELECT COUNT(*) as n FROM plays WHERE bar_slug = ? AND played_on = ? AND game_type = ?",
+            (bar_slug, today, game_type)
+        ).fetchone()['n']
+        correct = db.execute(
+            "SELECT COUNT(*) as n FROM plays WHERE bar_slug = ? AND played_on = ? AND game_type = ? AND correct = 1",
+            (bar_slug, today, game_type)
+        ).fetchone()['n']
+        try:
+            avg_row = db.execute(
+                "SELECT AVG(elapsed) as avg_e FROM plays WHERE bar_slug = ? AND played_on = ? AND game_type = ? AND elapsed > 0",
+                (bar_slug, today, game_type)
+            ).fetchone()
+            avg_elapsed = round(avg_row['avg_e']) if avg_row and avg_row['avg_e'] else None
+        except:
+            avg_elapsed = None
+    except:
+        total = 0; correct = 0; avg_elapsed = None
+    db.close()
+    return jsonify({'total': total, 'correct': correct, 'avg_elapsed': avg_elapsed})
+
+
 @app.route('/static/og.png')
 def og_image():
     from flask import send_file

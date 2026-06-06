@@ -1,0 +1,31 @@
+<!-- Stats block — shared across all games -->
+<div class="stats-block" id="stats-block">
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label">Jugadores hoy</div>
+      <div class="stat-value" id="stat-jugadores">—</div>
+      <div class="stat-sub">en este local</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Tiempo medio</div>
+      <div class="stat-value" id="stat-tiempo">—</div>
+      <div class="stat-sub">por partida</div>
+    </div>
+  </div>
+  <div class="donut-wrap">
+    <svg width="72" height="72" viewBox="0 0 72 72" aria-hidden="true">
+      <circle cx="36" cy="36" r="28" fill="none" stroke="var(--border)" stroke-width="10"/>
+      <circle cx="36" cy="36" r="28" fill="none" stroke="var(--bar-primary)" stroke-width="10"
+        stroke-dasharray="175.9" stroke-dashoffset="175.9"
+        stroke-linecap="round" transform="rotate(-90 36 36)"
+        id="donut-arc"/>
+      <text x="36" y="40" text-anchor="middle" font-size="13" font-weight="500"
+        fill="var(--text)" id="donut-text">—</text>
+    </svg>
+    <div class="donut-info">
+      <div class="donut-label">Han acertado</div>
+      <div class="donut-pct" id="donut-pct">—%</div>
+      <div class="donut-desc" id="donut-desc"></div>
+    </div>
+  </div>
+</div>

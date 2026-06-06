@@ -1,0 +1,189 @@
+{% extends "game_base.html" %}
+{% block title %}El Crimen del Día — {{ bar.name }}{% endblock %}
+{% block og_title %}¿Puedes resolver el crimen de hoy? — {{ bar.name }}{% endblock %}
+{% block og_description %}Un caso policial nuevo cada día. Pistas, sospechosos y una resolución sorprendente.{% endblock %}
+{% block og_url %}/{{ bar.slug }}/crimen{% endblock %}
+
+{% block game_content %}
+<style>
+.clue-btn {
+  width: 100%; text-align: left;
+  background: var(--bar-bg-subtle); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 8px;
+  cursor: pointer; font-size: 14px; color: var(--text-muted);
+  display: flex; align-items: flex-start; gap: 10px;
+  transition: all 0.15s; font-family: inherit;
+}
+.clue-btn.revealed { color: var(--text); border-color: var(--border-strong); background: var(--bar-bg-card); cursor: default; }
+.clue-btn:not(.revealed):hover { filter: brightness(0.97); }
+.clue-icon { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+.suspect-btn {
+  width: 100%; text-align: left; background: var(--bar-bg-card);
+  border: 1px solid var(--border); border-radius: var(--radius-md);
+  padding: 12px 14px; margin-bottom: 8px; cursor: pointer;
+  display: flex; align-items: center; gap: 12px;
+  transition: border-color 0.15s; font-family: inherit;
+}
+.suspect-btn:hover { border-color: var(--border-strong); }
+.suspect-btn.selected { border: 2px solid var(--bar-accent-dark); background: var(--bar-bg); }
+.suspect-avatar {
+  width: 38px; height: 38px; border-radius: 50%;
+  background: var(--bar-primary); color: var(--bar-primary-text);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; flex-shrink: 0;
+}
+.suspect-name { font-size: 14px; font-weight: 600; color: var(--text); }
+.suspect-role { font-size: 12px; color: var(--text-secondary); margin-top: 2px; line-height: 1.4; }
+</style>
+
+<!-- LOADING -->
+<div class="screen active" id="s-loading">
+  <div class="loading"><div class="loading-spinner"></div><p>Preparando el caso de hoy...</p></div>
+</div>
+
+<!-- JUEGO -->
+<div class="screen" id="s-game">
+  <a href="/{{ bar.slug }}?code={{ code }}" class="btn-back-game">← Volver al menú</a>
+  <span class="game-tag">Caso del día</span>
+  <h2 class="headline" id="g-titular"></h2>
+  <p class="location">📍 <span id="g-lugar"></span></p>
+  <hr class="divider">
+  <p class="body-text" id="g-intro"></p>
+  <hr class="divider">
+  <div class="section-label">Pistas — toca para revelar</div>
+  <div id="g-pistas"></div>
+  <hr class="divider">
+  <div class="section-label">Sospechosos</div>
+  <div id="g-sospechosos"></div>
+  <button class="btn-danger" id="accuse-btn" disabled onclick="accuse()">🔨 Acusar al culpable</button>
+</div>
+
+<!-- RESULTADO -->
+<div class="screen" id="s-result">
+  <div class="result-big" id="r-headline"></div>
+  <p class="result-sub" id="r-sub"></p>
+  <div class="reveal-card">
+    <div class="reveal-label">El culpable</div>
+    <div class="reveal-name" id="r-culpable"></div>
+  </div>
+  <p class="body-text" id="r-explicacion"></p>
+  {% include "components/stats.html" %}
+  <button class="btn-share" onclick="doShare()">📤 Compartir resultado</button>
+  <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
+  <div class="tomorrow">Mañana hay un caso nuevo aquí.<br>Vuelve a tomar un café.</div>
+</div>
+
+<script>
+const BAR_SLUG = "{{ bar.slug }}";
+const BAR_NAME = "{{ bar.name }}";
+const CODE = new URLSearchParams(window.location.search).get('code') || '';
+let currentGame = null;
+let selectedSuspect = -1;
+let startTime = null;
+
+async function init() {
+  try {
+    const res = await fetch('/api/game', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG })
+    });
+    currentGame = await res.json();
+    renderGame(currentGame);
+    startTime = Date.now();
+  } catch(e) {
+    document.getElementById('s-loading').innerHTML = `
+      <div class="error-msg"><p>No se pudo cargar el juego.</p>
+      <button class="btn-secondary" onclick="location.reload()">Reintentar</button></div>`;
+  }
+}
+
+function renderGame(g) {
+  document.getElementById('g-titular').textContent = g.titular;
+  document.getElementById('g-lugar').textContent = g.lugar;
+  document.getElementById('g-intro').textContent = g.introduccion;
+
+  document.getElementById('g-pistas').innerHTML = g.pistas.map((p, i) => `
+    <button class="clue-btn" id="c${i}" onclick="revealClue(${i}, this)">
+      <span class="clue-icon">🔒</span>
+      <span class="clue-text">Pista ${i+1} — toca para revelar</span>
+    </button>`).join('');
+
+  document.getElementById('g-sospechosos').innerHTML = g.sospechosos.map((s, i) => `
+    <button class="suspect-btn" id="sp${i}" onclick="pickSuspect(${i})">
+      <div class="suspect-avatar" id="av${i}"></div>
+      <div><div class="suspect-name" id="sn${i}"></div><div class="suspect-role" id="sr${i}"></div></div>
+    </button>`).join('');
+
+  g.sospechosos.forEach((s, i) => {
+    const initials = s.nombre.split(' ').map(w => w.charAt(0)).slice(0,2).join('');
+    document.getElementById('av' + i).textContent = initials;
+    document.getElementById('sn' + i).textContent = s.nombre;
+    document.getElementById('sr' + i).textContent = s.descripcion;
+  });
+
+  showScreen('s-game');
+}
+
+function revealClue(i, el) {
+  if (el.classList.contains('revealed')) return;
+  el.classList.add('revealed');
+  el.querySelector('.clue-icon').textContent = '👁️';
+  el.querySelector('.clue-text').textContent = currentGame.pistas[i];
+}
+
+function pickSuspect(idx) {
+  document.querySelectorAll('.suspect-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('sp' + idx).classList.add('selected');
+  selectedSuspect = idx;
+  document.getElementById('accuse-btn').disabled = false;
+}
+
+async function accuse() {
+  if (selectedSuspect === -1 || !currentGame) return;
+  const correct = selectedSuspect === currentGame.culpable;
+  const elapsed = startTime ? Math.round((Date.now() - startTime) / 1000) : 0;
+  const culpableName = currentGame.sospechosos[currentGame.culpable].nombre;
+  const accusedName = currentGame.sospechosos[selectedSuspect].nombre;
+
+  await fetch('/api/play', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG, correct, game_type: 'crimen', elapsed })
+  });
+
+  const h = document.getElementById('r-headline');
+  h.textContent = correct ? 'Caso resuelto.' : 'Fallaste.';
+  h.className = 'result-big ' + (correct ? 'correct' : 'wrong');
+  document.getElementById('r-sub').textContent = correct
+    ? 'Acertaste. Buen detective.'
+    : 'Te equivocaste. Acusaste a ' + accusedName + '.';
+  document.getElementById('r-culpable').textContent = culpableName;
+  document.getElementById('r-explicacion').textContent = currentGame.explicacion;
+
+  showScreen('s-result');
+  window.scrollTo(0, 0);
+  loadStats(BAR_SLUG, 'crimen');
+}
+
+function doShare() {
+  const correct = selectedSuspect === currentGame.culpable;
+  const culpableName = currentGame.sospechosos[currentGame.culpable].nombre;
+  const pct = document.getElementById('donut-pct')?.textContent;
+  shareGame({
+    correct,
+    barName: BAR_NAME,
+    gameTitle: 'El Crimen del Día',
+    detail: correct ? `El culpable era ${culpableName}` : `No encontré al culpable: ${culpableName}`,
+    pct: pct !== '—%' ? pct : null
+  });
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+init();
+</script>
+{% endblock %}

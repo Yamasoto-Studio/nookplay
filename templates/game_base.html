@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+  :root {
+    --bar-primary: {{ bar.color_primary }};
+    --bar-primary-text: {{ bar.color_primary_text }};
+    --bar-bg: {{ bar.color_bg }};
+    --bar-bg-card: #FFFFFF;
+    --bar-bg-subtle: {{ bar.color_bg_subtle }};
+    --bar-accent-dark: {{ bar.color_accent_dark }};
+  }
+</style>
+
+<link rel="stylesheet" href="/static/css/games.css">
+<script src="/static/js/stats.js" defer></script>
+<script src="/static/js/share.js" defer></script>
+
+<div class="nook">
+  <div class="nook-topbar">
+    <a href="/{{ bar.slug }}?code={{ code }}"><img src="/static/logo.svg" alt="Nookplay"></a>
+  </div>
+  <div class="bar-hero">
+    <img class="bar-hero-logo"
+      src="/static/clientes/{{ bar.slug }}/logo_header.png"
+      alt="{{ bar.name }}"
+      onerror="this.style.display='none'">
+  </div>
+  <div class="nook-content">
+    <div class="nook-card">
+      {% block game_content %}{% endblock %}
+    </div>
+  </div>
+  <div class="nook-footer">
+    <a href="/" class="nook-footer-brand"><img src="/static/logo.svg" alt="Nookplay"></a>
+    <a href="https://www.yamasoto.com/" target="_blank" class="nook-footer-by">by Yamasoto</a>
+  </div>
+</div>
+
+{% endblock %}
