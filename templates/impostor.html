@@ -146,6 +146,7 @@
   font-size: 14px; color: var(--text); line-height: 1.6;
 }
 .impostor-stats {
+  display: none;
   font-size: 12px; color: var(--text-muted);
   text-align: center; margin: 12px 0;
   padding: 10px; background: var(--bar-bg-subtle);
@@ -235,11 +236,14 @@ async function revelar() {
   document.getElementById('imp-explicacion').textContent = gameData.explicacion_falsa;
   document.getElementById('imp-bonus').textContent = gameData.dato_bonus;
 
-  // Stats
-  if (stats.total > 0) {
+  // Stats - only show when there's meaningful data
+  const statsEl = document.getElementById('imp-stats');
+  if (stats.total > 1) {
     const pct = Math.round((stats.correct / stats.total) * 100);
-    document.getElementById('imp-stats').innerHTML =
-      `Hoy han jugado <strong>${stats.total}</strong> personas · <strong>${pct}%</strong> encontró al impostor`;
+    statsEl.innerHTML = `Hoy han jugado <strong>${stats.total}</strong> personas · <strong>${pct}%</strong> encontró al impostor`;
+    statsEl.style.display = 'block';
+  } else {
+    statsEl.style.display = 'none';
   }
 
   // Color afirmaciones

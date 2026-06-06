@@ -201,8 +201,8 @@ Devuelve SOLO un objeto JSON válido, sin markdown, con exactamente esta estruct
     "Afirmación 4"
   ],
   "falsa": """ + str(falsa_idx) + """,
-  "explicacion_falsa": "Por qué es falsa y cuál es el dato real correcto. 2-3 frases.",
-  "dato_bonus": "Un dato extra sorprendente sobre el tema. 1-2 frases."
+  "explicacion_falsa": "Explica SOLO por qué esa afirmación concreta es falsa y cuál es la realidad. No menciones las otras afirmaciones. 2 frases máximo. Directo y claro.",
+  "dato_bonus": "Un dato curioso sobre el tema general, diferente a todo lo anterior. Como algo que dirías al final de una conversación de bar. 1-2 frases."
 }
 
 La afirmación en la posición """ + str(falsa_idx) + """ (índice 0-3) debe ser la FALSA."""
