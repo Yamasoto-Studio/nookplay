@@ -166,20 +166,6 @@ El índice culpable varía cada día: hoy usa {get_day_seed(bar_slug) % 3}."""
 # El Impostor generator
 # ─────────────────────────────────────────────────────────────────────────────
 
-CATEGORIAS_IMPOSTOR = [
-    "ciencia y física cuántica",
-    "historia medieval europea",
-    "gastronomía y origen de platos",
-    "geografía y países del mundo",
-    "arte y pintores clásicos",
-    "deportes y récords mundiales",
-    "tecnología e inventos",
-    "mitología griega y romana",
-    "cine y directores",
-    "naturaleza y animales",
-    "música y compositores",
-    "arquitectura y monumentos",
-]
 
 def generate_impostor(bar_name, bar_slug):
     today = str(date.today())
