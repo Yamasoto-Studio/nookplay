@@ -202,19 +202,27 @@ def impostor_page(bar_slug):
 def impostor_stats(bar_slug):
     today = str(date.today())
     db = get_db()
-    total = db.execute(
-        "SELECT COUNT(*) as n FROM plays WHERE bar_slug = ? AND played_on = ? AND game_type = 'impostor'",
-        (bar_slug, today)
-    ).fetchone()['n']
-    correct = db.execute(
-        "SELECT COUNT(*) as n FROM plays WHERE bar_slug = ? AND played_on = ? AND game_type = 'impostor' AND correct = 1",
-        (bar_slug, today)
-    ).fetchone()['n']
-    avg_row = db.execute(
-        "SELECT AVG(elapsed) as avg_e FROM plays WHERE bar_slug = ? AND played_on = ? AND game_type = 'impostor' AND elapsed > 0",
-        (bar_slug, today)
-    ).fetchone()
-    avg_elapsed = round(avg_row['avg_e']) if avg_row['avg_e'] else None
+    try:
+        total = db.execute(
+            "SELECT COUNT(*) as n FROM plays WHERE bar_slug = ? AND played_on = ? AND game_type = 'impostor'",
+            (bar_slug, today)
+        ).fetchone()['n']
+        correct = db.execute(
+            "SELECT COUNT(*) as n FROM plays WHERE bar_slug = ? AND played_on = ? AND game_type = 'impostor' AND correct = 1",
+            (bar_slug, today)
+        ).fetchone()['n']
+        try:
+            avg_row = db.execute(
+                "SELECT AVG(elapsed) as avg_e FROM plays WHERE bar_slug = ? AND played_on = ? AND game_type = 'impostor' AND elapsed > 0",
+                (bar_slug, today)
+            ).fetchone()
+            avg_elapsed = round(avg_row['avg_e']) if avg_row and avg_row['avg_e'] else None
+        except:
+            avg_elapsed = None
+    except:
+        total = 0
+        correct = 0
+        avg_elapsed = None
     db.close()
     return jsonify({'total': total, 'correct': correct, 'avg_elapsed': avg_elapsed})
 
@@ -266,6 +274,7 @@ if __name__ == '__main__':
 # Migration: add brand columns to bars table if not exist
 def migrate_db():
     db = get_db()
+    # Bar columns
     try:
         db.execute("ALTER TABLE bars ADD COLUMN color_primary TEXT DEFAULT '#C4622D'")
     except: pass
@@ -304,3 +313,8 @@ def migrate_db():
         WHERE slug='yellow'""")
     db.commit()
     db.close()
+
+
+with app.app_context():
+    init_db()
+    migrate_db()
