@@ -402,7 +402,7 @@ body.landing {
   padding: 0 !important;
 }
 
-.btn-primary, .btn-secondary, .btn-whatsapp, .nav-cta {
+.landing .btn-primary, .landing .btn-secondary, .btn-whatsapp, .nav-cta {
   display: inline-block;
   width: auto;
 }
