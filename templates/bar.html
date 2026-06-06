@@ -247,7 +247,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function showMenu() {
   const welcomeEl = document.getElementById('menu-welcome');
-  const customMsg = BAR_WELCOME || `Bienvenido al ${BAR_NAME}.`;
+  // Strip trailing fixed phrase if already included in custom message
+  let customMsg = BAR_WELCOME || `Bienvenido al ${BAR_NAME}.`;
+  customMsg = customMsg.replace(/[\.\s]*Elige tu pasatiempo de hoy\.?/gi, '').trim();
+  if (!customMsg) customMsg = `Bienvenido al ${BAR_NAME}.`;
   welcomeEl.innerHTML = `${customMsg}<br><span class="menu-welcome-sub">Elige tu pasatiempo de hoy.</span>`;
 
   const list = document.getElementById('activities-list');
