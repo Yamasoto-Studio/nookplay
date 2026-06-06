@@ -142,6 +142,9 @@ body {
 
 /* ── Buttons ── */
 .btn-primary {
+  display: block;
+  margin: 0 auto;
+  text-align: center;
   width: 100%; padding: 14px;
   background: var(--bar-accent-dark);
   color: #fff;

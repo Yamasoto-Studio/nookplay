@@ -147,7 +147,7 @@ if (urlCode) {
 }
 
 // Products data from server
-const PRODUCTS = {{ products_json }};
+const PRODUCTS = {{ products_json|safe }};
 
 function getRandomProduct(exclude_idx = -1) {
   if (!PRODUCTS || PRODUCTS.length === 0) return null;
