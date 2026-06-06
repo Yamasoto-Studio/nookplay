@@ -708,6 +708,35 @@ def admin_rotate_code(bar_slug):
 # Misc
 # --------------------------------------------------------------------------
 
+
+@app.route('/admin/init-codes')
+def init_codes():
+    """Ruta temporal para generar códigos semanales si no existen."""
+    from datetime import timedelta
+    db = get_db()
+    bars = db.execute("SELECT id, slug FROM bars WHERE active = 1").fetchall()
+    today = date.today()
+    monday = today - timedelta(days=today.weekday())
+    sunday = monday + timedelta(days=6)
+    generated = []
+    for bar in bars:
+        existing = db.execute(
+            "SELECT code FROM access_codes WHERE bar_id = ? AND valid_from <= ? AND valid_until >= ?",
+            (bar['id'], str(today), str(today))
+        ).fetchone()
+        if not existing:
+            new_code = generate_weekly_code()
+            db.execute("UPDATE bars SET access_code = ?, access_code_updated_at = ? WHERE id = ?",
+                      (new_code, str(monday), bar['id']))
+            db.execute("INSERT INTO access_codes (bar_id, code, valid_from, valid_until) VALUES (?,?,?,?)",
+                      (bar['id'], new_code, str(monday), str(sunday)))
+            generated.append({'slug': bar['slug'], 'code': new_code})
+        else:
+            generated.append({'slug': bar['slug'], 'code': existing['code'], 'existing': True})
+    db.commit()
+    db.close()
+    return jsonify({'ok': True, 'codes': generated})
+
 @app.route('/static/og.png')
 def og_image():
     from flask import send_file
