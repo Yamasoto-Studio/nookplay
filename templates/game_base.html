@@ -15,6 +15,28 @@
 <link rel="stylesheet" href="/static/css/games.css">
 <script src="/static/js/stats.js"></script>
 <script src="/static/js/share.js"></script>
+<script>
+const GAME_PRODUCTS = {{ products_json|default('[]') }};
+function showResultPromo() {
+  if (!GAME_PRODUCTS || GAME_PRODUCTS.length === 0) return;
+  const el = document.getElementById('result-promo');
+  if (!el) return;
+  const p = GAME_PRODUCTS[Math.floor(Math.random() * GAME_PRODUCTS.length)];
+  el.innerHTML = `
+    <div class="result-promo-wrap">
+      <div class="promo-label">✨ Mientras estás aquí</div>
+      <div class="promo-item">
+        ${p.image_path ? `<img src="${p.image_path}" alt="${p.title}" class="promo-img" onerror="this.style.display='none'">` : ''}
+        <div class="promo-info">
+          <div class="promo-title">${p.title}</div>
+          ${p.description ? `<div class="promo-desc">${p.description}</div>` : ''}
+          ${p.price ? `<div class="promo-price">${p.price}</div>` : ''}
+        </div>
+      </div>
+    </div>`;
+  el.style.display = 'block';
+}
+</script>
 
 <div class="nook">
   <div class="nook-topbar">

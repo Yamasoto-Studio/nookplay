@@ -114,3 +114,12 @@
 }
 .donut-pct { font-size: 28px; font-weight: 500; color: var(--text); line-height: 1; }
 .donut-desc { font-size: 12px; color: var(--text-muted); margin-top: 4px; line-height: 1.4; }
+
+/* ── Result promo ── */
+.result-promo-wrap {
+  background: var(--bar-bg-subtle);
+  border: 1.5px solid var(--bar-primary);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  margin: 12px 0;
+}

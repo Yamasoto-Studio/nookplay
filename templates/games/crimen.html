@@ -68,6 +68,7 @@
   </div>
   <p class="body-text" id="r-explicacion"></p>
   {% include "components/stats.html" %}
+  <div id="result-promo" style="display:none;"></div>
   <button class="btn-share" onclick="doShare()">📤 Compartir resultado</button>
   <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
   <div class="tomorrow">Mañana hay un caso nuevo aquí.<br>Vuelve a tomar un café.</div>
@@ -163,6 +164,7 @@ async function accuse() {
 
   showScreen('s-result');
   window.scrollTo(0, 0);
+  if (typeof showResultPromo === "function") showResultPromo();
   loadStats(BAR_SLUG, 'crimen');
 }
 

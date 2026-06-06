@@ -48,21 +48,8 @@
 
         {% if bar.promo_active and products %}
         <div class="promo-banner" id="promo-banner">
-          <div class="promo-label">🎁 Hoy en {{ bar.name }}</div>
-          <div class="promo-products">
-            {% for product in products %}
-            <div class="promo-item">
-              {% if product.image_path %}
-              <img src="{{ product.image_path }}" alt="{{ product.title }}" class="promo-img" onerror="this.style.display='none'">
-              {% endif %}
-              <div class="promo-info">
-                <div class="promo-title">{{ product.title }}</div>
-                {% if product.description %}<div class="promo-desc">{{ product.description }}</div>{% endif %}
-                {% if product.price %}<div class="promo-price">{{ product.price }}</div>{% endif %}
-              </div>
-            </div>
-            {% endfor %}
-          </div>
+          <div class="promo-label">✨ Te puede interesar</div>
+          <div class="promo-products" id="promo-menu-product"></div>
         </div>
         {% endif %}
 
@@ -159,6 +146,32 @@ if (urlCode) {
   window.addEventListener('DOMContentLoaded', () => showMenu());
 }
 
+// Products data from server
+const PRODUCTS = {{ products_json }};
+
+function getRandomProduct(exclude_idx = -1) {
+  if (!PRODUCTS || PRODUCTS.length === 0) return null;
+  const available = PRODUCTS.filter((_, i) => i !== exclude_idx);
+  if (available.length === 0) return PRODUCTS[0];
+  return available[Math.floor(Math.random() * available.length)];
+}
+
+function renderPromoItem(product, container_id) {
+  const el = document.getElementById(container_id);
+  if (!el || !product) return;
+  el.innerHTML = `
+    <div class="promo-item">
+      ${product.image_path ? `<img src="${product.image_path}" alt="${product.title}" class="promo-img" onerror="this.style.display='none'">` : ''}
+      <div class="promo-info">
+        <div class="promo-title">${product.title}</div>
+        ${product.description ? `<div class="promo-desc">${product.description}</div>` : ''}
+        ${product.price ? `<div class="promo-price">${product.price}</div>` : ''}
+      </div>
+    </div>`;
+}
+
+let menuPromoIdx = -1;
+
 const ACTIVITIES = [
   {
     id: 'crimen',
@@ -252,6 +265,15 @@ function showMenu() {
   `).join('');
 
   showScreen('s-menu');
+
+  // Show one random product in menu
+  if (PRODUCTS && PRODUCTS.length > 0) {
+    const banner = document.getElementById('promo-banner');
+    if (banner) {
+      menuPromoIdx = Math.floor(Math.random() * PRODUCTS.length);
+      renderPromoItem(PRODUCTS[menuPromoIdx], 'promo-menu-product');
+    }
+  }
 }
 
 function startActivity(id) {

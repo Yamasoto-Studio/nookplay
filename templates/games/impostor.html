@@ -62,6 +62,7 @@
     <div class="bonus-text" id="imp-bonus"></div>
   </div>
   {% include "components/stats.html" %}
+  <div id="result-promo" style="display:none;"></div>
   <button class="btn-share" onclick="doShare()">📤 Compartir resultado</button>
   <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
   <div class="tomorrow">Mañana, un nuevo impostor te espera.<br>Vuelve a tomar un café.</div>
@@ -137,6 +138,7 @@ async function revelar() {
 
   showScreen('s-result');
   window.scrollTo(0, 0);
+  if (typeof showResultPromo === "function") showResultPromo();
   loadStats(BAR_SLUG, 'impostor');
 }
 

@@ -350,27 +350,43 @@ def bar(bar_slug):
         (bar['id'],)
     ).fetchall()
     db.close()
-    return render_template('bar.html', bar=bar, products=products)
+    import json as json_lib
+    products_json = json_lib.dumps([dict(p) for p in products])
+    return render_template('bar.html', bar=bar, products=products, products_json=products_json)
 
 @app.route('/<bar_slug>/crimen')
 def crimen_page(bar_slug):
     db = get_db()
     bar = db.execute("SELECT * FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
-    db.close()
     if not bar:
+        db.close()
         return render_template('404.html'), 404
+    products = db.execute(
+        "SELECT * FROM bar_products WHERE bar_id = ? AND active = 1 ORDER BY position",
+        (bar['id'],)
+    ).fetchall()
+    db.close()
     code = request.args.get('code', '')
-    return render_template('games/crimen.html', bar=bar, code=code)
+    import json as json_lib
+    products_json = json_lib.dumps([dict(p) for p in products])
+    return render_template('games/crimen.html', bar=bar, code=code, products_json=products_json)
 
 @app.route('/<bar_slug>/impostor')
 def impostor_page(bar_slug):
     db = get_db()
     bar = db.execute("SELECT * FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
-    db.close()
     if not bar:
+        db.close()
         return render_template('404.html'), 404
+    products = db.execute(
+        "SELECT * FROM bar_products WHERE bar_id = ? AND active = 1 ORDER BY position",
+        (bar['id'],)
+    ).fetchall()
+    db.close()
     code = request.args.get('code', '')
-    return render_template('games/impostor.html', bar=bar, code=code)
+    import json as json_lib
+    products_json = json_lib.dumps([dict(p) for p in products])
+    return render_template('games/impostor.html', bar=bar, code=code, products_json=products_json)
 
 # --------------------------------------------------------------------------
 # API — Validación de acceso
