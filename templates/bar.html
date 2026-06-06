@@ -65,6 +65,15 @@ const BAR_WELCOME = "{{ bar.welcome_message }}";
 let validatedCode = null;
 let currentGame = null;
 
+// Check if code is already in URL (returning from a game)
+const urlParams = new URLSearchParams(window.location.search);
+const urlCode = urlParams.get('code');
+if (urlCode) {
+  validatedCode = urlCode;
+  // Show menu directly without asking for code again
+  window.addEventListener('DOMContentLoaded', () => showMenu());
+}
+
 const ACTIVITIES = [
   {
     id: 'crimen',
@@ -260,7 +269,7 @@ async function accuse() {
     </div>
     <p class="body-text" id="r-explicacion"></p>
     <button class="btn-share" onclick="shareResult()">📤 Compartir resultado</button>
-    <button class="btn-menu" onclick="showMenu()">← Volver al menú</button>
+    <button class="btn-menu" onclick="goToMenu()">← Volver al menú</button>
     <div class="tomorrow">Mañana hay un caso nuevo aquí.<br>Vuelve a tomar un café.</div>
   `;
 
@@ -278,6 +287,13 @@ function shareResult() {
   const txt = `🔍 El Crimen del Día — ${BAR_NAME}\n\n${emoji} Acusé a ${accusedName}\nEl culpable era: ${culpableName}\n\n¿Puedes tú resolverlo?\nnookplay.app`;
   if (navigator.share) { navigator.share({ text: txt }); }
   else { navigator.clipboard.writeText(txt).then(() => alert('¡Copiado!')); }
+}
+
+function goToMenu() {
+  // Update URL with code so menu shows directly on return
+  const newUrl = `/${BAR_SLUG}?code=${validatedCode}`;
+  window.history.replaceState({}, '', newUrl);
+  showMenu();
 }
 
 function showScreen(id) {
