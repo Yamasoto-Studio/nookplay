@@ -48,3 +48,19 @@ else:
 db.commit()
 db.close()
 print('DB ready')
+
+# Add new columns if not exist
+try:
+    db.execute("ALTER TABLE plays ADD COLUMN game_type TEXT DEFAULT 'crimen'")
+    db.commit()
+except: pass
+try:
+    db.execute("ALTER TABLE plays ADD COLUMN choice INTEGER DEFAULT -1")
+    db.commit()
+except: pass
+try:
+    db.execute("ALTER TABLE plays ADD COLUMN elapsed INTEGER DEFAULT 0")
+    db.commit()
+except: pass
+
+print('Migrations done')
