@@ -28,6 +28,7 @@
 
       <!-- PANTALLA: CÓDIGO -->
       <div class="screen active" id="s-code">
+        <p class="menu-welcome" id="code-welcome" style="text-align:center;"></p>
         <h1 class="nook-title">Disfruta del Pasatiempo<br>del Día</h1>
         <p class="nook-sub">Introduce el código de tu ticket para acceder al juego de hoy.</p>
         <div class="code-input-wrap">
@@ -137,6 +138,17 @@ const BAR_NAME = "{{ bar.name }}";
 const BAR_WELCOME = "{{ bar.welcome_message }}";
 let validatedCode = null;
 let currentGame = null;
+
+// Set welcome message on code screen
+document.addEventListener('DOMContentLoaded', () => {
+  const el = document.getElementById('code-welcome');
+  if (el) {
+    let customMsg = BAR_WELCOME || `Bienvenido al ${BAR_NAME}.`;
+    customMsg = customMsg.replace(/[.\s]*Elige tu pasatiempo de hoy.?/gi, '').trim();
+    if (!customMsg) customMsg = `Bienvenido al ${BAR_NAME}.`;
+    el.innerHTML = `${customMsg}<br><span class="menu-welcome-sub">Elige tu pasatiempo de hoy.</span>`;
+  }
+});
 
 // Si el código ya está en la URL (volviendo de un juego)
 const urlParams = new URLSearchParams(window.location.search);
