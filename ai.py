@@ -188,7 +188,7 @@ REGLAS DE CALIDAD:
 4. Al revelar la respuesta, el jugador debe pensar "casi lo sabía" o "qué interesante"
 5. Evita datos demasiado conocidos (el agua hierve a 100°, la Torre Eiffel está en París)
 6. El tema debe tener un ángulo sorprendente o poco conocido
-7. Tono: inteligente, con una pizca de humor en la explicación, nunca condescendiente
+7. TONO CRUCIAL: Como si se lo contaras a un amigo en un bar mientras tomáis algo. Curioso, ligero, con humor seco. Nada de lenguaje académico ni técnico. Las afirmaciones deben sonar como datos de conversación, no de enciclopedia.
 
 Devuelve SOLO un objeto JSON válido, sin markdown, con exactamente esta estructura:
 {

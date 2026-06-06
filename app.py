@@ -97,16 +97,6 @@ def validate_code():
         db.close()
         return jsonify({'valid': False, 'message': 'Código no válido.'})
 
-    # Check if already played today
-    played = db.execute(
-        "SELECT id FROM plays WHERE code = ? AND played_on = ?",
-        (code, today)
-    ).fetchone()
-
-    if played:
-        db.close()
-        return jsonify({'valid': False, 'message': 'Este código ya se ha usado hoy. Vuelve mañana con tu café. ☕'})
-
     db.close()
     return jsonify({'valid': True, 'bar_name': result['name']})
 
