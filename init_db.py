@@ -12,7 +12,9 @@ def generate_weekly_code():
     chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
     return ''.join(random.choices(chars, k=5))
 
-db = sqlite3.connect('nookplay.db')
+import os
+db_path = '/data/nookplay.db' if os.path.exists('/data') else 'nookplay.db'
+db = sqlite3.connect(db_path)
 db.row_factory = sqlite3.Row
 
 # ── Crear todas las tablas ──────────────────────────────────────────────────
