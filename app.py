@@ -338,6 +338,156 @@ def rotate_weekly_codes():
 def home():
     return render_template('home.html')
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Admin routes
+# ─────────────────────────────────────────────────────────────────────────────
+
+import hashlib as _hashlib
+from functools import wraps
+from flask import session, redirect
+
+def admin_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if 'admin_user_id' not in session:
+            return redirect('/admin/login')
+        return f(*args, **kwargs)
+    return decorated
+
+def hash_password(password):
+    return _hashlib.sha256(password.encode()).hexdigest()
+
+@app.route('/admin')
+def admin_index():
+    if 'admin_user_id' not in session:
+        return redirect('/admin/login')
+    db = get_db()
+    user = db.execute("SELECT * FROM admin_users WHERE id = ?", (session['admin_user_id'],)).fetchone()
+    db.close()
+    if not user:
+        return redirect('/admin/login')
+    return redirect('/admin/' + (user['bar_slug'] or 'yellow'))
+
+@app.route('/admin/login', methods=['GET', 'POST'])
+def admin_login():
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '')
+        db = get_db()
+        user = db.execute("SELECT * FROM admin_users WHERE email = ?", (email,)).fetchone()
+        db.close()
+        if user and user['password_hash'] == hash_password(password):
+            session['admin_user_id'] = user['id']
+            session['admin_role'] = user['role']
+            session['admin_bar_slug'] = user['bar_slug']
+            return redirect('/admin')
+        return render_template('admin/login.html', error='Email o contraseña incorrectos.')
+    return render_template('admin/login.html', error=None)
+
+@app.route('/admin/logout')
+def admin_logout():
+    session.clear()
+    return redirect('/admin/login')
+
+@app.route('/admin/<bar_slug>')
+@admin_required
+def admin_bar(bar_slug):
+    if session.get('admin_role') != 'superadmin' and session.get('admin_bar_slug') != bar_slug:
+        return redirect('/admin')
+    db = get_db()
+    bar = db.execute("SELECT * FROM bars WHERE slug = ?", (bar_slug,)).fetchone()
+    if not bar:
+        db.close()
+        return "Bar no encontrado", 404
+    products = db.execute(
+        "SELECT * FROM bar_products WHERE bar_id = ? AND active = 1 ORDER BY position",
+        (bar['id'],)
+    ).fetchall()
+    today = str(date.today())
+    code_row = db.execute(
+        "SELECT code, valid_until FROM access_codes WHERE bar_id = ? AND valid_from <= ? AND valid_until >= ? ORDER BY id DESC LIMIT 1",
+        (bar['id'], today, today)
+    ).fetchone()
+    current_code = code_row['code'] if code_row else (bar['access_code'] or 'N/D')
+    valid_until_str = code_row['valid_until'] if code_row else '—'
+    stats_today = db.execute(
+        "SELECT COUNT(*) as n FROM plays WHERE bar_slug = ? AND played_on = ?",
+        (bar_slug, today)
+    ).fetchone()['n']
+    from datetime import timedelta
+    monday = date.today() - timedelta(days=date.today().weekday())
+    stats_week = db.execute(
+        "SELECT COUNT(*) as n FROM plays WHERE bar_slug = ? AND played_on >= ?",
+        (bar_slug, str(monday))
+    ).fetchone()['n']
+    correct_week = db.execute(
+        "SELECT COUNT(*) as n FROM plays WHERE bar_slug = ? AND played_on >= ? AND correct = 1",
+        (bar_slug, str(monday))
+    ).fetchone()['n']
+    pct_correct = round((correct_week / stats_week * 100)) if stats_week > 0 else 0
+    db.close()
+    stats = {'today': stats_today, 'week': stats_week, 'pct_correct': pct_correct}
+    return render_template('admin/bar_panel.html', bar=bar, products=products,
+                           current_code=current_code, valid_until=valid_until_str, stats=stats)
+
+@app.route('/admin/api/save', methods=['POST'])
+@admin_required
+def admin_save():
+    data = request.get_json()
+    bar_slug = data.get('bar_slug')
+    if session.get('admin_role') != 'superadmin' and session.get('admin_bar_slug') != bar_slug:
+        return jsonify({'ok': False, 'error': 'No autorizado'}), 403
+    db = get_db()
+    bar = db.execute("SELECT * FROM bars WHERE slug = ?", (bar_slug,)).fetchone()
+    if not bar:
+        db.close()
+        return jsonify({'ok': False}), 404
+    db.execute(
+        "UPDATE bars SET welcome_message=?, promo_active=?, description=?, owner_name=?, staff_names=? WHERE slug=?",
+        (data.get('welcome_message',''), data.get('promo_active',0),
+         data.get('description',''), data.get('owner_name',''),
+         data.get('staff_names',''), bar_slug)
+    )
+    db.execute("DELETE FROM bar_products WHERE bar_id = ?", (bar['id'],))
+    for p in data.get('products', []):
+        if p.get('title'):
+            db.execute(
+                "INSERT INTO bar_products (bar_id, position, title, description, price) VALUES (?,?,?,?,?)",
+                (bar['id'], p['position'], p['title'], p.get('description',''), p.get('price',''))
+            )
+    db.commit()
+    db.close()
+    return jsonify({'ok': True})
+
+@app.route('/admin/api/create-user', methods=['POST'])
+def admin_create_user():
+    data = request.get_json()
+    if data.get('secret') != os.environ.get('ADMIN_SECRET', 'nookplay-admin-2026'):
+        return jsonify({'ok': False}), 403
+    db = get_db()
+    try:
+        db.execute(
+            "INSERT INTO admin_users (email, password_hash, role, bar_slug) VALUES (?,?,?,?)",
+            (data['email'].lower(), hash_password(data['password']),
+             data.get('role','bar_admin'), data.get('bar_slug',''))
+        )
+        db.commit()
+        db.close()
+        return jsonify({'ok': True})
+    except Exception as e:
+        db.close()
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
+
+with app.app_context():
+    init_db()
+    migrate_db()
+
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0', port=5000)
+
+
 @app.route('/<bar_slug>')
 def bar(bar_slug):
     db = get_db()
@@ -615,144 +765,6 @@ def stats(bar_slug):
 # Admin — Panel del bar (acceso privado)
 # --------------------------------------------------------------------------
 
-@app.route('/admin/<bar_slug>', methods=['GET'])
-def admin_bar(bar_slug):
-    # Por ahora acceso directo — en siguiente fase añadiremos login
-    db = get_db()
-    bar = db.execute("SELECT * FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
-    if not bar:
-        db.close()
-        return render_template('404.html'), 404
-    products = db.execute(
-        "SELECT * FROM bar_products WHERE bar_id = ? ORDER BY position",
-        (bar['id'],)
-    ).fetchall()
-    # Código actual
-    today = str(date.today())
-    current_code = db.execute("""
-        SELECT code, valid_from, valid_until FROM access_codes
-        WHERE bar_id = ? AND valid_from <= ? AND valid_until >= ?
-        ORDER BY created_at DESC LIMIT 1
-    """, (bar['id'], today, today)).fetchone()
-    db.close()
-    return render_template('admin/bar_edit.html', bar=bar, products=products, current_code=current_code)
-
-@app.route('/admin/<bar_slug>/save', methods=['POST'])
-def admin_bar_save(bar_slug):
-    db = get_db()
-    bar = db.execute("SELECT * FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
-    if not bar:
-        db.close()
-        return jsonify({'ok': False, 'error': 'Bar no encontrado'}), 404
-
-    data = request.get_json()
-
-    db.execute("""
-        UPDATE bars SET
-            name            = ?,
-            type            = ?,
-            address         = ?,
-            city            = ?,
-            province        = ?,
-            zip_code        = ?,
-            description     = ?,
-            owner_name      = ?,
-            staff_names     = ?,
-            bar_vibe        = ?,
-            welcome_message = ?,
-            promo_active    = ?,
-            whatsapp_phone  = ?,
-            updated_at      = datetime('now')
-        WHERE slug = ?
-    """, (
-        data.get('name', bar['name']),
-        data.get('type', ''),
-        data.get('address', ''),
-        data.get('city', ''),
-        data.get('province', ''),
-        data.get('zip_code', ''),
-        data.get('description', ''),
-        data.get('owner_name', ''),
-        data.get('staff_names', ''),
-        data.get('bar_vibe', ''),
-        data.get('welcome_message', ''),
-        1 if data.get('promo_active') else 0,
-        data.get('whatsapp_phone', ''),
-        bar_slug
-    ))
-
-    # Guardar productos (hasta 3)
-    products = data.get('products', [])
-    db.execute("DELETE FROM bar_products WHERE bar_id = ?", (bar['id'],))
-    for i, p in enumerate(products[:3]):
-        if p.get('title', '').strip():
-            db.execute("""
-                INSERT INTO bar_products (bar_id, position, title, description, price, active)
-                VALUES (?, ?, ?, ?, ?, 1)
-            """, (bar['id'], i + 1, p['title'], p.get('description', ''), p.get('price', '')))
-
-    db.commit()
-    db.close()
-    return jsonify({'ok': True})
-
-# --------------------------------------------------------------------------
-# Admin — Rotación manual de código (para pruebas)
-# --------------------------------------------------------------------------
-
-@app.route('/admin/<bar_slug>/rotate-code', methods=['POST'])
-def admin_rotate_code(bar_slug):
-    db = get_db()
-    bar = db.execute("SELECT id FROM bars WHERE slug = ?", (bar_slug,)).fetchone()
-    if not bar:
-        db.close()
-        return jsonify({'ok': False}), 404
-
-    new_code = generate_weekly_code()
-    today = date.today()
-    monday = today - timedelta(days=today.weekday())
-    sunday = monday + timedelta(days=6)
-
-    db.execute("UPDATE bars SET access_code = ?, access_code_updated_at = ? WHERE id = ?",
-              (new_code, str(monday), bar['id']))
-    db.execute("INSERT INTO access_codes (bar_id, code, valid_from, valid_until) VALUES (?,?,?,?)",
-              (bar['id'], new_code, str(monday), str(sunday)))
-    db.commit()
-    db.close()
-    return jsonify({'ok': True, 'code': new_code})
-
-# --------------------------------------------------------------------------
-# Misc
-# --------------------------------------------------------------------------
-
-
-@app.route('/admin/init-codes')
-def init_codes():
-    """Ruta temporal para generar códigos semanales si no existen."""
-    from datetime import timedelta
-    db = get_db()
-    bars = db.execute("SELECT id, slug FROM bars WHERE active = 1").fetchall()
-    today = date.today()
-    monday = today - timedelta(days=today.weekday())
-    sunday = monday + timedelta(days=6)
-    generated = []
-    for bar in bars:
-        existing = db.execute(
-            "SELECT code FROM access_codes WHERE bar_id = ? AND valid_from <= ? AND valid_until >= ?",
-            (bar['id'], str(today), str(today))
-        ).fetchone()
-        if not existing:
-            new_code = generate_weekly_code()
-            db.execute("UPDATE bars SET access_code = ?, access_code_updated_at = ? WHERE id = ?",
-                      (new_code, str(monday), bar['id']))
-            db.execute("INSERT INTO access_codes (bar_id, code, valid_from, valid_until) VALUES (?,?,?,?)",
-                      (bar['id'], new_code, str(monday), str(sunday)))
-            generated.append({'slug': bar['slug'], 'code': new_code})
-        else:
-            generated.append({'slug': bar['slug'], 'code': existing['code'], 'existing': True})
-    db.commit()
-    db.close()
-    return jsonify({'ok': True, 'codes': generated})
-
 @app.route('/static/og.png')
 def og_image():
     from flask import send_file
@@ -761,10 +773,3 @@ def og_image():
 # --------------------------------------------------------------------------
 # Run
 # --------------------------------------------------------------------------
-
-with app.app_context():
-    init_db()
-    migrate_db()
-
-if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
