@@ -15,7 +15,9 @@ app.secret_key = os.environ.get('SECRET_KEY', 'nookplay-secret-2026')
 # --------------------------------------------------------------------------
 
 def get_db():
-    db = sqlite3.connect('nookplay.db')
+    import os as _os
+    _db_path = '/data/nookplay.db' if _os.path.exists('/data') else 'nookplay.db'
+    db = sqlite3.connect(_db_path)
     db.row_factory = sqlite3.Row
     return db
 
