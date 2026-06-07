@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+{% block title %}Panel — {{ bar.name }}{% endblock %}
+{% block content %}
+
+<style>
+  body { background: #F7F2EB !important; display: block !important; padding: 0 !important; }
+  .admin-wrap { max-width: 680px; margin: 0 auto; padding: 24px 16px 60px; }
+
+  /* Header */
+  .admin-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }
+  .admin-header-logo img { height: 20px; }
+  .admin-logout { font-size: 13px; color: #6B6059; text-decoration: none; padding: 6px 12px; border: 1px solid #E5DDD5; border-radius: 8px; }
+
+  /* Bar hero */
+  .admin-bar-hero { background: {{ bar.color_primary }}; border-radius: 14px; padding: 20px; display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
+  .admin-bar-logo { width: 56px; height: 56px; border-radius: 10px; background: rgba(255,255,255,0.2); overflow: hidden; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .admin-bar-logo img { width: 100%; height: 100%; object-fit: contain; }
+  .admin-bar-name { font-size: 18px; font-weight: 700; color: {{ bar.color_primary_text }}; }
+  .admin-bar-city { font-size: 13px; color: {{ bar.color_primary_text }}; opacity: 0.7; margin-top: 2px; }
+
+  /* Code card */
+  .code-card { background: #fff; border-radius: 14px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+  .card-title { font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: #A89B91; margin-bottom: 12px; }
+  .weekly-code { font-size: 36px; font-weight: 700; letter-spacing: 6px; color: #1A1A1A; font-family: monospace; text-align: center; padding: 16px; background: #F7F2EB; border-radius: 10px; margin-bottom: 8px; }
+  .code-validity { font-size: 13px; color: #6B6059; text-align: center; }
+  .code-hint { font-size: 12px; color: #A89B91; text-align: center; margin-top: 6px; line-height: 1.5; }
+
+  /* Stats mini */
+  .stats-mini { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+  .stat-mini-card { background: #fff; border-radius: 12px; padding: 14px 10px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+  .stat-mini-val { font-size: 24px; font-weight: 600; color: #1A1A1A; line-height: 1; }
+  .stat-mini-label { font-size: 11px; color: #A89B91; margin-top: 4px; line-height: 1.3; }
+
+  /* Form sections */
+  .form-card { background: #fff; border-radius: 14px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+  .form-card h3 { font-size: 15px; font-weight: 600; color: #1A1A1A; margin-bottom: 16px; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 13px; font-weight: 500; color: #1A1A1A; margin-bottom: 5px; }
+  .field input, .field textarea { width: 100%; padding: 11px 13px; border: 1px solid #E5DDD5; border-radius: 10px; font-size: 15px; font-family: inherit; outline: none; transition: border-color 0.15s; resize: vertical; }
+  .field input:focus, .field textarea:focus { border-color: #C4622D; }
+  .field-hint { font-size: 12px; color: #A89B91; margin-top: 4px; }
+
+  /* Product cards */
+  .product-item { border: 1px solid #E5DDD5; border-radius: 12px; padding: 14px; margin-bottom: 10px; }
+  .product-item h4 { font-size: 13px; font-weight: 600; color: #6B6059; margin-bottom: 10px; }
+
+  /* Save button */
+  .btn-save { width: 100%; padding: 14px; background: #C4622D; color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit; }
+  .btn-save:hover { opacity: 0.9; }
+  .save-success { display: none; text-align: center; color: #22aa55; font-size: 14px; font-weight: 500; margin-top: 10px; }
+
+  /* Toggle */
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; }
+  .toggle { position: relative; width: 44px; height: 26px; }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider { position: absolute; cursor: pointer; inset: 0; background: #E5DDD5; border-radius: 26px; transition: 0.2s; }
+  .toggle-slider:before { position: absolute; content: ''; height: 20px; width: 20px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.2s; }
+  .toggle input:checked + .toggle-slider { background: #C4622D; }
+  .toggle input:checked + .toggle-slider:before { transform: translateX(18px); }
+</style>
+
+<div class="admin-wrap">
+
+  <!-- Header -->
+  <div class="admin-header">
+    <div class="admin-header-logo"><img src="/static/logo.svg" alt="Nookplay"></div>
+    <a href="/admin/logout" class="admin-logout">Cerrar sesión</a>
+  </div>
+
+  <!-- Bar hero -->
+  <div class="admin-bar-hero">
+    <div class="admin-bar-logo">
+      <img src="/static/clientes/{{ bar.slug }}/logo_header.png" alt="{{ bar.name }}" onerror="this.style.display='none'">
+    </div>
+    <div>
+      <div class="admin-bar-name">{{ bar.name }}</div>
+      <div class="admin-bar-city">{{ bar.city }}{% if bar.province %}, {{ bar.province }}{% endif %}</div>
+    </div>
+  </div>
+
+  <!-- Código semanal -->
+  <div class="code-card">
+    <div class="card-title">Código de esta semana</div>
+    <div class="weekly-code">{{ current_code }}</div>
+    <div class="code-validity">Válido hasta el {{ valid_until }}</div>
+    <div class="code-hint">Configura este código en tu TPV cada lunes.<br>El lunes siguiente recibirás el nuevo código por WhatsApp.</div>
+  </div>
+
+  <!-- Stats mini -->
+  <div class="stats-mini">
+    <div class="stat-mini-card">
+      <div class="stat-mini-val">{{ stats.today }}</div>
+      <div class="stat-mini-label">Partidas hoy</div>
+    </div>
+    <div class="stat-mini-card">
+      <div class="stat-mini-val">{{ stats.week }}</div>
+      <div class="stat-mini-label">Esta semana</div>
+    </div>
+    <div class="stat-mini-card">
+      <div class="stat-mini-val">{{ stats.pct_correct }}%</div>
+      <div class="stat-mini-label">Han acertado</div>
+    </div>
+  </div>
+
+  <!-- Formulario -->
+  <form id="admin-form">
+
+    <!-- Bienvenida -->
+    <div class="form-card">
+      <h3>Mensaje de bienvenida</h3>
+      <div class="field">
+        <label for="welcome_message">Tu mensaje personalizado</label>
+        <input type="text" id="welcome_message" name="welcome_message" value="{{ bar.welcome_message }}" placeholder="Bienvenido al {{ bar.name }}.">
+        <div class="field-hint">Aparece al entrar al juego. Solo la primera parte — "Elige tu pasatiempo de hoy." se añade automáticamente.</div>
+      </div>
+    </div>
+
+    <!-- Productos -->
+    <div class="form-card">
+      <h3>Productos destacados</h3>
+      <div class="field">
+        <div class="toggle-row">
+          <label>Mostrar productos en el juego</label>
+          <label class="toggle">
+            <input type="checkbox" id="promo_active" name="promo_active" {% if bar.promo_active %}checked{% endif %}>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="field-hint">Los productos aparecen antes de los juegos y al terminar.</div>
+      </div>
+      {% for i in range(3) %}
+      {% set p = products[i] if i < products|length else None %}
+      <div class="product-item">
+        <h4>Producto {{ i + 1 }}</h4>
+        <div class="field">
+          <label>Nombre</label>
+          <input type="text" name="product_title_{{ i }}" value="{{ p.title if p else '' }}" placeholder="Ej: Café de finca etíope">
+        </div>
+        <div class="field">
+          <label>Descripción</label>
+          <input type="text" name="product_desc_{{ i }}" value="{{ p.description if p else '' }}" placeholder="Una frase breve">
+        </div>
+        <div class="field">
+          <label>Precio</label>
+          <input type="text" name="product_price_{{ i }}" value="{{ p.price if p else '' }}" placeholder="2,50 €">
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Sobre el local -->
+    <div class="form-card">
+      <h3>Sobre el local</h3>
+      <div class="field">
+        <label>Descripción</label>
+        <textarea name="description" rows="3" placeholder="Describe tu local...">{{ bar.description }}</textarea>
+        <div class="field-hint">La IA usa esto para personalizar los juegos de vez en cuando.</div>
+      </div>
+      <div class="field">
+        <label>Tu nombre</label>
+        <input type="text" name="owner_name" value="{{ bar.owner_name }}" placeholder="Lorena">
+      </div>
+      <div class="field">
+        <label>Equipo (separado por comas)</label>
+        <input type="text" name="staff_names" value="{{ bar.staff_names }}" placeholder="Carla, Marta">
+      </div>
+    </div>
+
+    <button type="button" class="btn-save" onclick="saveChanges()">Guardar cambios</button>
+    <div class="save-success" id="save-success">✅ Cambios guardados</div>
+
+  </form>
+
+</div>
+
+<script>
+async function saveChanges() {
+  const form = document.getElementById('admin-form');
+  const data = {
+    welcome_message: form.welcome_message.value,
+    promo_active: form.promo_active.checked ? 1 : 0,
+    description: form.description.value,
+    owner_name: form.owner_name.value,
+    staff_names: form.staff_names.value,
+    products: []
+  };
+
+  for (let i = 0; i < 3; i++) {
+    data.products.push({
+      position: i + 1,
+      title: form[`product_title_${i}`].value,
+      description: form[`product_desc_${i}`].value,
+      price: form[`product_price_${i}`].value
+    });
+  }
+
+  const res = await fetch('/admin/api/save', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ bar_slug: '{{ bar.slug }}', ...data })
+  });
+
+  const result = await res.json();
+  if (result.ok) {
+    const el = document.getElementById('save-success');
+    el.style.display = 'block';
+    setTimeout(() => el.style.display = 'none', 3000);
+  }
+}
+</script>
+
+{% endblock %}

@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Acceso — Nookplay Admin{% endblock %}
+{% block content %}
+
+<style>
+  body { display: flex !important; align-items: center !important; justify-content: center !important; min-height: 100vh !important; background: #F7F2EB !important; padding: 20px !important; }
+  .login-wrap { width: 100%; max-width: 380px; }
+  .login-logo { text-align: center; margin-bottom: 32px; }
+  .login-logo img { height: 24px; }
+  .login-card { background: #fff; border-radius: 16px; padding: 32px 28px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+  .login-title { font-size: 20px; font-weight: 700; color: #1A1A1A; margin-bottom: 6px; text-align: center; }
+  .login-sub { font-size: 14px; color: #6B6059; text-align: center; margin-bottom: 24px; }
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 13px; font-weight: 500; color: #1A1A1A; margin-bottom: 6px; }
+  .field input { width: 100%; padding: 12px 14px; border: 1px solid #E5DDD5; border-radius: 10px; font-size: 15px; font-family: inherit; outline: none; transition: border-color 0.15s; }
+  .field input:focus { border-color: #C4622D; }
+  .login-btn { width: 100%; padding: 13px; background: #C4622D; color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit; margin-top: 8px; }
+  .login-btn:hover { opacity: 0.9; }
+  .login-error { font-size: 14px; color: #cc2222; text-align: center; margin-top: 12px; min-height: 20px; font-weight: 500; }
+  .login-footer { text-align: center; margin-top: 20px; font-size: 12px; color: #A89B91; }
+</style>
+
+<div class="login-wrap">
+  <div class="login-logo">
+    <img src="/static/logo.svg" alt="Nookplay">
+  </div>
+  <div class="login-card">
+    <div class="login-title">Acceso al panel</div>
+    <div class="login-sub">Gestiona tu rincón Nookplay</div>
+    {% if error %}
+    <div class="login-error">{{ error }}</div>
+    {% endif %}
+    <form method="POST" action="/admin/login">
+      <div class="field">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" placeholder="tu@email.com" required autocomplete="email">
+      </div>
+      <div class="field">
+        <label for="password">Contraseña</label>
+        <input type="password" id="password" name="password" placeholder="••••••••" required autocomplete="current-password">
+      </div>
+      <button type="submit" class="login-btn">Entrar</button>
+    </form>
+  </div>
+  <div class="login-footer">Nookplay by Yamasoto · Acceso restringido</div>
+</div>
+
+{% endblock %}
