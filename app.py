@@ -769,6 +769,27 @@ def stats(bar_slug):
 
 
 
+
+@app.route('/fix-db-now')
+def fix_db_now():
+    db = get_db()
+    results = []
+    migrations = [
+        "ALTER TABLE admin_users ADD COLUMN bar_slug TEXT DEFAULT ''",
+        "ALTER TABLE plays ADD COLUMN game_type TEXT DEFAULT 'crimen'",
+        "ALTER TABLE plays ADD COLUMN choice INTEGER DEFAULT -1",
+        "ALTER TABLE plays ADD COLUMN elapsed INTEGER DEFAULT 0",
+    ]
+    for sql in migrations:
+        try:
+            db.execute(sql)
+            db.commit()
+            results.append({'sql': sql[:40], 'ok': True})
+        except Exception as e:
+            results.append({'sql': sql[:40], 'ok': False, 'error': str(e)})
+    db.close()
+    return jsonify({'ok': True, 'results': results})
+
 @app.route('/static/og.png')
 def og_image():
     from flask import send_file
