@@ -768,18 +768,6 @@ def stats(bar_slug):
 
 
 
-@app.route('/fix-db-now')
-def fix_db_now():
-    db = get_db()
-    results = []
-    try:
-        db.execute("ALTER TABLE admin_users ADD COLUMN bar_slug TEXT DEFAULT ''")
-        db.commit()
-        results.append('bar_slug added OK')
-    except Exception as e:
-        results.append(f'bar_slug: {e}')
-    db.close()
-    return jsonify({'ok': True, 'results': results})
 
 @app.route('/static/og.png')
 def og_image():
