@@ -115,9 +115,12 @@ ESCENARIO: {ambiente}
 
 REGLAS ABSOLUTAS DE CALIDAD:
 1. El culpable debe tener motivo claro, medio físico posible y oportunidad real
-2. Incluye exactamente 4 pistas — no 3
-3. REGLA DE ORO DE LAS PISTAS: cada pista debe poder interpretarse de DOS maneras distintas antes de conocer al culpable. Una pista debe apuntar erróneamente hacia un inocente. Solo en retrospectiva todas apuntan al culpable
-4. Una pista debe ser un detalle cotidiano aparentemente irrelevante que lo cambia todo
+2. Incluye exactamente 3 pistas — ni más ni menos
+3. REGLA DE ORO DE LAS PISTAS:
+   - Pista 1: un detalle físico o sensorial ambiguo — puede interpretarse de dos formas
+   - Pista 2: una pista engañosa que parece señalar a un inocente
+   - Pista 3: el detalle cotidiano aparentemente irrelevante que en retrospectiva lo revela todo
+4. Dificultad MEDIA: el jugador atento puede resolverlo, pero no es obvio a la primera
 5. El giro final debe ser sorprendente pero inevitable — al leerlo el jugador piensa "¡cómo no lo vi!"
 6. Los tres sospechosos deben ser IGUALMENTE creíbles — el jugador no debe poder descartar a ninguno antes de leer todas las pistas
 7. Nunca uses veneno como arma — es demasiado predecible
@@ -133,10 +136,9 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
   "lugar": "Lugar específico y evocador dentro del escenario",
   "introduccion": "4-5 frases que establezcan el escenario, el crimen y la atmósfera. Concreto, sensorial, con un detalle llamativo que enganche. Sin revelar nada clave.",
   "pistas": [
-    "Pista 1: detalle físico o sensorial del escenario — puede apuntar a cualquiera",
-    "Pista 2: comportamiento o coartada — parece exculpar al culpable pero no lo hace",
-    "Pista 3: detalle aparentemente irrelevante de un objeto o hábito personal",
-    "Pista 4: dato que parece apuntar a un inocente pero confirma al culpable en retrospectiva"
+    "Pista 1: detalle físico o sensorial ambiguo — puede apuntar a cualquier sospechoso",
+    "Pista 2: dato que parece señalar claramente a un inocente — pista engañosa",
+    "Pista 3: detalle cotidiano insignificante que en retrospectiva lo revela todo"
   ],
   "sospechosos": [
     {{"nombre": "Nombre Apellido evocador", "descripcion": "Ocupación precisa, rasgo de carácter y motivo sospechoso en una frase. Debe sonar real."}},
