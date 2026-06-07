@@ -108,6 +108,7 @@ db.executescript('''
         password_hash   TEXT NOT NULL,
         role            TEXT DEFAULT 'bar_admin',
         bar_id          INTEGER,
+        bar_slug        TEXT DEFAULT '',
         created_at      TEXT DEFAULT (datetime('now'))
     );
 ''')
@@ -141,6 +142,7 @@ migrations = [
     "ALTER TABLE bars ADD COLUMN welcome_message TEXT DEFAULT ''",
     "ALTER TABLE bars ADD COLUMN updated_at TEXT DEFAULT (datetime('now'))",
     "ALTER TABLE plays ADD COLUMN game_type TEXT DEFAULT 'crimen'",
+    "ALTER TABLE admin_users ADD COLUMN bar_slug TEXT DEFAULT ''",
     "ALTER TABLE plays ADD COLUMN choice INTEGER DEFAULT -1",
     "ALTER TABLE plays ADD COLUMN elapsed INTEGER DEFAULT 0",
 ]
