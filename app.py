@@ -340,6 +340,90 @@ def rotate_weekly_codes():
 def home():
     return render_template('home.html')
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Scheduled tasks
+# ─────────────────────────────────────────────────────────────────────────────
+
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
+import pytz
+
+def generate_weekly_codes():
+    """Ejecuta cada lunes a las 6am — genera códigos semanales para todos los bares."""
+    from datetime import timedelta
+    import random
+    chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+    def gen_code():
+        return ''.join(random.choices(chars, k=5))
+
+    today = date.today()
+    monday = today - timedelta(days=today.weekday())
+    sunday = monday + timedelta(days=6)
+
+    db = get_db()
+    bars = db.execute("SELECT id, slug FROM bars WHERE active = 1").fetchall()
+    for bar in bars:
+        existing = db.execute(
+            "SELECT id FROM access_codes WHERE bar_id = ? AND valid_from = ?",
+            (bar['id'], str(monday))
+        ).fetchone()
+        if not existing:
+            new_code = gen_code()
+            db.execute("UPDATE bars SET access_code = ?, access_code_updated_at = ? WHERE id = ?",
+                      (new_code, str(monday), bar['id']))
+            db.execute("INSERT INTO access_codes (bar_id, code, valid_from, valid_until) VALUES (?,?,?,?)",
+                      (bar['id'], new_code, str(monday), str(sunday)))
+            print(f"[CRON] Código semanal para {bar['slug']}: {new_code}")
+    db.commit()
+    db.close()
+
+def pregen_daily_games():
+    """Ejecuta cada día a las 6am — pre-genera los juegos del día para todos los bares."""
+    from ai import generate_game, generate_impostor, build_bar_context, get_day_seed
+    today = str(date.today())
+
+    db = get_db()
+    bars = db.execute("SELECT * FROM bars WHERE active = 1").fetchall()
+    for bar in bars:
+        for game_type in ['crimen', 'impostor']:
+            existing = db.execute(
+                "SELECT id FROM generated_games WHERE bar_id = ? AND game_type = ? AND game_date = ?",
+                (bar['id'], game_type, today)
+            ).fetchone()
+            if not existing:
+                try:
+                    products = db.execute(
+                        "SELECT title FROM bar_products WHERE bar_id = ? AND active = 1",
+                        (bar['id'],)
+                    ).fetchall()
+                    if game_type == 'crimen':
+                        ctx = build_bar_context(dict(bar))
+                        ctx['productos'] = [p['title'] for p in products]
+                        game_data = generate_game(ctx, bar['slug'])
+                    else:
+                        game_data = generate_impostor(bar['name'], bar['slug'])
+                    
+                    import json as _json
+                    db.execute(
+                        "INSERT INTO generated_games (bar_id, game_type, game_date, content) VALUES (?,?,?,?)",
+                        (bar['id'], game_type, today, _json.dumps(game_data))
+                    )
+                    db.commit()
+                    print(f"[CRON] Pre-generado {game_type} para {bar['slug']}")
+                except Exception as e:
+                    print(f"[CRON] Error generando {game_type} para {bar['slug']}: {e}")
+    db.close()
+
+def start_scheduler():
+    scheduler = BackgroundScheduler(timezone=pytz.timezone('Europe/Madrid'))
+    # Lunes a las 6am — códigos semanales
+    scheduler.add_job(generate_weekly_codes, CronTrigger(day_of_week='mon', hour=6, minute=0))
+    # Cada día a las 6am — pre-generación de juegos
+    scheduler.add_job(pregen_daily_games, CronTrigger(hour=6, minute=0))
+    scheduler.start()
+    print("[SCHEDULER] Iniciado — códigos lunes 6am, juegos diarios 6am")
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Admin routes
 # ─────────────────────────────────────────────────────────────────────────────
@@ -485,6 +569,7 @@ def admin_create_user():
 with app.app_context():
     init_db()
     migrate_db()
+    start_scheduler()
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
