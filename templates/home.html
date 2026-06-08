@@ -405,8 +405,8 @@
     <h2>Ya en tu ciudad</h2>
     <p class="section-sub">Cada punto en el mapa es un local donde los clientes juegan cada día mientras toman algo.</p>
     <div style="position:relative; border-radius:16px; overflow:hidden; height:260px;">
-      <div id="leaflet-map" style="width:100%; height:100%;"></div>
-      <div class="map-count" id="map-count" style="position:absolute; top:12px; right:12px; z-index:1000;">Cargando...</div>
+      <div id="map-container" style="width:100%; height:100%; background:#E8EDE0;"></div>
+      <div class="map-count" id="map-count" style="position:absolute; top:12px; right:12px; z-index:10; background:#C4622D; color:#fff; font-size:11px; font-weight:600; padding:4px 12px; border-radius:20px;">Cargando...</div>
     </div>
   </div>
 </div>
@@ -521,7 +521,7 @@ window.addEventListener('scroll', () => {
   });
 });
 
-// Dynamic map with Leaflet
+// Dynamic map with OpenStreetMap iframe
 async function loadMap() {
   try {
     const res = await fetch('/api/bars-map');
@@ -529,58 +529,36 @@ async function loadMap() {
     const n = bars.length;
     document.getElementById('map-count').textContent = n + (n === 1 ? ' local adherido' : ' locales adheridos');
 
-    if (!window.L) return;
+    if (!bars.length) return;
 
-    const defaultLat = bars.length ? bars[0].latitude : 41.3851;
-    const defaultLng = bars.length ? bars[0].longitude : 2.1734;
+    const container = document.getElementById('map-container');
+    let src;
 
-    const map = L.map('leaflet-map', { zoomControl: false, scrollWheelZoom: false })
-      .setView([defaultLat, defaultLng], bars.length === 1 ? 13 : 8);
-
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap'
-    }).addTo(map);
-
-    const icon = L.divIcon({
-      className: '',
-      html: '<div style="width:14px;height:14px;border-radius:50%;background:#C4622D;box-shadow:0 0 0 6px rgba(196,98,45,0.2);"></div>',
-      iconSize: [14, 14],
-      iconAnchor: [7, 7]
-    });
-
-    bars.forEach(bar => {
-      L.marker([bar.latitude, bar.longitude], { icon })
-        .addTo(map)
-        .bindPopup(`<strong>${bar.name}</strong><br>${bar.city}`);
-    });
-
-    if (bars.length > 1) {
-      const group = L.featureGroup(bars.map(b => L.marker([b.latitude, b.longitude])));
-      map.fitBounds(group.getBounds().pad(0.3));
+    if (n === 1) {
+      const lat = bars[0].latitude;
+      const lng = bars[0].longitude;
+      const delta = 0.02;
+      src = `https://www.openstreetmap.org/export/embed.html?bbox=${lng-delta},${lat-delta},${lng+delta},${lat+delta}&layer=mapnik&marker=${lat},${lng}`;
+    } else {
+      const lats = bars.map(b => parseFloat(b.latitude));
+      const lngs = bars.map(b => parseFloat(b.longitude));
+      const minLat = Math.min(...lats) - 0.1;
+      const maxLat = Math.max(...lats) + 0.1;
+      const minLng = Math.min(...lngs) - 0.1;
+      const maxLng = Math.max(...lngs) + 0.1;
+      src = `https://www.openstreetmap.org/export/embed.html?bbox=${minLng},${minLat},${maxLng},${maxLat}&layer=mapnik`;
     }
 
-    // Fix tiles not loading fully
-    setTimeout(() => { map.invalidateSize(); }, 200);
-    window.addEventListener('scroll', () => map.invalidateSize(), { once: true });
+    const iframe = document.createElement('iframe');
+    iframe.src = src;
+    iframe.style.cssText = 'width:100%; height:100%; border:none;';
+    iframe.setAttribute('loading', 'lazy');
+    container.appendChild(iframe);
   } catch(e) {
     document.getElementById('map-count').textContent = '1 local adherido';
   }
 }
-
-// Load Leaflet JS then init map when visible
-const leafletScript = document.createElement('script');
-leafletScript.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-leafletScript.onload = () => {
-  const mapEl = document.getElementById('leaflet-map');
-  const observer = new IntersectionObserver((entries) => {
-    if (entries[0].isIntersecting) {
-      observer.disconnect();
-      setTimeout(loadMap, 50);
-    }
-  });
-  observer.observe(mapEl);
-};
-document.head.appendChild(leafletScript);
+loadMap();
 </script>
 
 {% endblock %}
