@@ -1,11 +1,11 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 from datetime import date, datetime, timedelta
 import sqlite3
+from ai import generate_game, generate_impostor, generate_dilema, build_bar_context, get_day_seed
 import os
 import json
 import random
 import string
-from ai import generate_game, generate_impostor, build_bar_context
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'nookplay-secret-2026')
@@ -380,7 +380,6 @@ def generate_weekly_codes():
 
 def pregen_daily_games():
     """Ejecuta cada día a las 6am — pre-genera los juegos del día para todos los bares."""
-    from ai import generate_game, generate_impostor, generate_dilema, build_bar_context, get_day_seed
     today = str(date.today())
 
     db = get_db()
