@@ -118,6 +118,7 @@
     text-decoration: none;
     font-family: inherit;
     display: inline-block;
+    width: auto;
   }
 
   .btn-secondary {
@@ -132,6 +133,7 @@
     text-decoration: none;
     font-family: inherit;
     display: inline-block;
+    width: auto;
   }
 
   /* ── SECTIONS ── */
@@ -405,8 +407,8 @@
     <h2>Ya en tu ciudad</h2>
     <p class="section-sub">Cada punto en el mapa es un local donde los clientes juegan cada día mientras toman algo.</p>
     <div style="position:relative; border-radius:16px; overflow:hidden; height:260px;">
-      <div id="map-container" style="width:100%; height:100%; background:#E8EDE0;"></div>
-      <div class="map-count" id="map-count" style="position:absolute; top:12px; right:12px; z-index:10; background:#C4622D; color:#fff; font-size:11px; font-weight:600; padding:4px 12px; border-radius:20px;">Cargando...</div>
+      <div id="leaflet-map" style="width:100%; height:260px;"></div>
+      <div class="map-count" id="map-count" style="position:absolute; top:12px; right:12px; z-index:1000; background:#C4622D; color:#fff; font-size:11px; font-weight:600; padding:4px 12px; border-radius:20px;">Cargando...</div>
     </div>
   </div>
 </div>
@@ -521,54 +523,58 @@ window.addEventListener('scroll', () => {
   });
 });
 
-// Dynamic map with OpenStreetMap iframe
-async function loadMap() {
+// Dynamic map
+var nookMap = null;
+async function initNookMap() {
   try {
     const res = await fetch('/api/bars-map');
     const bars = await res.json();
     const n = bars.length;
-    document.getElementById('map-count').textContent = n + (n === 1 ? ' local adherido' : ' locales adheridos');
+    const countEl = document.getElementById('map-count');
+    if (countEl) countEl.textContent = n + (n === 1 ? ' local adherido' : ' locales adheridos');
+    if (!n) return;
 
-    if (!bars.length) return;
+    nookMap = L.map('leaflet-map', { zoomControl: false, scrollWheelZoom: false });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 18,
+      attribution: ''
+    }).addTo(nookMap);
 
-    const container = document.getElementById('map-container');
-    let src;
+    const icon = L.divIcon({
+      className: '',
+      html: '<div style="width:16px;height:16px;border-radius:50%;background:#C4622D;box-shadow:0 0 0 6px rgba(196,98,45,0.2);"></div>',
+      iconSize: [16,16], iconAnchor: [8,8], popupAnchor: [0,-8]
+    });
 
-    const lats = bars.map(b => parseFloat(b.latitude));
-    const lngs = bars.map(b => parseFloat(b.longitude));
-    const minLat = Math.min(...lats);
-    const maxLat = Math.max(...lats);
-    const minLng = Math.min(...lngs);
-    const maxLng = Math.max(...lngs);
-    const pad = n === 1 ? 0.02 : 0.1;
+    const markers = bars.map(b =>
+      L.marker([b.latitude, b.longitude], {icon}).addTo(nookMap)
+        .bindPopup('<strong>' + b.name + '</strong><br>' + b.city)
+    );
 
-    const src = `https://www.openstreetmap.org/export/embed.html?bbox=${minLng-pad},${minLat-pad},${maxLng+pad},${maxLat+pad}&layer=mapnik`;
+    if (n === 1) {
+      nookMap.setView([bars[0].latitude, bars[0].longitude], 14);
+    } else {
+      nookMap.fitBounds(L.featureGroup(markers).getBounds().pad(0.3));
+    }
 
-    const iframe = document.createElement('iframe');
-    iframe.src = src;
-    iframe.style.cssText = 'width:100%; height:100%; border:none; position:absolute; top:0; left:0;';
-    iframe.setAttribute('loading', 'lazy');
-    container.style.position = 'relative';
-    container.appendChild(iframe);
-
-    // Add custom markers on top
-    iframe.onload = () => {
-      const bboxW = (maxLng + pad) - (minLng - pad);
-      const bboxH = (maxLat + pad) - (minLat - pad);
-      bars.forEach(bar => {
-        const pctX = ((parseFloat(bar.longitude) - (minLng - pad)) / bboxW) * 100;
-        const pctY = (1 - (parseFloat(bar.latitude) - (minLat - pad)) / bboxH) * 100;
-        const pin = document.createElement('div');
-        pin.title = bar.name + ' · ' + bar.city;
-        pin.style.cssText = `position:absolute; left:${pctX}%; top:${pctY}%; transform:translate(-50%,-50%); width:16px; height:16px; border-radius:50%; background:#C4622D; box-shadow:0 0 0 5px rgba(196,98,45,0.25); z-index:10; cursor:pointer; pointer-events:auto;`;
-        container.appendChild(pin);
-      });
-    };
+    nookMap.invalidateSize();
   } catch(e) {
-    document.getElementById('map-count').textContent = '1 local adherido';
+    const countEl = document.getElementById('map-count');
+    if (countEl) countEl.textContent = '1 local adherido';
   }
 }
-loadMap();
+
+// Load Leaflet and init
+const s = document.createElement('script');
+s.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+s.onload = () => {
+  // Wait for layout to settle
+  requestAnimationFrame(() => requestAnimationFrame(initNookMap));
+};
+document.head.appendChild(s);
+
+// Re-invalidate on scroll (fixes partial tiles)
+window.addEventListener('scroll', () => { if (nookMap) nookMap.invalidateSize(); }, {passive: true});
 </script>
 
 {% endblock %}
