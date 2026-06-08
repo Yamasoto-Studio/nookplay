@@ -252,6 +252,70 @@
 
   </form>
 
+  {% if admin_role == 'superadmin' %}
+  <div style="margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--border);">
+    <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 10px;">Zona de peligro</div>
+    <button type="button" onclick="openDeleteModal()" style="background: transparent; color: #cc2222; border: 1px solid #cc2222; border-radius: 8px; padding: 10px 18px; font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit;">
+      Eliminar este local permanentemente
+    </button>
+  </div>
+
+  <!-- Modal confirmación eliminar -->
+  <div id="delete-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:1000; align-items:center; justify-content:center; padding:20px;">
+    <div style="background:#fff; border-radius:16px; padding:28px; width:100%; max-width:420px;">
+      <div style="font-size:20px; margin-bottom:4px;">⚠️ Eliminar local</div>
+      <p style="font-size:14px; color:#6B6059; margin-bottom:16px; line-height:1.6;">
+        Estás a punto de eliminar <strong>{{ bar.name }}</strong> y todos sus datos: partidas, códigos, productos y accesos. <strong>Esta acción no se puede deshacer.</strong>
+      </p>
+      <div style="margin-bottom:16px;">
+        <label style="font-size:13px; font-weight:500; display:block; margin-bottom:6px;">Escribe <strong>{{ bar.slug }}</strong> para confirmar:</label>
+        <input type="text" id="delete-confirm-input" placeholder="{{ bar.slug }}" style="width:100%; padding:10px 12px; border:1px solid #E5DDD5; border-radius:8px; font-size:14px; font-family:inherit; outline:none;">
+      </div>
+      <div style="display:flex; gap:10px;">
+        <button onclick="closeDeleteModal()" style="flex:1; padding:11px; background:#F7F2EB; color:#6B6059; border:none; border-radius:8px; font-size:14px; cursor:pointer; font-family:inherit;">Cancelar</button>
+        <button onclick="confirmDelete()" id="delete-btn" disabled style="flex:2; padding:11px; background:#cc2222; color:#fff; border:none; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; font-family:inherit; opacity:0.4;">Eliminar definitivamente</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  function openDeleteModal() {
+    document.getElementById('delete-modal').style.display = 'flex';
+    document.getElementById('delete-confirm-input').value = '';
+    document.getElementById('delete-btn').disabled = true;
+    document.getElementById('delete-btn').style.opacity = '0.4';
+  }
+  function closeDeleteModal() {
+    document.getElementById('delete-modal').style.display = 'none';
+  }
+  document.addEventListener('DOMContentLoaded', () => {
+    const input = document.getElementById('delete-confirm-input');
+    if (input) {
+      input.addEventListener('input', function() {
+        const ok = this.value === '{{ bar.slug }}';
+        document.getElementById('delete-btn').disabled = !ok;
+        document.getElementById('delete-btn').style.opacity = ok ? '1' : '0.4';
+      });
+    }
+  });
+  async function confirmDelete() {
+    const confirm = document.getElementById('delete-confirm-input').value;
+    if (confirm !== '{{ bar.slug }}') return;
+    const res = await fetch('/admin/api/delete-bar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bar_slug: '{{ bar.slug }}' })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      window.location = '/admin/dashboard';
+    } else {
+      alert('Error: ' + (data.error || 'No se pudo eliminar'));
+    }
+  }
+  </script>
+  {% endif %}
+
 </div>
 
 <script>

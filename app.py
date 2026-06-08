@@ -996,6 +996,37 @@ def admin_upload_logo():
     file.save(f'{folder}/logo_header.png')
     return jsonify({'ok': True})
 
+
+@app.route('/admin/api/delete-bar', methods=['POST'])
+@admin_required
+def admin_delete_bar():
+    if session.get('admin_role') != 'superadmin':
+        return jsonify({'ok': False, 'error': 'No autorizado'}), 403
+    data = request.get_json()
+    bar_slug = data.get('bar_slug', '').strip()
+    if not bar_slug or bar_slug == 'yellow':
+        return jsonify({'ok': False, 'error': 'No se puede eliminar este local'})
+    db = get_db()
+    try:
+        bar = db.execute("SELECT id FROM bars WHERE slug = ?", (bar_slug,)).fetchone()
+        if not bar:
+            db.close()
+            return jsonify({'ok': False, 'error': 'Local no encontrado'})
+        bar_id = bar['id']
+        db.execute("DELETE FROM bar_products WHERE bar_id = ?", (bar_id,))
+        db.execute("DELETE FROM access_codes WHERE bar_id = ?", (bar_id,))
+        db.execute("DELETE FROM access_log WHERE bar_id = ?", (bar_id,))
+        db.execute("DELETE FROM generated_games WHERE bar_id = ?", (bar_id,))
+        db.execute("DELETE FROM plays WHERE bar_slug = ?", (bar_slug,))
+        db.execute("DELETE FROM admin_users WHERE bar_slug = ?", (bar_slug,))
+        db.execute("DELETE FROM bars WHERE id = ?", (bar_id,))
+        db.commit()
+        db.close()
+        return jsonify({'ok': True})
+    except Exception as e:
+        db.close()
+        return jsonify({'ok': False, 'error': str(e)})
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Superadmin routes
 # ─────────────────────────────────────────────────────────────────────────────
