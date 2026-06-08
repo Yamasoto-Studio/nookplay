@@ -5,12 +5,13 @@
 
 /* ── Game tag (top pill) ── */
 .game-tag {
-  display: inline-block;
+  display: block;
   font-size: 12px; font-weight: 600;
   letter-spacing: 1.5px; text-transform: uppercase;
   padding: 3px 10px; border-radius: 20px;
   background: var(--bar-primary); color: var(--bar-primary-text);
-  margin-bottom: 12px;
+  margin-bottom: 16px;
+  width: fit-content;
 }
 
 /* ── Back button ── */
