@@ -153,9 +153,15 @@
       <label>Contraseña inicial *</label>
       <input type="text" id="new-password" placeholder="Contraseña temporal">
     </div>
-    <div class="field">
-      <label>Color principal (hex)</label>
-      <input type="text" id="new-color" placeholder="#C4622D" value="#C4622D">
+    <div class="field-row">
+      <div class="field">
+        <label>Color principal</label>
+        <input type="text" id="new-color" placeholder="#C4622D" value="#C4622D">
+      </div>
+      <div class="field">
+        <label>Color fondo</label>
+        <input type="text" id="new-color-bg" placeholder="#F7F2EB" value="#F7F2EB">
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
@@ -202,7 +208,7 @@ async function createBar() {
   const res = await fetch('/admin/api/create-bar', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, slug, city, plan, email, password, color_primary: color })
+    body: JSON.stringify({ name, slug, city, plan, email, password, color_primary: color, color_bg: document.getElementById('new-color-bg').value.trim() })
   });
   const data = await res.json();
 

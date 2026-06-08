@@ -63,7 +63,12 @@
 
   <!-- Header -->
   <div class="admin-header">
-    <div class="admin-header-logo"><img src="/static/logo.svg" alt="Nookplay"></div>
+    <div style="display:flex; align-items:center; gap:10px;">
+      <div class="admin-header-logo"><img src="/static/logo.svg" alt="Nookplay"></div>
+      {% if admin_role == 'superadmin' %}
+      <a href="/admin/dashboard" style="font-size:12px; color:#A89B91; text-decoration:none;">← Todos los locales</a>
+      {% endif %}
+    </div>
     <a href="/admin/logout" class="admin-logout">Cerrar sesión</a>
   </div>
 
@@ -148,6 +153,41 @@
       {% endfor %}
     </div>
 
+    <!-- Logo e imagen -->
+    <div class="form-card">
+      <h3>Logo del local</h3>
+      <div class="field">
+        <label>Imagen actual</label>
+        <img src="/static/clientes/{{ bar.slug }}/logo_header.png" alt="Logo" style="max-height:60px; display:block; margin-bottom:8px;" onerror="this.style.display='none'">
+        <input type="file" id="logo-file" accept="image/*" onchange="uploadLogo(this)">
+        <div class="field-hint">PNG o JPG. Recomendado: ancho máximo 800px, fondo transparente.</div>
+        <div id="logo-status" style="font-size:13px; margin-top:6px;"></div>
+      </div>
+    </div>
+
+    <!-- Colores -->
+    <div class="form-card">
+      <h3>Colores</h3>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <div class="field">
+          <label>Color principal</label>
+          <input type="text" name="color_primary" value="{{ bar.color_primary }}" placeholder="#C4622D">
+        </div>
+        <div class="field">
+          <label>Color texto sobre principal</label>
+          <input type="text" name="color_primary_text" value="{{ bar.color_primary_text }}" placeholder="#FFFFFF">
+        </div>
+        <div class="field">
+          <label>Color fondo</label>
+          <input type="text" name="color_bg" value="{{ bar.color_bg }}" placeholder="#F7F2EB">
+        </div>
+        <div class="field">
+          <label>Color fondo sutil</label>
+          <input type="text" name="color_bg_subtle" value="{{ bar.color_bg_subtle }}" placeholder="#F0EBE3">
+        </div>
+      </div>
+    </div>
+
     <!-- Sobre el local -->
     <div class="form-card">
       <h3>Sobre el local</h3>
@@ -174,6 +214,25 @@
 </div>
 
 <script>
+async function uploadLogo(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const statusEl = document.getElementById('logo-status');
+  statusEl.textContent = 'Subiendo...';
+  const formData = new FormData();
+  formData.append('logo', file);
+  formData.append('bar_slug', '{{ bar.slug }}');
+  const res = await fetch('/admin/api/upload-logo', { method: 'POST', body: formData });
+  const data = await res.json();
+  if (data.ok) {
+    statusEl.textContent = '✅ Logo actualizado. Recarga para verlo.';
+    statusEl.style.color = '#22aa55';
+  } else {
+    statusEl.textContent = '❌ Error: ' + (data.error || 'Inténtalo de nuevo');
+    statusEl.style.color = '#cc2222';
+  }
+}
+
 async function saveChanges() {
   const form = document.getElementById('admin-form');
   const data = {
@@ -182,6 +241,10 @@ async function saveChanges() {
     description: form.description.value,
     owner_name: form.owner_name.value,
     staff_names: form.staff_names.value,
+    color_primary: form.color_primary.value,
+    color_primary_text: form.color_primary_text.value,
+    color_bg: form.color_bg.value,
+    color_bg_subtle: form.color_bg_subtle.value,
     products: []
   };
 

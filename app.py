@@ -515,7 +515,8 @@ def admin_bar(bar_slug):
     db.close()
     stats = {'today': stats_today, 'week': stats_week, 'pct_correct': pct_correct}
     return render_template('admin/bar_panel.html', bar=bar, products=products,
-                           current_code=current_code, valid_until=valid_until_str, stats=stats)
+                           current_code=current_code, valid_until=valid_until_str, stats=stats,
+                           admin_role=session.get('admin_role','bar_admin'))
 
 @app.route('/admin/api/save', methods=['POST'])
 @admin_required
@@ -530,10 +531,12 @@ def admin_save():
         db.close()
         return jsonify({'ok': False}), 404
     db.execute(
-        "UPDATE bars SET welcome_message=?, promo_active=?, description=?, owner_name=?, staff_names=? WHERE slug=?",
+        "UPDATE bars SET welcome_message=?, promo_active=?, description=?, owner_name=?, staff_names=?, color_primary=?, color_primary_text=?, color_bg=?, color_bg_subtle=? WHERE slug=?",
         (data.get('welcome_message',''), data.get('promo_active',0),
          data.get('description',''), data.get('owner_name',''),
-         data.get('staff_names',''), bar_slug)
+         data.get('staff_names',''), data.get('color_primary','#C4622D'),
+         data.get('color_primary_text','#FFFFFF'), data.get('color_bg','#F7F2EB'),
+         data.get('color_bg_subtle','#F0EBE3'), bar_slug)
     )
     db.execute("DELETE FROM bar_products WHERE bar_id = ?", (bar['id'],))
     for p in data.get('products', []):
@@ -966,6 +969,24 @@ def og_image():
 # --------------------------------------------------------------------------
 # Run
 # --------------------------------------------------------------------------
+
+@app.route('/admin/api/upload-logo', methods=['POST'])
+@admin_required
+def admin_upload_logo():
+    bar_slug = request.form.get('bar_slug', '').strip()
+    if session.get('admin_role') != 'superadmin' and session.get('admin_bar_slug') != bar_slug:
+        return jsonify({'ok': False, 'error': 'No autorizado'}), 403
+    if 'logo' not in request.files:
+        return jsonify({'ok': False, 'error': 'No file'})
+    file = request.files['logo']
+    if file.filename == '':
+        return jsonify({'ok': False, 'error': 'Empty filename'})
+    import os as _os
+    folder = f'static/clientes/{bar_slug}'
+    _os.makedirs(folder, exist_ok=True)
+    file.save(f'{folder}/logo_header.png')
+    return jsonify({'ok': True})
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Superadmin routes
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1015,11 +1036,11 @@ def admin_create_bar():
     new_code = ''.join(_random.choices(chars, k=5))
     db = get_db()
     try:
+        color_bg = data.get('color_bg', '#F7F2EB')
         db.execute(
-            "INSERT INTO bars (slug, name, city, plan, plan_status, color_primary, color_primary_text, color_bg, color_bg_subtle, color_accent_dark, active) VALUES (?,?,?,?,'active',?,'#FFFFFF','#F7F2EB','#F0EBE3','#1A1A1A',1)",
-            (slug, name, city, plan, color)
+            "INSERT INTO bars (slug, name, city, plan, plan_status, color_primary, color_primary_text, color_bg, color_bg_subtle, color_accent_dark, active) VALUES (?,?,?,?,'active',?,'#FFFFFF',?,'#F0EBE3','#1A1A1A',1)",
+            (slug, name, city, plan, color, color_bg)
         )
-        db.commit()
         bar = db.execute("SELECT id FROM bars WHERE slug = ?", (slug,)).fetchone()
         bar_id = bar['id']
         from datetime import timedelta
@@ -1039,5 +1060,6 @@ def admin_create_bar():
         _os.makedirs(f'static/clientes/{slug}', exist_ok=True)
         return jsonify({'ok': True, 'code': new_code})
     except Exception as e:
+        db.rollback()
         db.close()
         return jsonify({'ok': False, 'error': str(e)})
