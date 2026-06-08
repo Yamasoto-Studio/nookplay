@@ -970,6 +970,16 @@ def dilema_stats(bar_slug):
     db.close()
     return jsonify({'total': total, 'votos_a': votos_a, 'votos_b': votos_b, 'avg_elapsed': avg_elapsed})
 
+
+@app.route('/api/bars-map')
+def bars_map():
+    db = get_db()
+    bars = db.execute(
+        "SELECT name, city, latitude, longitude, slug FROM bars WHERE active = 1 AND latitude IS NOT NULL"
+    ).fetchall()
+    db.close()
+    return jsonify([dict(b) for b in bars])
+
 @app.route('/static/og.png')
 def og_image():
     from flask import send_file

@@ -404,10 +404,11 @@
     <div class="section-tag">Locales adheridos</div>
     <h2>Ya en tu ciudad</h2>
     <p class="section-sub">Cada punto en el mapa es un local donde los clientes juegan cada día mientras toman algo.</p>
-    <div class="map-box">
-      <div class="map-dot"></div>
-      <div class="map-label">Yellow Specialty Koffee · Viladecans</div>
-      <div class="map-count">1 local adherido</div>
+    <div class="map-box" id="map-box">
+      <div class="map-dot" id="map-single-dot" style="display:none;"></div>
+      <div class="map-label" id="map-single-label" style="display:none;"></div>
+      <div class="map-count" id="map-count">Cargando...</div>
+      <div id="map-pins" style="position:absolute; width:100%; height:100%; top:0; left:0; pointer-events:none;"></div>
     </div>
   </div>
 </div>
@@ -457,12 +458,20 @@
           <span class="badge">Disponible</span>
         </div>
       </div>
-      <div class="game-card coming">
-        <div class="game-icon">♊</div>
+      <div class="game-card active">
+        <div class="game-icon">🕵️</div>
         <div class="game-info">
-          <h3>Tu Horóscopo</h3>
-          <p>Predicciones del día con humor y personalidad. Nunca el mismo dos veces.</p>
-          <span class="badge badge-soon">Próximamente</span>
+          <h3>El Impostor</h3>
+          <p>Cuatro datos sobre un tema. Uno es mentira. ¿Cuál?</p>
+          <span class="badge">Disponible</span>
+        </div>
+      </div>
+      <div class="game-card active">
+        <div class="game-icon">🤔</div>
+        <div class="game-info">
+          <h3>El Dilema</h3>
+          <p>Una situación cotidiana. Dos opciones. ¿Con quién estás?</p>
+          <span class="badge">Disponible</span>
         </div>
       </div>
       <div class="game-card coming">
@@ -470,14 +479,6 @@
         <div class="game-info">
           <h3>¿Dónde en el mundo?</h3>
           <p>Una foto, un lugar del mundo. ¿Puedes adivinar dónde está?</p>
-          <span class="badge badge-soon">Próximamente</span>
-        </div>
-      </div>
-      <div class="game-card coming">
-        <div class="game-icon">📖</div>
-        <div class="game-info">
-          <h3>Microficción</h3>
-          <p>Una historia inacabada. Tú eliges cómo termina.</p>
           <span class="badge badge-soon">Próximamente</span>
         </div>
       </div>
@@ -521,6 +522,47 @@ window.addEventListener('scroll', () => {
     el.style.transform = `translateY(${scrollY * speed}px)`;
   });
 });
+
+// Dynamic map
+async function loadMap() {
+  try {
+    const res = await fetch('/api/bars-map');
+    const bars = await res.json();
+    const countEl = document.getElementById('map-count');
+    const n = bars.length;
+    countEl.textContent = n + (n === 1 ? ' local adherido' : ' locales adheridos');
+
+    if (n === 1) {
+      // Single bar — show centered dot with label
+      document.getElementById('map-single-dot').style.display = 'block';
+      document.getElementById('map-single-label').style.display = 'block';
+      document.getElementById('map-single-label').textContent = bars[0].name + ' · ' + bars[0].city;
+    } else if (n > 1) {
+      // Multiple bars — show relative pins
+      const lats = bars.map(b => b.latitude);
+      const lngs = bars.map(b => b.longitude);
+      const minLat = Math.min(...lats), maxLat = Math.max(...lats);
+      const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
+      const pinsEl = document.getElementById('map-pins');
+      const box = document.getElementById('map-box');
+      bars.forEach(bar => {
+        const pctX = maxLng === minLng ? 50 : ((bar.longitude - minLng) / (maxLng - minLng)) * 80 + 10;
+        const pctY = maxLat === minLat ? 50 : (1 - (bar.latitude - minLat) / (maxLat - minLat)) * 80 + 10;
+        const pin = document.createElement('div');
+        pin.style.cssText = `position:absolute; left:${pctX}%; top:${pctY}%; transform:translate(-50%,-50%); width:14px; height:14px; border-radius:50%; background:#C4622D; box-shadow:0 0 0 6px rgba(196,98,45,0.2); cursor:pointer;`;
+        pin.title = bar.name + ' · ' + bar.city;
+        pinsEl.appendChild(pin);
+      });
+    }
+  } catch(e) {
+    // Fallback silencioso
+    document.getElementById('map-count').textContent = '1 local adherido';
+    document.getElementById('map-single-dot').style.display = 'block';
+    document.getElementById('map-single-label').style.display = 'block';
+    document.getElementById('map-single-label').textContent = 'Yellow Specialty Koffee · Viladecans';
+  }
+}
+loadMap();
 </script>
 
 {% endblock %}
