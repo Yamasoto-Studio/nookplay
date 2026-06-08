@@ -558,6 +558,9 @@ async function loadMap() {
       const group = L.featureGroup(bars.map(b => L.marker([b.latitude, b.longitude])));
       map.fitBounds(group.getBounds().pad(0.3));
     }
+
+    // Fix tiles not loading fully
+    setTimeout(() => map.invalidateSize(), 100);
   } catch(e) {
     document.getElementById('map-count').textContent = '1 local adherido';
   }
