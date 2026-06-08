@@ -560,16 +560,26 @@ async function loadMap() {
     }
 
     // Fix tiles not loading fully
-    setTimeout(() => map.invalidateSize(), 100);
+    setTimeout(() => { map.invalidateSize(); }, 200);
+    window.addEventListener('scroll', () => map.invalidateSize(), { once: true });
   } catch(e) {
     document.getElementById('map-count').textContent = '1 local adherido';
   }
 }
 
-// Load Leaflet JS then init map
+// Load Leaflet JS then init map when visible
 const leafletScript = document.createElement('script');
 leafletScript.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-leafletScript.onload = loadMap;
+leafletScript.onload = () => {
+  const mapEl = document.getElementById('leaflet-map');
+  const observer = new IntersectionObserver((entries) => {
+    if (entries[0].isIntersecting) {
+      observer.disconnect();
+      setTimeout(loadMap, 50);
+    }
+  });
+  observer.observe(mapEl);
+};
 document.head.appendChild(leafletScript);
 </script>
 
