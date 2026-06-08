@@ -1037,9 +1037,19 @@ def admin_create_bar():
     db = get_db()
     try:
         color_bg = data.get('color_bg', '#F7F2EB')
+        address = data.get('address', '')
+        province = data.get('province', '')
+        zip_code = data.get('zip_code', '')
+        latitude = data.get('latitude', None)
+        longitude = data.get('longitude', None)
+        try:
+            latitude = float(latitude) if latitude else None
+            longitude = float(longitude) if longitude else None
+        except: pass
+
         db.execute(
-            "INSERT INTO bars (slug, name, city, plan, plan_status, color_primary, color_primary_text, color_bg, color_bg_subtle, color_accent_dark, active) VALUES (?,?,?,?,'active',?,'#FFFFFF',?,'#F0EBE3','#1A1A1A',1)",
-            (slug, name, city, plan, color, color_bg)
+            "INSERT INTO bars (slug, name, city, province, address, zip_code, latitude, longitude, plan, plan_status, color_primary, color_primary_text, color_bg, color_bg_subtle, color_accent_dark, active) VALUES (?,?,?,?,?,?,?,?,?,'active',?,'#FFFFFF',?,'#F0EBE3','#1A1A1A',1)",
+            (slug, name, city, province, address, zip_code, latitude, longitude, plan, color, color_bg)
         )
         bar = db.execute("SELECT id FROM bars WHERE slug = ?", (slug,)).fetchone()
         bar_id = bar['id']

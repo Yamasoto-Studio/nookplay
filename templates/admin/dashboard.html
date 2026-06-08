@@ -133,9 +133,21 @@
       </div>
       <div class="field">
         <label>Ciudad *</label>
-        <input type="text" id="new-city" placeholder="Barcelona">
+        <input type="text" id="new-city" placeholder="Barcelona" readonly>
       </div>
     </div>
+    <div class="field">
+      <label>Dirección *</label>
+      <div style="display:flex; gap:8px;">
+        <input type="text" id="new-address" placeholder="Calle Mayor 1, Barcelona" style="flex:1;">
+        <button type="button" onclick="searchAddress()" style="padding:10px 14px; background:#C4622D; color:#fff; border:none; border-radius:8px; cursor:pointer; font-size:13px; white-space:nowrap;">Buscar</button>
+      </div>
+      <div id="address-result" style="font-size:12px; color:#6B6059; margin-top:4px;"></div>
+    </div>
+    <input type="hidden" id="new-lat">
+    <input type="hidden" id="new-lng">
+    <input type="hidden" id="new-province">
+    <input type="hidden" id="new-zip">
     <div class="field">
       <label>Plan</label>
       <select id="new-plan">
@@ -179,6 +191,32 @@ function closeModal(e) {
   }
 }
 
+async function searchAddress() {
+  const address = document.getElementById('new-address').value.trim();
+  if (!address) return;
+  const resultEl = document.getElementById('address-result');
+  resultEl.textContent = 'Buscando...';
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1&addressdetails=1`, {
+      headers: { 'Accept-Language': 'es' }
+    });
+    const data = await res.json();
+    if (data.length === 0) { resultEl.textContent = 'No encontrado. Prueba con más detalle.'; return; }
+    const r = data[0];
+    const addr = r.address;
+    document.getElementById('new-lat').value = r.lat;
+    document.getElementById('new-lng').value = r.lon;
+    document.getElementById('new-city').value = addr.city || addr.town || addr.village || addr.municipality || '';
+    document.getElementById('new-province').value = addr.state || '';
+    document.getElementById('new-zip').value = addr.postcode || '';
+    resultEl.textContent = '✅ ' + r.display_name;
+    resultEl.style.color = '#22aa55';
+  } catch(e) {
+    resultEl.textContent = 'Error al buscar. Inténtalo de nuevo.';
+    resultEl.style.color = '#cc2222';
+  }
+}
+
 // Auto-generate slug from name
 document.getElementById('new-name').addEventListener('input', function() {
   const slug = this.value.toLowerCase()
@@ -208,7 +246,16 @@ async function createBar() {
   const res = await fetch('/admin/api/create-bar', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, slug, city, plan, email, password, color_primary: color, color_bg: document.getElementById('new-color-bg').value.trim() })
+    body: JSON.stringify({
+      name, slug, city, plan, email, password,
+      color_primary: color,
+      color_bg: document.getElementById('new-color-bg').value.trim(),
+      address: document.getElementById('new-address').value.trim(),
+      latitude: document.getElementById('new-lat').value,
+      longitude: document.getElementById('new-lng').value,
+      province: document.getElementById('new-province').value,
+      zip_code: document.getElementById('new-zip').value
+    })
   });
   const data = await res.json();
 
