@@ -85,19 +85,18 @@
 <!-- JUEGO -->
 <div class="screen" id="s-game">
   <div class="game-tag">El Dilema</div>
-  <a href="/{{ bar.slug }}?code={{ code }}" class="btn-back-game">← Volver al menú</a>
   <p class="dilema-situacion" id="d-situacion"></p>
   <p class="dilema-pregunta">¿Tú qué harías?</p>
   <div class="dilema-btns">
     <button class="dilema-btn" id="btn-a" onclick="votar('a')"></button>
     <button class="dilema-btn" id="btn-b" onclick="votar('b')"></button>
   </div>
+  <a href="/{{ bar.slug }}?code={{ code }}" class="btn-back-game" style="justify-content:center; margin-top:8px;">← Volver al menú</a>
 </div>
 
 <!-- RESULTADO -->
 <div class="screen" id="s-result">
   <div class="game-tag">El Dilema</div>
-  <a href="/{{ bar.slug }}?code={{ code }}" class="btn-back-game">← Volver al menú</a>
   <p class="dilema-situacion" id="r-situacion"></p>
 
   <div class="result-bars">
