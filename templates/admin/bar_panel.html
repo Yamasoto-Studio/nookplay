@@ -288,7 +288,8 @@ async function searchAddress() {
     const r = data[0];
     const addr = r.address;
     document.getElementById('city-input').value = addr.city || addr.town || addr.village || addr.municipality || '';
-    document.getElementById('province-input').value = addr.state || '';
+    // En España: county = provincia, state = comunidad autónoma
+    document.getElementById('province-input').value = addr.county || addr.state_district || addr.state || '';
     document.getElementById('zip-input').value = addr.postcode || '';
     document.getElementById('lat-input').value = r.lat;
     document.getElementById('lng-input').value = r.lon;
