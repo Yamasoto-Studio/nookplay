@@ -39,13 +39,13 @@
 
 <!-- JUEGO -->
 <div class="screen" id="s-game">
-  <div class="game-tag">El Impostor</div>
-  <h2 class="headline" id="imp-tema" style="text-align:center;"></h2>
+  <div class="game-tag" style="display:block; text-align:center; width:fit-content; margin:0 auto 12px;">El Impostor</div>
+  <h2 class="headline" id="imp-tema" style="text-align:center; margin-bottom:8px;"></h2>
   <p class="body-text" id="imp-intro" style="color:var(--text-secondary); font-size:14px; margin-bottom:16px;"></p>
   <p class="impostor-instruccion">¿Cuál de estas afirmaciones es <strong>falsa</strong>?</p>
   <div id="imp-afirmaciones"></div>
   <button class="btn-danger" id="imp-btn" disabled onclick="revelar()">Revelar respuesta</button>
-  <a href="/{{ bar.slug }}?code={{ code }}" class="btn-back-game" style="justify-content:center; margin-top:8px;">← Volver al menú</a>
+  <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
 </div>
 
 <!-- RESULTADO -->
