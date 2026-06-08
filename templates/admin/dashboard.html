@@ -207,7 +207,9 @@ async function searchAddress() {
     document.getElementById('new-lat').value = r.lat;
     document.getElementById('new-lng').value = r.lon;
     document.getElementById('new-city').value = addr.city || addr.town || addr.village || addr.municipality || '';
-    document.getElementById('new-province').value = addr.state || '';
+    const rawProv = addr.state_district || addr.county || addr.state || '';
+    const isComarca = ['Baix Llobregat','Barcelonès','Vallès','Maresme','Garraf'].some(c => rawProv.includes(c));
+    document.getElementById('new-province').value = isComarca ? '' : rawProv;
     document.getElementById('new-zip').value = addr.postcode || '';
     resultEl.textContent = '✅ ' + r.display_name;
     resultEl.style.color = '#22aa55';
