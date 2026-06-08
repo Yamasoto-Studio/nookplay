@@ -239,3 +239,74 @@ La afirmación en la posición """ + str(falsa_idx) + """ (índice 0-3) debe ser
     text = data['content'][0]['text'].strip()
     text = text.replace('```json', '').replace('```', '').strip()
     return json.loads(text)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# El Dilema generator
+# ─────────────────────────────────────────────────────────────────────────────
+
+CATEGORIAS_DILEMA = [
+    "situación cotidiana en la calle o el transporte",
+    "decisión en una reunión familiar o con amigos",
+    "dilema en el trabajo o con compañeros",
+    "situación con un desconocido",
+    "decisión sobre dinero o propiedades",
+    "dilema de honestidad en el día a día",
+    "situación incómoda en un restaurante o tienda",
+    "decisión sobre redes sociales o tecnología",
+    "dilema con vecinos o en el barrio",
+    "situación de vacaciones o viaje",
+]
+
+def generate_dilema(bar_name, bar_slug):
+    today = str(date.today())
+    api_key = os.environ.get('ANTHROPIC_API_KEY')
+    seed = get_day_seed(bar_slug)
+    categoria = CATEGORIAS_DILEMA[(seed + 7) % len(CATEGORIAS_DILEMA)]
+
+    prompt = """Eres el animador de una mesa de bar. Propones dilemas cotidianos que hacen que la gente debata mientras toma algo. Tu estilo es cercano, divertido, sin pretensiones.
+
+FECHA: """ + today + """
+CATEGORÍA: """ + categoria + """
+
+Crea un dilema del día con estas reglas:
+1. La situación debe ser 100% cotidiana y reconocible — algo que le puede pasar a cualquiera
+2. Las dos opciones deben ser igualmente defendibles — no hay respuesta obvia
+3. Tono casual y cercano, como si lo contara un amigo en un bar
+4. Nada de política, religión ni temas divisivos serios
+5. La situación en 2-3 frases máximo, directa y con gancho
+6. Los botones deben ser cortos y contundentes (máx 5 palabras cada uno)
+7. El "dato curioso" al final debe ser una estadística real o un dato sorprendente relacionado con el tema
+
+Devuelve SOLO un objeto JSON válido, sin markdown:
+{
+  "situacion": "Descripción de la situación en 2-3 frases. Directa, con gancho, tono de bar.",
+  "opcion_a": "Texto corto del botón A (máx 5 palabras)",
+  "opcion_b": "Texto corto del botón B (máx 5 palabras)",
+  "dato_curioso": "Un dato real y sorprendente sobre este tipo de situación. 1-2 frases.",
+  "contexto_a": "En qué porcentaje aproximado crees que la gente elegiría A? Solo el número, ej: 45",
+  "contexto_b": "En qué porcentaje aproximado crees que la gente elegiría B? Solo el número, ej: 55"
+}"""
+
+    response = requests.post(
+        'https://api.anthropic.com/v1/messages',
+        headers={
+            'x-api-key': api_key,
+            'anthropic-version': '2023-06-01',
+            'content-type': 'application/json'
+        },
+        json={
+            'model': 'claude-sonnet-4-5',
+            'max_tokens': 800,
+            'messages': [{'role': 'user', 'content': prompt}]
+        },
+        timeout=60
+    )
+
+    data = response.json()
+    if 'content' not in data:
+        raise Exception(f"API error: {data.get('error', data)}")
+
+    text = data['content'][0]['text'].strip()
+    text = text.replace('```json', '').replace('```', '').strip()
+    return json.loads(text)

@@ -380,7 +380,7 @@ def generate_weekly_codes():
 
 def pregen_daily_games():
     """Ejecuta cada día a las 6am — pre-genera los juegos del día para todos los bares."""
-    from ai import generate_game, generate_impostor, build_bar_context, get_day_seed
+    from ai import generate_game, generate_impostor, generate_dilema, build_bar_context, get_day_seed
     today = str(date.today())
 
     db = get_db()
@@ -857,6 +857,115 @@ def stats(bar_slug):
 
 
 
+
+
+@app.route('/<bar_slug>/dilema')
+def dilema_page(bar_slug):
+    db = get_db()
+    bar = db.execute("SELECT * FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
+    if not bar:
+        db.close()
+        return render_template('404.html'), 404
+    products = db.execute(
+        "SELECT * FROM bar_products WHERE bar_id = ? AND active = 1 ORDER BY position",
+        (bar['id'],)
+    ).fetchall()
+    db.close()
+    code = request.args.get('code', '')
+    import json as json_lib
+    products_json = json_lib.dumps([dict(p) for p in products])
+    return render_template('games/dilema.html', bar=bar, code=code, products_json=products_json)
+
+@app.route('/api/dilema', methods=['POST'])
+def dilema_api():
+    data = request.get_json()
+    code = data.get('code', '').strip().upper()
+    bar_slug = data.get('bar_slug', '').strip()
+    today = str(date.today())
+
+    db = get_db()
+    result = db.execute('''
+        SELECT b.name, b.id FROM codes c
+        JOIN bars b ON c.bar_id = b.id
+        WHERE c.code = ? AND b.slug = ? AND c.active = 1 AND b.active = 1
+    ''', (code, bar_slug)).fetchone()
+
+    if not result:
+        # Try weekly code
+        bar = db.execute("SELECT * FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
+        if bar:
+            valid_code = db.execute(
+                "SELECT code FROM access_codes WHERE bar_id = ? AND valid_from <= ? AND valid_until >= ?",
+                (bar['id'], today, today)
+            ).fetchone()
+            if not valid_code or valid_code['code'] != code:
+                db.close()
+                return jsonify({'error': 'Invalid code'}), 403
+            bar_name = bar['name']
+            bar_id = bar['id']
+        else:
+            db.close()
+            return jsonify({'error': 'Invalid code'}), 403
+    else:
+        bar_name = result['name']
+        bar_id = result['id']
+
+    cache_key = f"{bar_slug}_dilema_{today}"
+    if cache_key in _game_cache:
+        db.close()
+        return jsonify(_game_cache[cache_key])
+
+    # Check pre-generated
+    pregenerated = db.execute(
+        "SELECT content FROM generated_games WHERE bar_id = ? AND game_type = 'dilema' AND game_date = ?",
+        (bar_id, today)
+    ).fetchone()
+    if pregenerated:
+        import json as _json
+        game_data = _json.loads(pregenerated['content'])
+        _game_cache[cache_key] = game_data
+        db.close()
+        return jsonify(game_data)
+
+    db.close()
+
+    try:
+        game_data = generate_dilema(bar_name, bar_slug)
+        _game_cache[cache_key] = game_data
+        return jsonify(game_data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/dilema-stats/<bar_slug>')
+def dilema_stats(bar_slug):
+    today = str(date.today())
+    db = get_db()
+    try:
+        total = db.execute(
+            "SELECT COUNT(*) as n FROM plays WHERE bar_slug = ? AND played_on = ? AND game_type = 'dilema'",
+            (bar_slug, today)
+        ).fetchone()['n']
+        votos_a = db.execute(
+            "SELECT COUNT(*) as n FROM plays WHERE bar_slug = ? AND played_on = ? AND game_type = 'dilema' AND choice = 0",
+            (bar_slug, today)
+        ).fetchone()['n']
+        votos_b = db.execute(
+            "SELECT COUNT(*) as n FROM plays WHERE bar_slug = ? AND played_on = ? AND game_type = 'dilema' AND choice = 1",
+            (bar_slug, today)
+        ).fetchone()['n']
+        try:
+            avg_row = db.execute(
+                "SELECT AVG(elapsed) as avg_e FROM plays WHERE bar_slug = ? AND played_on = ? AND game_type = 'dilema' AND elapsed > 0",
+                (bar_slug, today)
+            ).fetchone()
+            avg_elapsed = round(avg_row['avg_e']) if avg_row and avg_row['avg_e'] else None
+        except:
+            avg_elapsed = None
+    except:
+        total = votos_a = votos_b = 0
+        avg_elapsed = None
+    db.close()
+    return jsonify({'total': total, 'votos_a': votos_a, 'votos_b': votos_b, 'avg_elapsed': avg_elapsed})
 
 @app.route('/static/og.png')
 def og_image():

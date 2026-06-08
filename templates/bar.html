@@ -199,6 +199,13 @@ const ACTIVITIES = [
     active: true
   },
   {
+    id: 'dilema',
+    name: 'El Dilema',
+    desc: '¿Tú qué harías? Dos opciones, sin respuesta correcta',
+    icon: '🤔',
+    active: true
+  },
+  {
     id: 'horoscopo',
     name: 'Tu Horóscopo',
     desc: 'Las estrellas tienen algo que decirte hoy',
@@ -294,6 +301,7 @@ function showMenu() {
 function startActivity(id) {
   if (id === 'crimen') window.location = `/${BAR_SLUG}/crimen?code=${validatedCode}`;
   if (id === 'impostor') window.location = `/${BAR_SLUG}/impostor?code=${validatedCode}`;
+  if (id === 'dilema') window.location = `/${BAR_SLUG}/dilema?code=${validatedCode}`;
 }
 
 function showScreen(id) {
