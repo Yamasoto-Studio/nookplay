@@ -7,7 +7,7 @@
 {% block game_content %}
 <style>
 .dilema-situacion {
-  font-size: 18px;
+  font-size: 20px; text-align:center;
   font-weight: 600;
   line-height: 1.5;
   color: var(--text);
@@ -84,7 +84,6 @@
 
 <!-- JUEGO -->
 <div class="screen" id="s-game">
-  <a href="/{{ bar.slug }}?code={{ code }}" class="btn-back-game">← Volver al menú</a>
   <div class="game-tag">El Dilema</div>
   <p class="dilema-situacion" id="d-situacion"></p>
   <p class="dilema-pregunta">¿Tú qué harías?</p>
