@@ -884,31 +884,21 @@ def dilema_api():
     today = str(date.today())
 
     db = get_db()
-    result = db.execute('''
-        SELECT b.name, b.id FROM codes c
-        JOIN bars b ON c.bar_id = b.id
-        WHERE c.code = ? AND b.slug = ? AND c.active = 1 AND b.active = 1
-    ''', (code, bar_slug)).fetchone()
+    bar = db.execute("SELECT * FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
+    if not bar:
+        db.close()
+        return jsonify({'error': 'Invalid code'}), 403
 
-    if not result:
-        # Try weekly code
-        bar = db.execute("SELECT * FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
-        if bar:
-            valid_code = db.execute(
-                "SELECT code FROM access_codes WHERE bar_id = ? AND valid_from <= ? AND valid_until >= ?",
-                (bar['id'], today, today)
-            ).fetchone()
-            if not valid_code or valid_code['code'] != code:
-                db.close()
-                return jsonify({'error': 'Invalid code'}), 403
-            bar_name = bar['name']
-            bar_id = bar['id']
-        else:
-            db.close()
-            return jsonify({'error': 'Invalid code'}), 403
-    else:
-        bar_name = result['name']
-        bar_id = result['id']
+    valid_code = db.execute(
+        "SELECT code FROM access_codes WHERE bar_id = ? AND valid_from <= ? AND valid_until >= ?",
+        (bar['id'], today, today)
+    ).fetchone()
+    if not valid_code or valid_code['code'] != code:
+        db.close()
+        return jsonify({'error': 'Invalid code'}), 403
+
+    bar_name = bar['name']
+    bar_id = bar['id']
 
     cache_key = f"{bar_slug}_dilema_{today}"
     if cache_key in _game_cache:
