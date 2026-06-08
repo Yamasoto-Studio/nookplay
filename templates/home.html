@@ -404,11 +404,9 @@
     <div class="section-tag">Locales adheridos</div>
     <h2>Ya en tu ciudad</h2>
     <p class="section-sub">Cada punto en el mapa es un local donde los clientes juegan cada día mientras toman algo.</p>
-    <div class="map-box" id="map-box">
-      <div class="map-dot" id="map-single-dot" style="display:none;"></div>
-      <div class="map-label" id="map-single-label" style="display:none;"></div>
-      <div class="map-count" id="map-count">Cargando...</div>
-      <div id="map-pins" style="position:absolute; width:100%; height:100%; top:0; left:0; pointer-events:none;"></div>
+    <div style="position:relative; border-radius:16px; overflow:hidden; height:260px;">
+      <div id="leaflet-map" style="width:100%; height:100%;"></div>
+      <div class="map-count" id="map-count" style="position:absolute; top:12px; right:12px; z-index:1000;">Cargando...</div>
     </div>
   </div>
 </div>
@@ -523,46 +521,53 @@ window.addEventListener('scroll', () => {
   });
 });
 
-// Dynamic map
+// Dynamic map with Leaflet
 async function loadMap() {
   try {
     const res = await fetch('/api/bars-map');
     const bars = await res.json();
-    const countEl = document.getElementById('map-count');
     const n = bars.length;
-    countEl.textContent = n + (n === 1 ? ' local adherido' : ' locales adheridos');
+    document.getElementById('map-count').textContent = n + (n === 1 ? ' local adherido' : ' locales adheridos');
 
-    if (n === 1) {
-      // Single bar — show centered dot with label
-      document.getElementById('map-single-dot').style.display = 'block';
-      document.getElementById('map-single-label').style.display = 'block';
-      document.getElementById('map-single-label').textContent = bars[0].name + ' · ' + bars[0].city;
-    } else if (n > 1) {
-      // Multiple bars — show relative pins
-      const lats = bars.map(b => b.latitude);
-      const lngs = bars.map(b => b.longitude);
-      const minLat = Math.min(...lats), maxLat = Math.max(...lats);
-      const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
-      const pinsEl = document.getElementById('map-pins');
-      const box = document.getElementById('map-box');
-      bars.forEach(bar => {
-        const pctX = maxLng === minLng ? 50 : ((bar.longitude - minLng) / (maxLng - minLng)) * 80 + 10;
-        const pctY = maxLat === minLat ? 50 : (1 - (bar.latitude - minLat) / (maxLat - minLat)) * 80 + 10;
-        const pin = document.createElement('div');
-        pin.style.cssText = `position:absolute; left:${pctX}%; top:${pctY}%; transform:translate(-50%,-50%); width:14px; height:14px; border-radius:50%; background:#C4622D; box-shadow:0 0 0 6px rgba(196,98,45,0.2); cursor:pointer;`;
-        pin.title = bar.name + ' · ' + bar.city;
-        pinsEl.appendChild(pin);
-      });
+    if (!window.L) return;
+
+    const defaultLat = bars.length ? bars[0].latitude : 41.3851;
+    const defaultLng = bars.length ? bars[0].longitude : 2.1734;
+
+    const map = L.map('leaflet-map', { zoomControl: false, scrollWheelZoom: false })
+      .setView([defaultLat, defaultLng], bars.length === 1 ? 13 : 8);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    const icon = L.divIcon({
+      className: '',
+      html: '<div style="width:14px;height:14px;border-radius:50%;background:#C4622D;box-shadow:0 0 0 6px rgba(196,98,45,0.2);"></div>',
+      iconSize: [14, 14],
+      iconAnchor: [7, 7]
+    });
+
+    bars.forEach(bar => {
+      L.marker([bar.latitude, bar.longitude], { icon })
+        .addTo(map)
+        .bindPopup(`<strong>${bar.name}</strong><br>${bar.city}`);
+    });
+
+    if (bars.length > 1) {
+      const group = L.featureGroup(bars.map(b => L.marker([b.latitude, b.longitude])));
+      map.fitBounds(group.getBounds().pad(0.3));
     }
   } catch(e) {
-    // Fallback silencioso
     document.getElementById('map-count').textContent = '1 local adherido';
-    document.getElementById('map-single-dot').style.display = 'block';
-    document.getElementById('map-single-label').style.display = 'block';
-    document.getElementById('map-single-label').textContent = 'Yellow Specialty Koffee · Viladecans';
   }
 }
-loadMap();
+
+// Load Leaflet JS then init map
+const leafletScript = document.createElement('script');
+leafletScript.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+leafletScript.onload = loadMap;
+document.head.appendChild(leafletScript);
 </script>
 
 {% endblock %}
