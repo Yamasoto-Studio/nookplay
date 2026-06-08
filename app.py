@@ -530,13 +530,22 @@ def admin_save():
     if not bar:
         db.close()
         return jsonify({'ok': False}), 404
+    lat = data.get('latitude')
+    lng = data.get('longitude')
+    try:
+        lat = float(lat) if lat else None
+        lng = float(lng) if lng else None
+    except: pass
+
     db.execute(
-        "UPDATE bars SET welcome_message=?, promo_active=?, description=?, owner_name=?, staff_names=?, color_primary=?, color_primary_text=?, color_bg=?, color_bg_subtle=? WHERE slug=?",
+        "UPDATE bars SET welcome_message=?, promo_active=?, description=?, owner_name=?, staff_names=?, color_primary=?, color_primary_text=?, color_bg=?, color_bg_subtle=?, address=?, city=?, province=?, zip_code=?, country=?, latitude=?, longitude=? WHERE slug=?",
         (data.get('welcome_message',''), data.get('promo_active',0),
          data.get('description',''), data.get('owner_name',''),
          data.get('staff_names',''), data.get('color_primary','#C4622D'),
          data.get('color_primary_text','#FFFFFF'), data.get('color_bg','#F7F2EB'),
-         data.get('color_bg_subtle','#F0EBE3'), bar_slug)
+         data.get('color_bg_subtle','#F0EBE3'), data.get('address',''),
+         data.get('city',''), data.get('province',''), data.get('zip_code',''),
+         data.get('country','España'), lat, lng, bar_slug)
     )
     db.execute("DELETE FROM bar_products WHERE bar_id = ?", (bar['id'],))
     for p in data.get('products', []):

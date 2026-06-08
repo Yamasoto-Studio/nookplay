@@ -188,6 +188,47 @@
       </div>
     </div>
 
+    <!-- Dirección -->
+    <div class="form-card">
+      <h3>Ubicación</h3>
+      <div class="field">
+        <label>Dirección</label>
+        <div style="display:flex; gap:8px;">
+          <input type="text" id="address-input" name="address" value="{{ bar.address or '' }}" placeholder="Calle Mayor 1, Barcelona" style="flex:1;">
+          <button type="button" onclick="searchAddress()" style="padding:10px 14px; background:#C4622D; color:#fff; border:none; border-radius:8px; cursor:pointer; font-size:13px; white-space:nowrap;">Buscar</button>
+        </div>
+        <div id="address-result" style="font-size:12px; color:#6B6059; margin-top:4px;"></div>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+        <div class="field">
+          <label>Ciudad</label>
+          <input type="text" name="city" id="city-input" value="{{ bar.city or '' }}" placeholder="Barcelona">
+        </div>
+        <div class="field">
+          <label>Provincia</label>
+          <input type="text" name="province" id="province-input" value="{{ bar.province or '' }}" placeholder="Barcelona">
+        </div>
+        <div class="field">
+          <label>Código postal</label>
+          <input type="text" name="zip_code" id="zip-input" value="{{ bar.zip_code or '' }}" placeholder="08001">
+        </div>
+        <div class="field">
+          <label>País</label>
+          <input type="text" name="country" value="{{ bar.country or 'España' }}" placeholder="España">
+        </div>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+        <div class="field">
+          <label>Latitud</label>
+          <input type="text" name="latitude" id="lat-input" value="{{ bar.latitude or '' }}" placeholder="41.3851">
+        </div>
+        <div class="field">
+          <label>Longitud</label>
+          <input type="text" name="longitude" id="lng-input" value="{{ bar.longitude or '' }}" placeholder="2.1734">
+        </div>
+      </div>
+    </div>
+
     <!-- Sobre el local -->
     <div class="form-card">
       <h3>Sobre el local</h3>
@@ -233,6 +274,32 @@ async function uploadLogo(input) {
   }
 }
 
+async function searchAddress() {
+  const address = document.getElementById('address-input').value.trim();
+  if (!address) return;
+  const resultEl = document.getElementById('address-result');
+  resultEl.textContent = 'Buscando...';
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1&addressdetails=1`, {
+      headers: { 'Accept-Language': 'es' }
+    });
+    const data = await res.json();
+    if (data.length === 0) { resultEl.textContent = 'No encontrado. Prueba con más detalle.'; return; }
+    const r = data[0];
+    const addr = r.address;
+    document.getElementById('city-input').value = addr.city || addr.town || addr.village || addr.municipality || '';
+    document.getElementById('province-input').value = addr.state || '';
+    document.getElementById('zip-input').value = addr.postcode || '';
+    document.getElementById('lat-input').value = r.lat;
+    document.getElementById('lng-input').value = r.lon;
+    resultEl.textContent = '✅ ' + r.display_name;
+    resultEl.style.color = '#22aa55';
+  } catch(e) {
+    resultEl.textContent = 'Error al buscar.';
+    resultEl.style.color = '#cc2222';
+  }
+}
+
 async function saveChanges() {
   const form = document.getElementById('admin-form');
   const data = {
@@ -245,6 +312,13 @@ async function saveChanges() {
     color_primary_text: form.color_primary_text.value,
     color_bg: form.color_bg.value,
     color_bg_subtle: form.color_bg_subtle.value,
+    address: form.address.value,
+    city: form.city.value,
+    province: form.province.value,
+    zip_code: form.zip_code.value,
+    country: form.country.value,
+    latitude: form.latitude.value || null,
+    longitude: form.longitude.value || null,
     products: []
   };
 
