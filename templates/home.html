@@ -557,24 +557,39 @@ async function initNookMap() {
       nookMap.fitBounds(L.featureGroup(markers).getBounds().pad(0.3));
     }
 
-    nookMap.invalidateSize();
+    // Multiple invalidateSize calls to ensure tiles load
+    setTimeout(() => nookMap.invalidateSize(true), 100);
+    setTimeout(() => nookMap.invalidateSize(true), 500);
+    setTimeout(() => nookMap.invalidateSize(true), 1000);
+
+    // ResizeObserver for dynamic resizing
+    if (window.ResizeObserver) {
+      new ResizeObserver(() => nookMap.invalidateSize(true)).observe(document.getElementById('leaflet-map'));
+    }
   } catch(e) {
     const countEl = document.getElementById('map-count');
     if (countEl) countEl.textContent = '1 local adherido';
   }
 }
 
-// Load Leaflet and init
+// Load Leaflet and init when map is visible
 const s = document.createElement('script');
 s.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
 s.onload = () => {
-  // Wait for layout to settle
-  requestAnimationFrame(() => requestAnimationFrame(initNookMap));
+  const mapEl = document.getElementById('leaflet-map');
+  if (!mapEl) return;
+  // Use IntersectionObserver to init when visible
+  const io = new IntersectionObserver((entries) => {
+    if (entries[0].isIntersecting) {
+      io.disconnect();
+      setTimeout(initNookMap, 50);
+    }
+  }, { threshold: 0.1 });
+  io.observe(mapEl);
 };
 document.head.appendChild(s);
 
-// Re-invalidate on scroll (fixes partial tiles)
-window.addEventListener('scroll', () => { if (nookMap) nookMap.invalidateSize(); }, {passive: true});
+window.addEventListener('scroll', () => { if (nookMap) nookMap.invalidateSize(true); }, {passive: true});
 </script>
 
 {% endblock %}
