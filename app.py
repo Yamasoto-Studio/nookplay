@@ -451,6 +451,8 @@ def admin_index():
     db.close()
     if not user:
         return redirect('/admin/login')
+    if user['role'] == 'superadmin':
+        return redirect('/admin/dashboard')
     return redirect('/admin/' + (user['bar_slug'] or 'yellow'))
 
 @app.route('/admin/login', methods=['GET', 'POST'])
@@ -964,3 +966,78 @@ def og_image():
 # --------------------------------------------------------------------------
 # Run
 # --------------------------------------------------------------------------
+# ─────────────────────────────────────────────────────────────────────────────
+# Superadmin routes
+# ─────────────────────────────────────────────────────────────────────────────
+
+@app.route('/admin/dashboard')
+@admin_required
+def admin_dashboard():
+    if session.get('admin_role') != 'superadmin':
+        return redirect('/admin')
+    db = get_db()
+    today = str(date.today())
+    from datetime import timedelta
+    monday = date.today() - timedelta(days=date.today().weekday())
+    bars_raw = db.execute("SELECT * FROM bars WHERE active = 1 ORDER BY created_at DESC").fetchall()
+    bars = []
+    for bar in bars_raw:
+        plays = db.execute("SELECT COUNT(*) as n FROM plays WHERE bar_slug = ?", (bar['slug'],)).fetchone()['n']
+        bar_dict = dict(bar)
+        bar_dict['plays_count'] = plays
+        bars.append(bar_dict)
+    stats = {
+        'total_bars': len(bars),
+        'plays_today': db.execute("SELECT COUNT(*) as n FROM plays WHERE played_on = ?", (today,)).fetchone()['n'],
+        'plays_week': db.execute("SELECT COUNT(*) as n FROM plays WHERE played_on >= ?", (str(monday),)).fetchone()['n'],
+        'plays_total': db.execute("SELECT COUNT(*) as n FROM plays").fetchone()['n'],
+    }
+    db.close()
+    return render_template('admin/dashboard.html', bars=bars, stats=stats)
+
+@app.route('/admin/api/create-bar', methods=['POST'])
+@admin_required
+def admin_create_bar():
+    if session.get('admin_role') != 'superadmin':
+        return jsonify({'ok': False, 'error': 'No autorizado'}), 403
+    data = request.get_json()
+    name = data.get('name', '').strip()
+    slug = data.get('slug', '').strip()
+    city = data.get('city', '').strip()
+    plan = data.get('plan', 'gift')
+    email = data.get('email', '').strip().lower()
+    password = data.get('password', '').strip()
+    color = data.get('color_primary', '#C4622D')
+    if not all([name, slug, city, email, password]):
+        return jsonify({'ok': False, 'error': 'Faltan campos obligatorios'})
+    import random as _random
+    chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+    new_code = ''.join(_random.choices(chars, k=5))
+    db = get_db()
+    try:
+        db.execute(
+            "INSERT INTO bars (slug, name, city, plan, plan_status, color_primary, color_primary_text, color_bg, color_bg_subtle, color_accent_dark, active) VALUES (?,?,?,?,'active',?,'#FFFFFF','#F7F2EB','#F0EBE3','#1A1A1A',1)",
+            (slug, name, city, plan, color)
+        )
+        db.commit()
+        bar = db.execute("SELECT id FROM bars WHERE slug = ?", (slug,)).fetchone()
+        bar_id = bar['id']
+        from datetime import timedelta
+        today_d = date.today()
+        monday = today_d - timedelta(days=today_d.weekday())
+        sunday = monday + timedelta(days=6)
+        db.execute("UPDATE bars SET access_code = ? WHERE id = ?", (new_code, bar_id))
+        db.execute("INSERT INTO access_codes (bar_id, code, valid_from, valid_until) VALUES (?,?,?,?)",
+                  (bar_id, new_code, str(monday), str(sunday)))
+        db.execute(
+            "INSERT INTO admin_users (email, password_hash, role, bar_slug) VALUES (?,?,?,?)",
+            (email, hash_password(password), 'bar_admin', slug)
+        )
+        db.commit()
+        db.close()
+        import os as _os
+        _os.makedirs(f'static/clientes/{slug}', exist_ok=True)
+        return jsonify({'ok': True, 'code': new_code})
+    except Exception as e:
+        db.close()
+        return jsonify({'ok': False, 'error': str(e)})

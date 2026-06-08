@@ -144,6 +144,11 @@ migrations = [
     "ALTER TABLE plays ADD COLUMN choice INTEGER DEFAULT -1",
     "ALTER TABLE plays ADD COLUMN elapsed INTEGER DEFAULT 0",
     "ALTER TABLE admin_users ADD COLUMN bar_slug TEXT DEFAULT ''",
+    "ALTER TABLE bars ADD COLUMN plan TEXT DEFAULT 'gift'",
+    "ALTER TABLE bars ADD COLUMN plan_status TEXT DEFAULT 'active'",
+    "ALTER TABLE bars ADD COLUMN plan_expires_at TEXT DEFAULT ''",
+    "ALTER TABLE bars ADD COLUMN stripe_customer_id TEXT DEFAULT ''",
+    "ALTER TABLE bars ADD COLUMN stripe_subscription_id TEXT DEFAULT ''",
 ]
 for sql in migrations:
     try:

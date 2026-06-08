@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Nookplay Admin{% endblock %}
+{% block content %}
+
+<style>
+  body { background: #F7F2EB !important; display: block !important; padding: 0 !important; }
+  .sa-wrap { max-width: 900px; margin: 0 auto; padding: 24px 16px 60px; }
+
+  .sa-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }
+  .sa-header-left { display: flex; align-items: center; gap: 12px; }
+  .sa-header img { height: 20px; }
+  .sa-badge { font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; background: #C4622D; color: #fff; padding: 3px 8px; border-radius: 20px; }
+  .sa-logout { font-size: 13px; color: #6B6059; text-decoration: none; padding: 6px 12px; border: 1px solid #E5DDD5; border-radius: 8px; }
+
+  /* Stats globales */
+  .sa-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+  .sa-stat { background: #fff; border-radius: 12px; padding: 16px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+  .sa-stat-val { font-size: 28px; font-weight: 600; color: #1A1A1A; line-height: 1; }
+  .sa-stat-label { font-size: 11px; color: #A89B91; margin-top: 4px; }
+
+  /* Tabla de bares */
+  .sa-section-title { font-size: 13px; font-weight: 600; color: #1A1A1A; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; }
+  .btn-new-bar { background: #C4622D; color: #fff; border: none; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; text-decoration: none; }
+
+  .bars-table { background: #fff; border-radius: 14px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+  .bar-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; align-items: center; padding: 14px 16px; border-bottom: 1px solid #F0EBE3; gap: 12px; }
+  .bar-row:last-child { border-bottom: none; }
+  .bar-row-header { background: #F7F2EB; font-size: 11px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; color: #A89B91; }
+  .bar-name { font-size: 14px; font-weight: 600; color: #1A1A1A; }
+  .bar-city { font-size: 12px; color: #A89B91; margin-top: 2px; }
+  .plan-badge { font-size: 10px; font-weight: 600; padding: 3px 8px; border-radius: 20px; display: inline-block; }
+  .plan-gift { background: #FEE25A; color: #1A1A1A; }
+  .plan-starter { background: #E8F4E8; color: #2D7A2D; }
+  .plan-pro { background: #E8EEF8; color: #2D4A8A; }
+  .plan-premium { background: #F0E8F8; color: #6A2D8A; }
+  .status-active { color: #22aa55; font-size: 12px; font-weight: 500; }
+  .status-expired { color: #cc2222; font-size: 12px; font-weight: 500; }
+  .plays-count { font-size: 14px; font-weight: 500; color: #1A1A1A; }
+  .btn-edit { font-size: 12px; color: #C4622D; text-decoration: none; font-weight: 500; }
+
+  /* Modal nuevo bar */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: #fff; border-radius: 16px; padding: 28px; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; }
+  .modal h3 { font-size: 18px; font-weight: 700; margin-bottom: 20px; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 13px; font-weight: 500; color: #1A1A1A; margin-bottom: 5px; }
+  .field input, .field select { width: 100%; padding: 10px 12px; border: 1px solid #E5DDD5; border-radius: 8px; font-size: 14px; font-family: inherit; outline: none; }
+  .field input:focus, .field select:focus { border-color: #C4622D; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .modal-footer { display: flex; gap: 10px; margin-top: 20px; }
+  .btn-cancel { flex: 1; padding: 11px; background: #F7F2EB; color: #6B6059; border: none; border-radius: 8px; font-size: 14px; cursor: pointer; font-family: inherit; }
+  .btn-create { flex: 2; padding: 11px; background: #C4622D; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; }
+
+  @media (max-width: 600px) {
+    .sa-stats { grid-template-columns: repeat(2, 1fr); }
+    .bar-row { grid-template-columns: 1fr auto; }
+    .bar-row > *:not(:first-child):not(:last-child) { display: none; }
+  }
+</style>
+
+<div class="sa-wrap">
+  <!-- Header -->
+  <div class="sa-header">
+    <div class="sa-header-left">
+      <img src="/static/logo.svg" alt="Nookplay">
+      <span class="sa-badge">Superadmin</span>
+    </div>
+    <a href="/admin/logout" class="sa-logout">Cerrar sesión</a>
+  </div>
+
+  <!-- Stats globales -->
+  <div class="sa-stats">
+    <div class="sa-stat">
+      <div class="sa-stat-val">{{ stats.total_bars }}</div>
+      <div class="sa-stat-label">Locales activos</div>
+    </div>
+    <div class="sa-stat">
+      <div class="sa-stat-val">{{ stats.plays_today }}</div>
+      <div class="sa-stat-label">Partidas hoy</div>
+    </div>
+    <div class="sa-stat">
+      <div class="sa-stat-val">{{ stats.plays_week }}</div>
+      <div class="sa-stat-label">Esta semana</div>
+    </div>
+    <div class="sa-stat">
+      <div class="sa-stat-val">{{ stats.plays_total }}</div>
+      <div class="sa-stat-label">Total partidas</div>
+    </div>
+  </div>
+
+  <!-- Lista de bares -->
+  <div class="sa-section-title">
+    <span>Locales</span>
+    <a href="#" class="btn-new-bar" onclick="openModal()">+ Nuevo local</a>
+  </div>
+
+  <div class="bars-table">
+    <div class="bar-row bar-row-header">
+      <div>Local</div>
+      <div>Plan</div>
+      <div>Estado</div>
+      <div>Partidas</div>
+      <div></div>
+    </div>
+    {% for bar in bars %}
+    <div class="bar-row">
+      <div>
+        <div class="bar-name">{{ bar.name }}</div>
+        <div class="bar-city">{{ bar.city }}{% if bar.province %}, {{ bar.province }}{% endif %}</div>
+      </div>
+      <div><span class="plan-badge plan-{{ bar.plan or 'gift' }}">{{ bar.plan or 'gift' }}</span></div>
+      <div><span class="status-{{ bar.plan_status or 'active' }}">{{ '✓ Activo' if (bar.plan_status or 'active') == 'active' else '✗ Expirado' }}</span></div>
+      <div class="plays-count">{{ bar.plays_count }}</div>
+      <div><a href="/admin/{{ bar.slug }}" class="btn-edit">Gestionar →</a></div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Modal nuevo bar -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal">
+    <h3>Nuevo local</h3>
+    <div class="field">
+      <label>Nombre del local *</label>
+      <input type="text" id="new-name" placeholder="Ej: Café Central">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Slug (URL) *</label>
+        <input type="text" id="new-slug" placeholder="cafe-central">
+      </div>
+      <div class="field">
+        <label>Ciudad *</label>
+        <input type="text" id="new-city" placeholder="Barcelona">
+      </div>
+    </div>
+    <div class="field">
+      <label>Plan</label>
+      <select id="new-plan">
+        <option value="gift">Gift (gratuito)</option>
+        <option value="starter">Starter — 6,95€/mes</option>
+        <option value="pro">Pro — 9,95€/mes</option>
+        <option value="premium">Premium — 14,95€/mes</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Email del propietario *</label>
+      <input type="email" id="new-email" placeholder="propietario@local.com">
+    </div>
+    <div class="field">
+      <label>Contraseña inicial *</label>
+      <input type="text" id="new-password" placeholder="Contraseña temporal">
+    </div>
+    <div class="field">
+      <label>Color principal (hex)</label>
+      <input type="text" id="new-color" placeholder="#C4622D" value="#C4622D">
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-create" onclick="createBar()">Crear local</button>
+    </div>
+    <div id="modal-error" style="color:#cc2222; font-size:13px; margin-top:8px; text-align:center;"></div>
+  </div>
+</div>
+
+<script>
+function openModal() { document.getElementById('modal-overlay').classList.add('open'); }
+function closeModal(e) {
+  if (!e || e.target === document.getElementById('modal-overlay')) {
+    document.getElementById('modal-overlay').classList.remove('open');
+  }
+}
+
+// Auto-generate slug from name
+document.getElementById('new-name').addEventListener('input', function() {
+  const slug = this.value.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .trim();
+  document.getElementById('new-slug').value = slug;
+});
+
+async function createBar() {
+  const name = document.getElementById('new-name').value.trim();
+  const slug = document.getElementById('new-slug').value.trim();
+  const city = document.getElementById('new-city').value.trim();
+  const plan = document.getElementById('new-plan').value;
+  const email = document.getElementById('new-email').value.trim();
+  const password = document.getElementById('new-password').value.trim();
+  const color = document.getElementById('new-color').value.trim();
+  const errEl = document.getElementById('modal-error');
+
+  if (!name || !slug || !city || !email || !password) {
+    errEl.textContent = 'Rellena todos los campos obligatorios.';
+    return;
+  }
+
+  const res = await fetch('/admin/api/create-bar', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, slug, city, plan, email, password, color_primary: color })
+  });
+  const data = await res.json();
+
+  if (data.ok) {
+    location.reload();
+  } else {
+    errEl.textContent = data.error || 'Error al crear el local.';
+  }
+}
+</script>
+
+{% endblock %}
