@@ -534,26 +534,36 @@ async function loadMap() {
     const container = document.getElementById('map-container');
     let src;
 
-    if (n === 1) {
-      const lat = bars[0].latitude;
-      const lng = bars[0].longitude;
-      const delta = 0.02;
-      src = `https://www.openstreetmap.org/export/embed.html?bbox=${lng-delta},${lat-delta},${lng+delta},${lat+delta}&layer=mapnik&marker=${lat},${lng}`;
-    } else {
-      const lats = bars.map(b => parseFloat(b.latitude));
-      const lngs = bars.map(b => parseFloat(b.longitude));
-      const minLat = Math.min(...lats) - 0.1;
-      const maxLat = Math.max(...lats) + 0.1;
-      const minLng = Math.min(...lngs) - 0.1;
-      const maxLng = Math.max(...lngs) + 0.1;
-      src = `https://www.openstreetmap.org/export/embed.html?bbox=${minLng},${minLat},${maxLng},${maxLat}&layer=mapnik`;
-    }
+    const lats = bars.map(b => parseFloat(b.latitude));
+    const lngs = bars.map(b => parseFloat(b.longitude));
+    const minLat = Math.min(...lats);
+    const maxLat = Math.max(...lats);
+    const minLng = Math.min(...lngs);
+    const maxLng = Math.max(...lngs);
+    const pad = n === 1 ? 0.02 : 0.1;
+
+    const src = `https://www.openstreetmap.org/export/embed.html?bbox=${minLng-pad},${minLat-pad},${maxLng+pad},${maxLat+pad}&layer=mapnik`;
 
     const iframe = document.createElement('iframe');
     iframe.src = src;
-    iframe.style.cssText = 'width:100%; height:100%; border:none;';
+    iframe.style.cssText = 'width:100%; height:100%; border:none; position:absolute; top:0; left:0;';
     iframe.setAttribute('loading', 'lazy');
+    container.style.position = 'relative';
     container.appendChild(iframe);
+
+    // Add custom markers on top
+    iframe.onload = () => {
+      const bboxW = (maxLng + pad) - (minLng - pad);
+      const bboxH = (maxLat + pad) - (minLat - pad);
+      bars.forEach(bar => {
+        const pctX = ((parseFloat(bar.longitude) - (minLng - pad)) / bboxW) * 100;
+        const pctY = (1 - (parseFloat(bar.latitude) - (minLat - pad)) / bboxH) * 100;
+        const pin = document.createElement('div');
+        pin.title = bar.name + ' · ' + bar.city;
+        pin.style.cssText = `position:absolute; left:${pctX}%; top:${pctY}%; transform:translate(-50%,-50%); width:16px; height:16px; border-radius:50%; background:#C4622D; box-shadow:0 0 0 5px rgba(196,98,45,0.25); z-index:10; cursor:pointer; pointer-events:auto;`;
+        container.appendChild(pin);
+      });
+    };
   } catch(e) {
     document.getElementById('map-count').textContent = '1 local adherido';
   }
