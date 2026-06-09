@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 from datetime import date, datetime, timedelta
 import sqlite3
-from ai import generate_game, generate_impostor, generate_dilema, generate_conexiones, generate_oraculo, generate_donde, generate_carta, generate_reinas, build_bar_context, get_day_seed
+from ai import generate_game, generate_impostor, generate_dilema, generate_conexiones, generate_oraculo, generate_donde, generate_carta, generate_reinas, generate_conexion_local, build_bar_context, get_day_seed
 import os
 import json
 import random
@@ -1277,6 +1277,71 @@ def reinas_api():
     game_data = generate_reinas(bar_slug)
     _game_cache[cache_key] = game_data
     return jsonify(game_data)
+
+
+@app.route('/<bar_slug>/local')
+def local_page(bar_slug):
+    db = get_db()
+    bar = db.execute("SELECT * FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
+    if not bar:
+        db.close()
+        return render_template('404.html'), 404
+    products = db.execute(
+        "SELECT * FROM bar_products WHERE bar_id = ? AND active = 1 ORDER BY position",
+        (bar['id'],)
+    ).fetchall()
+    db.close()
+    code = request.args.get('code', '')
+    import json as json_lib
+    products_json = json_lib.dumps([dict(p) for p in products])
+    return render_template('games/local.html', bar=bar, code=code, products_json=products_json)
+
+@app.route('/api/local', methods=['POST'])
+def local_api():
+    data = request.get_json()
+    code = data.get('code', '').strip().upper()
+    bar_slug = data.get('bar_slug', '').strip()
+    today = str(date.today())
+
+    db = get_db()
+    bar = db.execute("SELECT * FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
+    if not bar:
+        db.close()
+        return jsonify({'error': 'Invalid code'}), 403
+
+    valid_code = db.execute(
+        "SELECT code FROM access_codes WHERE bar_id = ? AND valid_from <= ? AND valid_until >= ?",
+        (bar['id'], today, today)
+    ).fetchone()
+    if not valid_code or valid_code['code'] != code:
+        db.close()
+        return jsonify({'error': 'Invalid code'}), 403
+
+    cache_key = f"{bar_slug}_local_{today}"
+    if cache_key in _game_cache:
+        db.close()
+        return jsonify(_game_cache[cache_key])
+
+    pregenerated = db.execute(
+        "SELECT content FROM generated_games WHERE bar_id = ? AND game_type = 'local' AND game_date = ?",
+        (bar['id'], today)
+    ).fetchone()
+    if pregenerated:
+        import json as _json
+        game_data = _json.loads(pregenerated['content'])
+        _game_cache[cache_key] = game_data
+        db.close()
+        return jsonify(game_data)
+
+    db.close()
+    try:
+        city = bar['city'] or 'tu ciudad'
+        province = bar['province'] or ''
+        game_data = generate_conexion_local(bar['name'], city, province, bar_slug)
+        _game_cache[cache_key] = game_data
+        return jsonify(game_data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/static/og.png')
 def og_image():

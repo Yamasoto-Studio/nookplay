@@ -219,6 +219,13 @@ const ACTIVITIES = [
     active: true
   },
   {
+    id: 'local',
+    name: 'Conexión Local',
+    desc: 'Curiosidades, anécdotas y trivia de tu ciudad',
+    icon: '📍',
+    active: true
+  },
+  {
     id: 'reinas',
     name: 'Las Reinas',
     desc: 'Coloca una 👑 en cada región, fila y columna',
@@ -327,6 +334,7 @@ function startActivity(id) {
   if (id === 'donde') window.location = `/${BAR_SLUG}/donde?code=${validatedCode}`;
   if (id === 'carta') window.location = `/${BAR_SLUG}/carta?code=${validatedCode}`;
   if (id === 'reinas') window.location = `/${BAR_SLUG}/reinas?code=${validatedCode}`;
+  if (id === 'local') window.location = `/${BAR_SLUG}/local?code=${validatedCode}`;
 }
 
 function showScreen(id) {

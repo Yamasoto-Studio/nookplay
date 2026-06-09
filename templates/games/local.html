@@ -1,0 +1,271 @@
+{% extends "game_base.html" %}
+{% block title %}Conexión Local — {{ bar.name }}{% endblock %}
+{% block og_title %}¿Conoces tu ciudad? — {{ bar.name }}{% endblock %}
+{% block og_description %}Curiosidades, anécdotas y trivia sobre tu ciudad. Solo en Nookplay.{% endblock %}
+{% block og_url %}/{{ bar.slug }}/local{% endblock %}
+
+{% block game_content %}
+<style>
+.local-ciudad {
+  text-align: center; font-size: 11px; font-weight: 700;
+  letter-spacing: 2px; text-transform: uppercase;
+  color: var(--bar-primary); margin-bottom: 4px;
+}
+.local-tipo-badge {
+  display: inline-block; font-size: 10px; font-weight: 600;
+  letter-spacing: 1px; text-transform: uppercase;
+  padding: 3px 10px; border-radius: 20px;
+  background: var(--bar-bg-subtle); color: var(--text-muted);
+  margin-bottom: 12px;
+}
+.local-titulo {
+  font-size: 22px; font-weight: 700; color: var(--text);
+  margin-bottom: 16px; line-height: 1.3; text-align: center;
+}
+.local-emoji { font-size: 40px; text-align: center; display: block; margin-bottom: 12px; }
+.local-contenido {
+  font-size: 16px; line-height: 1.8; color: var(--text);
+  margin-bottom: 20px; padding: 16px;
+  background: var(--bar-bg-subtle); border-radius: var(--radius-md);
+  border-left: 3px solid var(--bar-primary);
+}
+.local-pregunta {
+  font-size: 15px; font-weight: 600; color: var(--text);
+  margin-bottom: 16px; text-align: center; line-height: 1.4;
+}
+
+/* Trivia options */
+.local-opciones { margin-bottom: 16px; }
+.local-opcion {
+  width: 100%; text-align: left;
+  background: var(--bar-bg-subtle); border: 2px solid var(--border);
+  border-radius: var(--radius-md); padding: 14px 16px;
+  margin-bottom: 10px; cursor: pointer;
+  font-family: inherit; font-size: 15px; color: var(--text);
+  transition: all 0.15s; display: flex; gap: 10px; align-items: center;
+}
+.local-opcion:hover { border-color: var(--bar-primary); }
+.local-opcion.selected { border-color: var(--bar-primary); background: color-mix(in srgb, var(--bar-primary) 10%, white); }
+.local-opcion.correcta { border-color: #22aa55; background: #f0fff4; }
+.local-opcion.incorrecta { border-color: #cc2222; background: #fff0f0; }
+.opcion-letra {
+  width: 24px; height: 24px; border-radius: 50%;
+  background: var(--bar-primary); color: var(--bar-primary-text);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; flex-shrink: 0;
+}
+
+.local-explicacion {
+  background: var(--bar-bg-subtle); border: 1px solid var(--border);
+  border-radius: var(--radius-md); padding: 14px;
+  margin: 12px 0; display: none;
+}
+.local-explicacion.visible { display: block; }
+.local-exp-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--bar-primary); margin-bottom: 6px;
+}
+.local-bonus {
+  background: color-mix(in srgb, var(--bar-primary) 8%, white);
+  border: 1px solid color-mix(in srgb, var(--bar-primary) 20%, white);
+  border-radius: var(--radius-md); padding: 14px; margin: 12px 0;
+}
+.local-bonus-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--bar-primary); margin-bottom: 6px;
+}
+
+/* Debate box for non-trivia */
+.local-debate {
+  background: var(--bar-bg-subtle); border-radius: var(--radius-md);
+  padding: 16px; margin-bottom: 16px; text-align: center;
+}
+.local-debate-label {
+  font-size: 11px; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px;
+}
+.local-debate-q { font-size: 16px; font-weight: 600; color: var(--text); line-height: 1.4; }
+
+.tipo-label { font-size: 13px; color: var(--text-muted); }
+</style>
+
+<!-- LOADING -->
+<div class="screen active" id="s-loading">
+  <div class="loading"><div class="loading-spinner"></div><p>Conectando con tu ciudad...</p></div>
+</div>
+
+<!-- JUEGO -->
+<div class="screen" id="s-game">
+  <div class="game-tag" style="display:block;text-align:center;width:fit-content;margin:0 auto 8px;">Conexión Local</div>
+  <div class="local-ciudad" id="l-ciudad"></div>
+  <div style="text-align:center;margin-bottom:16px;"><span class="local-tipo-badge" id="l-tipo-badge"></span></div>
+  <span class="local-emoji" id="l-emoji"></span>
+  <h2 class="local-titulo" id="l-titulo"></h2>
+  <div class="local-contenido" id="l-contenido"></div>
+
+  <!-- Trivia -->
+  <div id="l-trivia-wrap" style="display:none;">
+    <p class="local-pregunta" id="l-trivia-pregunta">¿Cuál de estas opciones es correcta?</p>
+    <div class="local-opciones" id="l-opciones"></div>
+    <button class="btn-primary" id="btn-responder" disabled onclick="responderTrivia()" style="margin-bottom:10px;">
+      Confirmar respuesta
+    </button>
+  </div>
+
+  <!-- Debate (no trivia) -->
+  <div id="l-debate-wrap" style="display:none;">
+    <div class="local-debate">
+      <div class="local-debate-label">💬 Pregunta para la mesa</div>
+      <div class="local-debate-q" id="l-pregunta"></div>
+    </div>
+    <button class="btn-primary" onclick="revelarBonus()" style="margin-bottom:10px;">
+      Ver dato bonus 🎁
+    </button>
+  </div>
+
+  <div class="local-explicacion" id="l-explicacion">
+    <div class="local-exp-label">✅ Respuesta correcta</div>
+    <div id="l-exp-texto"></div>
+  </div>
+  <div class="local-bonus" id="l-bonus" style="display:none;">
+    <div class="local-bonus-label">💡 Dato bonus</div>
+    <div id="l-bonus-texto"></div>
+  </div>
+
+  <button class="btn-share" id="btn-share" style="display:none;" onclick="doShare()">📤 Compartir</button>
+  <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
+</div>
+
+<script>
+const BAR_SLUG = "{{ bar.slug }}";
+const BAR_NAME = "{{ bar.name }}";
+const CODE = new URLSearchParams(window.location.search).get('code') || '';
+
+const TIPO_LABELS = {
+  trivia: '🧠 Trivia local',
+  anecdota: '📖 Anécdota',
+  comparativa: '⚖️ Comparativa',
+  leyenda: '🗺️ Leyenda',
+  personaje: '👤 Personaje',
+};
+
+let gameData = null;
+let selectedOption = -1;
+
+async function init() {
+  try {
+    const res = await fetch('/api/local', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG })
+    });
+    gameData = await res.json();
+    renderGame();
+  } catch(e) {
+    document.getElementById('s-loading').innerHTML = `
+      <div class="error-msg">No se pudo conectar.<br>
+      <button class="btn-secondary" onclick="location.reload()">Reintentar</button></div>`;
+  }
+}
+
+function renderGame() {
+  document.getElementById('l-ciudad').textContent = gameData.ciudad.toUpperCase();
+  document.getElementById('l-tipo-badge').textContent = TIPO_LABELS[gameData.tipo] || gameData.tipo;
+  document.getElementById('l-emoji').textContent = gameData.emoji_titulo;
+  document.getElementById('l-titulo').textContent = gameData.titulo;
+  document.getElementById('l-contenido').textContent = gameData.contenido;
+
+  if (gameData.tipo === 'trivia' && gameData.opciones) {
+    document.getElementById('l-trivia-wrap').style.display = 'block';
+    const letras = ['A','B','C','D'];
+    const opcionesEl = document.getElementById('l-opciones');
+    opcionesEl.innerHTML = gameData.opciones.map((op, i) => `
+      <button class="local-opcion" id="op-${i}" onclick="selectOpcion(${i})">
+        <div class="opcion-letra">${letras[i]}</div>
+        <span>${op}</span>
+      </button>
+    `).join('');
+  } else {
+    document.getElementById('l-debate-wrap').style.display = 'block';
+    if (gameData.pregunta) {
+      document.getElementById('l-pregunta').textContent = gameData.pregunta;
+    }
+  }
+
+  showScreen('s-game');
+}
+
+function selectOpcion(idx) {
+  selectedOption = idx;
+  document.querySelectorAll('.local-opcion').forEach((btn, i) => {
+    btn.classList.toggle('selected', i === idx);
+  });
+  document.getElementById('btn-responder').disabled = false;
+}
+
+async function responderTrivia() {
+  if (selectedOption === -1) return;
+  const correcta = selectedOption === gameData.correcta;
+
+  await fetch('/api/play', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      code: CODE, bar_slug: BAR_SLUG,
+      correct: correcta, game_type: 'local', choice: selectedOption
+    })
+  });
+
+  // Mark options
+  document.querySelectorAll('.local-opcion').forEach((btn, i) => {
+    btn.onclick = null;
+    if (i === gameData.correcta) btn.classList.add('correcta');
+    else if (i === selectedOption && !correcta) btn.classList.add('incorrecta');
+    btn.classList.remove('selected');
+  });
+  document.getElementById('btn-responder').style.display = 'none';
+
+  // Show explanation
+  const expEl = document.getElementById('l-explicacion');
+  document.getElementById('l-exp-texto').textContent = gameData.explicacion;
+  expEl.classList.add('visible');
+
+  // Show bonus
+  mostrarBonus();
+}
+
+async function revelarBonus() {
+  await fetch('/api/play', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      code: CODE, bar_slug: BAR_SLUG,
+      correct: true, game_type: 'local'
+    })
+  });
+  document.getElementById('l-debate-wrap').style.display = 'none';
+  mostrarBonus();
+}
+
+function mostrarBonus() {
+  const bonusEl = document.getElementById('l-bonus');
+  document.getElementById('l-bonus-texto').textContent = gameData.dato_bonus;
+  bonusEl.style.display = 'block';
+  document.getElementById('btn-share').style.display = 'flex';
+  loadStats(BAR_SLUG, 'local');
+}
+
+function doShare() {
+  const txt = `📍 ${gameData.ciudad} Connection en ${BAR_NAME}\n\n${gameData.emoji_titulo} ${gameData.titulo}\n\n"${gameData.contenido.substring(0,100)}..."\n\n¿Lo sabías? → nookplay.app`;
+  if (navigator.share) navigator.share({ text: txt, url: 'https://nookplay.app' });
+  else navigator.clipboard.writeText(txt).then(() => alert('¡Copiado!'));
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+init();
+</script>
+{% endblock %}

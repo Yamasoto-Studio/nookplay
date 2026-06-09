@@ -708,3 +708,85 @@ def generate_reinas(bar_slug):
     seed = get_day_seed(bar_slug)
     idx = seed % len(REINAS_PUZZLES)
     return REINAS_PUZZLES[idx]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Conexión Local — juego hiperlocal generado por IA
+# ─────────────────────────────────────────────────────────────────────────────
+
+def generate_conexion_local(bar_name, bar_city, bar_province, bar_slug):
+    today = str(date.today())
+    from datetime import datetime
+    dia_semana = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"][datetime.now().weekday()]
+    api_key = os.environ.get('ANTHROPIC_API_KEY')
+    seed = get_day_seed(bar_slug)
+
+    # Rotate between different content types each day
+    tipos = ["trivia", "anecdota", "comparativa", "leyenda", "personaje"]
+    tipo_hoy = tipos[seed % len(tipos)]
+
+    prompt = """Eres un experto en historia local, geografía y cultura española. Conoces cada rincón de cada pueblo y ciudad. Tu estilo es cercano, divertido y sorprendente — como el que más sabe del bar.
+
+FECHA: """ + today + """
+DÍA: """ + dia_semana + """
+LOCAL: """ + bar_name + """
+CIUDAD: """ + bar_city + """
+PROVINCIA: """ + bar_province + """
+TIPO DE CONTENIDO HOY: """ + tipo_hoy + """
+
+Crea el contenido de "Conexión Local" para hoy. El juego debe sentirse completamente personalizado para """ + bar_city + """.
+
+REGLAS:
+1. El contenido debe ser 100% real y verificable sobre """ + bar_city + """ o su entorno inmediato
+2. Debe sorprender — algo que incluso los propios vecinos pueden no saber
+3. Tono: como si lo contara un amigo muy curioso en un bar
+4. Referencia el bar o el día si tiene gracia natural
+5. Debe generar conversación en la mesa — que la gente quiera opinar o debatir
+
+TIPOS de contenido según el tipo asignado:
+- "trivia": Una pregunta de trivia sobre """ + bar_city + """ con 4 opciones. Una correcta, tres plausibles pero incorrectas.
+- "anecdota": Una anécdota histórica o curiosidad sorprendente sobre """ + bar_city + """. Con un dato que nadie espera.
+- "comparativa": Compara """ + bar_city + """ con otra ciudad o pueblo cercano de forma divertida. Datos reales.
+- "leyenda": Una leyenda, mito o historia curiosa vinculada a """ + bar_city + """ o la zona.
+- "personaje": Un personaje histórico, famoso o curioso vinculado a """ + bar_city + """ que pocos conocen.
+
+Devuelve SOLO un objeto JSON válido, sin markdown:
+{
+  "tipo": "trivia|anecdota|comparativa|leyenda|personaje",
+  "titulo": "Título corto y llamativo (máx 6 palabras)",
+  "contenido": "El texto principal. 3-4 frases. Directo, con gancho, sorprendente.",
+  "pregunta": "Una pregunta para debatir en mesa relacionada con el contenido (solo si tipo != trivia)",
+  "opciones": ["Opción A", "Opción B", "Opción C", "Opción D"],
+  "correcta": 0,
+  "explicacion": "Por qué esta es la respuesta correcta. 1-2 frases con el dato interesante.",
+  "dato_bonus": "Un dato extra sorprendente sobre """ + bar_city + """ o la zona. 1-2 frases.",
+  "emoji_titulo": "Un emoji que representa el contenido"
+}
+
+IMPORTANTE para trivia: opciones y correcta son obligatorios. Para los demás tipos, opciones puede ser null y correcta -1."""
+
+    response = requests.post(
+        'https://api.anthropic.com/v1/messages',
+        headers={
+            'x-api-key': api_key,
+            'anthropic-version': '2023-06-01',
+            'content-type': 'application/json'
+        },
+        json={
+            'model': 'claude-sonnet-4-5',
+            'max_tokens': 1200,
+            'messages': [{'role': 'user', 'content': prompt}]
+        },
+        timeout=60
+    )
+
+    data = response.json()
+    if 'content' not in data:
+        raise Exception(f"API error: {data.get('error', data)}")
+
+    text = data['content'][0]['text'].strip()
+    text = text.replace('```json', '').replace('```', '').strip()
+    result = json.loads(text)
+    result['ciudad'] = bar_city
+    result['bar_name'] = bar_name
+    return result
