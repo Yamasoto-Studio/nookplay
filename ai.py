@@ -670,7 +670,7 @@ REINAS_PUZZLES = [
             [3,4,4,4,4],
         ],
         "solution": [[0,2],[1,4],[2,1],[3,3],[4,0]],
-        "colors": ["#FFB3B3","#FFD9B3","#FFFAB3","#B3FFB3","#B3D9FF"],
+        "colors": ["#FF6B6B","#FFA500","#FFD700","#51CF66","#339AF0"],
     },
     {
         "size": 5,
@@ -682,7 +682,7 @@ REINAS_PUZZLES = [
             [3,3,4,4,4],
         ],
         "solution": [[0,3],[1,0],[2,4],[3,2],[4,1]],
-        "colors": ["#FFB3D9","#C3B3FF","#FFE5B3","#B3FFD9","#B3E5FF"],
+        "colors": ["#FF6B9D","#9775FA","#FFB347","#20C997","#74C0FC"],
     },
     {
         "size": 5,
@@ -694,7 +694,7 @@ REINAS_PUZZLES = [
             [3,3,3,3,4],
         ],
         "solution": [[0,4],[1,2],[2,0],[3,3],[4,1]],
-        "colors": ["#FFCAB3","#B3C8FF","#FFB3F0","#B3FFCC","#FFF5B3"],
+        "colors": ["#FF8C42","#4DABF7","#F06595","#40C057","#FCC419"],
     },
     {
         "size": 6,
@@ -707,7 +707,7 @@ REINAS_PUZZLES = [
             [3,3,5,5,5,5],
         ],
         "solution": [[0,4],[1,1],[2,5],[3,2],[4,0],[5,3]],
-        "colors": ["#FFB3B3","#FFD9B3","#FFFAB3","#B3FFB3","#B3D9FF","#D9B3FF"],
+        "colors": ["#FF6B6B","#FFA94D","#FFD43B","#69DB7C","#4DABF7","#DA77F2"],
     },
     {
         "size": 5,
@@ -719,7 +719,7 @@ REINAS_PUZZLES = [
             [3,4,4,4,4],
         ],
         "solution": [[0,1],[1,3],[2,0],[3,4],[4,2]],
-        "colors": ["#FFB3CC","#B3FFEE","#FFE0B3","#C5B3FF","#B3ECFF"],
+        "colors": ["#FF6B9D","#63E6BE","#FFA94D","#A9E34B","#74C0FC"],
     },
     {
         "size": 5,
@@ -731,7 +731,7 @@ REINAS_PUZZLES = [
             [4,4,4,4,3],
         ],
         "solution": [[0,0],[1,3],[2,1],[3,4],[4,2]],
-        "colors": ["#FFD0B3","#B3F0FF","#FFB3E5","#B3FFD0","#FFF0B3"],
+        "colors": ["#FFA94D","#4DABF7","#F06595","#51CF66","#FFD43B"],
     },
     {
         "size": 5,
@@ -743,7 +743,7 @@ REINAS_PUZZLES = [
             [3,3,4,4,4],
         ],
         "solution": [[0,3],[1,0],[2,4],[3,2],[4,1]],
-        "colors": ["#FFB3B3","#B3CCFF","#FFE5B3","#B3FFB3","#F0B3FF"],
+        "colors": ["#FF6B6B","#74C0FC","#FFA94D","#69DB7C","#DA77F2"],
     },
 ]
 

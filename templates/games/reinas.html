@@ -34,21 +34,18 @@
   aspect-ratio: 1;
 }
 .reinas-cell:hover { filter: brightness(0.92); }
+.reinas-cell.has-x { font-size: 18px; color: rgba(0,0,0,0.4); font-weight: 700; }
 .reinas-cell.has-queen { font-size: 28px; }
 .reinas-cell.conflict {
   outline: 3px solid #E24B4A;
   outline-offset: -3px;
-  animation: pulse-red 0.4s ease;
 }
-@keyframes pulse-red {
-  0%, 100% { outline-color: #E24B4A; }
-  50% { outline-color: #ff8080; }
-}
-.reinas-cell.solved { animation: pop 0.3s ease; }
-@keyframes pop {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.2); }
-  100% { transform: scale(1); }
+.reinas-cell.conflict.has-queen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(226,75,74,0.25);
+  border-radius: 2px;
 }
 
 .reinas-counter {
@@ -78,9 +75,10 @@
   <div class="game-tag" style="display:block; text-align:center; width:fit-content; margin:0 auto 12px;">Las Reinas</div>
   <h2 class="headline" style="text-align:center; margin-bottom:8px;">Coloca todas las 👑</h2>
   <div class="reinas-reglas">
-    ♟ Una 👑 por cada <strong>fila</strong> y <strong>columna</strong><br>
-    ♟ Una 👑 por cada <strong>región de color</strong><br>
-    ♟ Dos reinas no pueden <strong>tocarse</strong> (ni en diagonal)
+    <strong>1 toque</strong> → marca ✕ (aquí no puede ir)<br>
+    <strong>2 toques</strong> → coloca 👑 (aquí va la reina)<br>
+    <strong>3 toques</strong> → borra<br>
+    Una 👑 por fila, columna y región. Sin tocarse.
   </div>
   <div class="reinas-counter" id="reinas-counter"></div>
   <div class="reinas-board" id="reinas-board"></div>
@@ -110,7 +108,7 @@ const BAR_NAME = "{{ bar.name }}";
 const CODE = new URLSearchParams(window.location.search).get('code') || '';
 
 let gameData = null;
-let board = [];
+let board = []; // 0=empty, 1=X, 2=queen
 let startTime = null;
 let timerInterval = null;
 let solved = false;
@@ -124,7 +122,7 @@ async function init() {
     });
     gameData = await res.json();
     const n = gameData.size;
-    board = Array(n).fill(null).map(() => Array(n).fill(false));
+    board = Array(n).fill(null).map(() => Array(n).fill(0));
     renderBoard();
     startTimer();
     showScreen('s-game');
@@ -150,7 +148,7 @@ function formatTime(s) {
 }
 
 function getQueenCount() {
-  return board.flat().filter(v => v).length;
+  return board.flat().filter(v => v === 2).length;
 }
 
 function getConflicts() {
@@ -163,14 +161,14 @@ function getConflicts() {
 
       // Check row
       for (let cc=0; cc<n; cc++) {
-        if (cc !== c && board[r][cc]) {
+        if (cc !== c && board[r][cc] === 2) {
           conflicts.add(`${r},${c}`);
           conflicts.add(`${r},${cc}`);
         }
       }
       // Check col
       for (let rr=0; rr<n; rr++) {
-        if (rr !== r && board[rr][c]) {
+        if (rr !== r && board[rr][c] === 2) {
           conflicts.add(`${r},${c}`);
           conflicts.add(`${rr},${c}`);
         }
@@ -179,7 +177,7 @@ function getConflicts() {
       const reg = gameData.regions[r][c];
       for (let rr=0; rr<n; rr++) {
         for (let cc=0; cc<n; cc++) {
-          if ((rr !== r || cc !== c) && board[rr][cc] && gameData.regions[rr][cc] === reg) {
+          if ((rr !== r || cc !== c) && board[rr][cc] === 2 && gameData.regions[rr][cc] === reg) {
             conflicts.add(`${r},${c}`);
             conflicts.add(`${rr},${cc}`);
           }
@@ -190,7 +188,7 @@ function getConflicts() {
         for (let dc=-1; dc<=1; dc++) {
           if (dr===0 && dc===0) continue;
           const nr=r+dr, nc=c+dc;
-          if (nr>=0 && nr<n && nc>=0 && nc<n && board[nr][nc]) {
+          if (nr>=0 && nr<n && nc>=0 && nc<n && board[nr][nc] === 2) {
             conflicts.add(`${r},${c}`);
             conflicts.add(`${nr},${nc}`);
           }
@@ -225,15 +223,16 @@ function renderBoard() {
       const cell = document.createElement('div');
       const regionColor = gameData.colors[gameData.regions[r][c]];
       const isConflict = conflicts.has(`${r},${c}`);
-      const hasQueen = board[r][c];
+      const state = board[r][c]; // 0=empty, 1=X, 2=queen
 
       cell.className = 'reinas-cell' +
-        (hasQueen ? ' has-queen' : '') +
+        (state === 2 ? ' has-queen' : '') +
+        (state === 1 ? ' has-x' : '') +
         (isConflict ? ' conflict' : '');
 
       cell.style.background = regionColor;
-      cell.style.fontSize = `${Math.max(20, 32 - n * 2)}px`;
-      cell.textContent = hasQueen ? '👑' : '';
+      cell.style.fontSize = state === 2 ? `${Math.max(20, 32 - n * 2)}px` : '16px';
+      cell.textContent = state === 2 ? '👑' : state === 1 ? '✕' : '';
       cell.onclick = () => toggleQueen(r, c);
 
       boardEl.appendChild(cell);
@@ -243,7 +242,7 @@ function renderBoard() {
 
 function toggleQueen(r, c) {
   if (solved) return;
-  board[r][c] = !board[r][c];
+  board[r][c] = (board[r][c] + 1) % 3;
   renderBoard();
 
   const st = document.getElementById('reinas-status');
@@ -261,7 +260,7 @@ function toggleQueen(r, c) {
 
 function resetBoard() {
   const n = gameData.size;
-  board = Array(n).fill(null).map(() => Array(n).fill(false));
+  board = Array(n).fill(null).map(() => Array(n).fill(0));
   solved = false;
   startTime = Date.now();
   document.getElementById('reinas-status').textContent = '';
