@@ -240,8 +240,7 @@
 
   .step h3 { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
   .step p { font-size: 13px; color: var(--text-sec); line-height: 1.6; }
-  .step-icon { width: 100%; height: 80px; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; }
-  .step-icon svg { width: 64px; height: 64px; }
+  .step-img { width: 100%; aspect-ratio: 1; border-radius: 16px; object-fit: cover; margin-bottom: 16px; display: block; }
 
   /* ── GAMES ── */
   .games-grid {
@@ -426,50 +425,20 @@
     <p class="section-sub">Sin apps. Sin registros. Sin permisos. Solo el móvil que ya tienes en el bolsillo.</p>
     <div class="steps">
       <div class="step">
-        <div class="step-icon">
-          <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="8" y="8" width="20" height="20" rx="2" stroke="#C4622D" stroke-width="2.5"/>
-            <rect x="13" y="13" width="10" height="10" rx="1" fill="#C4622D"/>
-            <rect x="36" y="8" width="20" height="20" rx="2" stroke="#C4622D" stroke-width="2.5"/>
-            <rect x="41" y="13" width="10" height="10" rx="1" fill="#C4622D"/>
-            <rect x="8" y="36" width="20" height="20" rx="2" stroke="#C4622D" stroke-width="2.5"/>
-            <rect x="13" y="41" width="10" height="10" rx="1" fill="#C4622D"/>
-            <rect x="36" y="36" width="6" height="6" rx="1" fill="#C4622D"/>
-            <rect x="46" y="36" width="6" height="6" rx="1" fill="#C4622D"/>
-            <rect x="36" y="46" width="6" height="6" rx="1" fill="#C4622D"/>
-            <rect x="46" y="46" width="6" height="6" rx="1" fill="#C4622D"/>
-          </svg>
-        </div>        <div class="step-num">1</div>
+        <img src="/static/landing/step1.png" alt="El cliente descubre Nookplay" class="step-img">
+        <div class="step-num">1</div>
         <h3>El cliente descubre Nookplay</h3>
         <p>Un QR en la mesa, en la barra o en la entrada. Lo escanea por curiosidad. Sin instalar nada, sin registrarse.</p>
       </div>
       <div class="step">
-        <div class="step-icon">
-          <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="6" y="16" width="52" height="32" rx="4" stroke="#C4622D" stroke-width="2.5"/>
-            <line x1="22" y1="16" x2="22" y2="48" stroke="#C4622D" stroke-width="2" stroke-dasharray="4 3"/>
-            <rect x="28" y="24" width="22" height="3" rx="1.5" fill="#C4622D"/>
-            <rect x="28" y="31" width="16" height="3" rx="1.5" fill="#C4622D" opacity="0.5"/>
-            <rect x="28" y="38" width="19" height="3" rx="1.5" fill="#C4622D" opacity="0.3"/>
-            <rect x="10" y="24" width="8" height="8" rx="1" fill="#C4622D" opacity="0.3"/>
-          </svg>
-        </div>        <div class="step-num">2</div>
+        <img src="/static/landing/step2.png" alt="Introduce el código" class="step-img">
+        <div class="step-num">2</div>
         <h3>Introduce el código del local</h3>
         <p>Un código semanal, impreso en el ticket o visible en el local. Acceso instantáneo al juego del día.</p>
       </div>
       <div class="step">
-        <div class="step-icon">
-          <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="8" y="14" width="48" height="36" rx="8" stroke="#C4622D" stroke-width="2.5"/>
-            <circle cx="24" cy="32" r="5" stroke="#C4622D" stroke-width="2.5"/>
-            <line x1="24" y1="26" x2="24" y2="22" stroke="#C4622D" stroke-width="2.5" stroke-linecap="round"/>
-            <line x1="24" y1="38" x2="24" y2="42" stroke="#C4622D" stroke-width="2.5" stroke-linecap="round"/>
-            <line x1="18" y1="32" x2="14" y2="32" stroke="#C4622D" stroke-width="2.5" stroke-linecap="round"/>
-            <line x1="34" y1="32" x2="30" y2="32" stroke="#C4622D" stroke-width="2.5" stroke-linecap="round"/>
-            <line x1="42" y1="28" x2="42" y2="36" stroke="#C4622D" stroke-width="2.5" stroke-linecap="round"/>
-            <line x1="38" y1="32" x2="46" y2="32" stroke="#C4622D" stroke-width="2.5" stroke-linecap="round"/>
-          </svg>
-        </div>        <div class="step-num">3</div>
+        <img src="/static/landing/step3.png" alt="Juega y vuelve" class="step-img">
+        <div class="step-num">3</div>
         <h3>Juega, debate y vuelve</h3>
         <p>Cada día hay algo nuevo. El cliente que jugó hoy, vuelve mañana a ver si puede más.</p>
       </div>
