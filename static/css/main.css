@@ -66,8 +66,8 @@ body {
 }
 
 .nook-topbar img {
-  height: 18px;
-  width: auto;
+  height: auto;
+  width: 100px;
   opacity: 1;
 }
 
@@ -260,8 +260,8 @@ body {
 }
 
 .nook-footer-brand img {
-  height: 20px;
-  width: auto;
+  height: auto;
+  width: 100px;
   opacity: 1;
   display: block;
 }
