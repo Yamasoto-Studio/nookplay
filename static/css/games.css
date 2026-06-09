@@ -53,13 +53,13 @@
 
 /* ── Back to menu button ── */
 .btn-menu {
-  width: 100%; padding: 12px;
-  background: var(--bar-bg-subtle); color: var(--text);
+  width: 100%; padding: 10px;
+  background: transparent; color: var(--text-muted);
   border: 1px solid var(--border); border-radius: var(--radius-md);
-  font-size: 14px; font-weight: 500; cursor: pointer;
+  font-size: 13px; font-weight: 400; cursor: pointer;
   margin-top: 8px; font-family: inherit;
 }
-.btn-menu:hover { background: var(--bar-bg); }
+.btn-menu:hover { color: var(--text-secondary); border-color: var(--border-strong); }
 
 /* ── Tomorrow note ── */
 .tomorrow {

@@ -57,6 +57,7 @@
 .opcion-btn:hover { border-color: var(--bar-primary); transform: scale(1.02); }
 .opcion-btn.correcta { background: #f0fff4; border-color: #22aa55; color: #22aa55; }
 .opcion-btn.incorrecta { background: #fff0f0; border-color: #cc2222; color: #cc2222; }
+.opcion-btn.seleccionada { border-color: var(--bar-primary); background: color-mix(in srgb, var(--bar-primary) 12%, white); }
 
 .donde-hint {
   text-align: center; font-size: 13px;
@@ -108,7 +109,10 @@
 
   <div class="donde-opciones" id="donde-opciones"></div>
 
-  <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
+  <button class="btn-primary" id="btn-confirmar-destino" onclick="confirmarDestino()" disabled style="margin-bottom:10px; display:none;">
+    ¡Este es el destino!
+  </button>
+  <button class="btn-back-game" onclick="window.location='/{{ bar.slug }}?code=' + CODE" style="width:100%; justify-content:center; margin-top:4px;">← Volver al menú</button>
 </div>
 
 <!-- RESULTADO -->
@@ -196,11 +200,29 @@ function revelarSiguientePista() {
   }
 }
 
+let opcionSeleccionada = -1;
+
 function mostrarOpciones() {
   const opcionesEl = document.getElementById('donde-opciones');
   opcionesEl.innerHTML = gameData.opciones.map((op, i) => `
-    <button class="opcion-btn" onclick="responder(${i})">${op}</button>
+    <button class="opcion-btn" id="op-${i}" onclick="seleccionarOpcion(${i})">${op}</button>
   `).join('');
+  document.getElementById('btn-confirmar-destino').style.display = 'block';
+}
+
+function seleccionarOpcion(idx) {
+  if (respondido) return;
+  opcionSeleccionada = idx;
+  document.querySelectorAll('.opcion-btn').forEach((btn, i) => {
+    btn.classList.toggle('seleccionada', i === idx);
+  });
+  document.getElementById('btn-confirmar-destino').disabled = false;
+}
+
+function confirmarDestino() {
+  if (opcionSeleccionada === -1 || respondido) return;
+  responder(opcionSeleccionada);
+  document.getElementById('btn-confirmar-destino').style.display = 'none';
 }
 
 async function responder(idx) {
