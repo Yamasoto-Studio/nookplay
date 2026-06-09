@@ -385,7 +385,7 @@ def pregen_daily_games():
     db = get_db()
     bars = db.execute("SELECT * FROM bars WHERE active = 1").fetchall()
     for bar in bars:
-        for game_type in ['crimen', 'impostor']:
+        for game_type in ['crimen', 'impostor', 'dilema', 'conexiones', 'oraculo']:
             existing = db.execute(
                 "SELECT id FROM generated_games WHERE bar_id = ? AND game_type = ? AND game_date = ?",
                 (bar['id'], game_type, today)
@@ -400,8 +400,21 @@ def pregen_daily_games():
                         ctx = build_bar_context(dict(bar))
                         ctx['productos'] = [p['title'] for p in products]
                         game_data = generate_game(ctx, bar['slug'])
-                    else:
+                    elif game_type == 'impostor':
                         game_data = generate_impostor(bar['name'], bar['slug'])
+                    elif game_type == 'dilema':
+                        game_data = generate_dilema(bar['name'], bar['slug'])
+                    elif game_type == 'conexiones':
+                        game_data = generate_conexiones(bar['name'], bar['slug'])
+                    elif game_type == 'oraculo':
+                        # Oráculo es único para todos los bares — solo generar una vez
+                        existing_oraculo = db.execute(
+                            "SELECT id FROM generated_games WHERE game_type = 'oraculo' AND game_date = ?",
+                            (today,)
+                        ).fetchone()
+                        if existing_oraculo:
+                            continue
+                        game_data = generate_oraculo(bar['slug'])
                     
                     import json as _json
                     db.execute(
