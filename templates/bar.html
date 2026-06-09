@@ -219,6 +219,13 @@ const ACTIVITIES = [
     active: true
   },
   {
+    id: 'carta',
+    name: 'La Carta',
+    desc: 'Sudoku 4×4 con emojis. ¿Cuánto tardas?',
+    icon: '🧩',
+    active: true
+  },
+  {
     id: 'donde',
     name: '¿Dónde en el mundo?',
     desc: '5 pistas. 4 opciones. ¿Reconoces el lugar?',
@@ -311,6 +318,7 @@ function startActivity(id) {
   if (id === 'conexiones') window.location = `/${BAR_SLUG}/conexiones?code=${validatedCode}`;
   if (id === 'oraculo') window.location = `/${BAR_SLUG}/oraculo?code=${validatedCode}`;
   if (id === 'donde') window.location = `/${BAR_SLUG}/donde?code=${validatedCode}`;
+  if (id === 'carta') window.location = `/${BAR_SLUG}/carta?code=${validatedCode}`;
 }
 
 function showScreen(id) {

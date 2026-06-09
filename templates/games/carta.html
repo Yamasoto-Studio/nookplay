@@ -1,0 +1,342 @@
+{% extends "game_base.html" %}
+{% block title %}La Carta — {{ bar.name }}{% endblock %}
+{% block og_title %}¿Puedes resolver La Carta de hoy? — {{ bar.name }}{% endblock %}
+{% block og_description %}Un sudoku 4x4 con emojis. Cada fila, columna y cuadrante tiene los 4 ingredientes.{% endblock %}
+{% block og_url %}/{{ bar.slug }}/carta{% endblock %}
+
+{% block game_content %}
+<style>
+.carta-intro {
+  text-align: center; font-size: 14px;
+  color: var(--text-secondary); margin-bottom: 16px; line-height: 1.5;
+}
+.carta-categoria {
+  text-align: center; font-size: 13px;
+  color: var(--text-muted); margin-bottom: 6px;
+  text-transform: uppercase; letter-spacing: 1px; font-weight: 600;
+}
+.carta-emojis-ref {
+  display: flex; justify-content: center; gap: 10px;
+  margin-bottom: 20px;
+}
+.carta-emoji-ref {
+  width: 44px; height: 44px;
+  background: var(--bar-bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+}
+
+/* Board */
+.carta-board {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 3px;
+  background: var(--border);
+  border: 3px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+.carta-cell {
+  background: var(--bar-bg-card);
+  display: flex; align-items: center; justify-content: center;
+  height: 72px; font-size: 28px;
+  cursor: pointer;
+  transition: background 0.1s;
+  user-select: none;
+  position: relative;
+}
+.carta-cell.fixed { cursor: default; }
+.carta-cell.selected { background: color-mix(in srgb, var(--bar-primary) 15%, white); outline: 3px solid var(--bar-primary); outline-offset: -3px; }
+.carta-cell.highlight { background: var(--bar-bg-subtle); }
+.carta-cell.empty { opacity: 0.25; }
+.carta-cell.error { background: #fff0f0; }
+.carta-cell.correct-anim { background: #f0fff4; }
+
+/* Thick borders for quadrants */
+.carta-cell.border-right { border-right: 2px solid var(--border-strong); }
+.carta-cell.border-bottom { border-bottom: 2px solid var(--border-strong); }
+
+/* Numpad */
+.carta-pad {
+  display: flex; gap: 8px; justify-content: center;
+  margin-bottom: 16px;
+}
+.carta-pad-btn {
+  width: 60px; height: 60px;
+  background: var(--bar-bg-subtle);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-md);
+  font-size: 28px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s; user-select: none;
+}
+.carta-pad-btn:hover { border-color: var(--bar-primary); transform: scale(1.05); }
+.carta-pad-btn.del { font-size: 18px; color: var(--text-secondary); }
+
+.carta-status {
+  text-align: center; font-size: 14px; font-weight: 500;
+  min-height: 22px; margin-bottom: 10px;
+  color: var(--bar-primary);
+}
+
+.carta-timer {
+  text-align: center; font-size: 13px; color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+/* Resultado */
+.carta-result-time {
+  font-size: 48px; font-weight: 700;
+  text-align: center; color: var(--bar-primary);
+  margin-bottom: 4px; line-height: 1;
+}
+.carta-result-label {
+  text-align: center; font-size: 14px;
+  color: var(--text-secondary); margin-bottom: 20px;
+}
+</style>
+
+<!-- LOADING -->
+<div class="screen active" id="s-loading">
+  <div class="loading"><div class="loading-spinner"></div><p>Preparando la carta de hoy...</p></div>
+</div>
+
+<!-- JUEGO -->
+<div class="screen" id="s-game">
+  <div class="game-tag" style="display:block; text-align:center; width:fit-content; margin:0 auto 12px;">La Carta</div>
+  <h2 class="headline" style="text-align:center; margin-bottom:6px;" id="carta-titulo"></h2>
+  <p class="carta-intro">Cada fila, columna y cuadrante 2×2<br>debe tener los 4 ingredientes.</p>
+  <div class="carta-categoria" id="carta-cat-label"></div>
+  <div class="carta-emojis-ref" id="carta-ref"></div>
+  <div class="carta-timer" id="carta-timer">0:00</div>
+  <div class="carta-board" id="carta-board"></div>
+  <div class="carta-status" id="carta-status"></div>
+  <div class="carta-pad" id="carta-pad"></div>
+  <div style="display:flex; gap:8px; margin-bottom:10px;">
+    <button class="btn-secondary" style="flex:1; padding:10px;" onclick="resetBoard()">↺ Reiniciar</button>
+    <button class="btn-primary" style="flex:2; padding:10px;" onclick="checkBoard()">Comprobar</button>
+  </div>
+  <button class="btn-back-game" style="width:100%; justify-content:center;" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
+</div>
+
+<!-- RESULTADO -->
+<div class="screen" id="s-result">
+  <div class="game-tag" style="display:block; text-align:center; width:fit-content; margin:0 auto 12px;">La Carta</div>
+  <div class="result-big correct" style="text-align:center;">¡Resuelta!</div>
+  <p class="result-sub" style="text-align:center;" id="r-sub"></p>
+  <div class="carta-result-time" id="r-time"></div>
+  <div class="carta-result-label">tiempo</div>
+
+  <div style="background:var(--bar-bg-subtle); border-radius:var(--radius-md); padding:16px; text-align:center; margin-bottom:16px;">
+    <div style="font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--text-muted); margin-bottom:8px;">La carta de hoy</div>
+    <div id="r-emojis" style="font-size:28px; letter-spacing:8px;"></div>
+    <div id="r-categoria" style="font-size:13px; color:var(--text-secondary); margin-top:4px;"></div>
+  </div>
+
+  {% include "components/stats.html" %}
+
+  <button class="btn-share" onclick="doShare()">📤 Compartir resultado</button>
+  <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
+  <div class="tomorrow">Mañana, una nueva carta te espera.<br>Vuelve a tomar un café.</div>
+</div>
+
+<script>
+const BAR_SLUG = "{{ bar.slug }}";
+const BAR_NAME = "{{ bar.name }}";
+const CODE = new URLSearchParams(window.location.search).get('code') || '';
+
+let gameData = null;
+let userBoard = [];
+let selected = null;
+let startTime = null;
+let timerInterval = null;
+let errores = 0;
+
+async function init() {
+  try {
+    const res = await fetch('/api/carta', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG })
+    });
+    gameData = await res.json();
+    userBoard = gameData.puzzle.map(r => [...r]);
+    renderGame();
+    startTimer();
+  } catch(e) {
+    document.getElementById('s-loading').innerHTML = `
+      <div class="error-msg">No se pudo cargar el juego.<br>
+      <button class="btn-secondary" onclick="location.reload()">Reintentar</button></div>`;
+  }
+}
+
+function startTimer() {
+  startTime = Date.now();
+  timerInterval = setInterval(() => {
+    const elapsed = Math.floor((Date.now() - startTime) / 1000);
+    const m = Math.floor(elapsed / 60);
+    const s = elapsed % 60;
+    document.getElementById('carta-timer').textContent = `${m}:${s.toString().padStart(2,'0')}`;
+  }, 1000);
+}
+
+function getElapsed() {
+  return Math.floor((Date.now() - startTime) / 1000);
+}
+
+function formatTime(s) {
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return `${m}:${sec.toString().padStart(2,'0')}`;
+}
+
+function renderGame() {
+  const items = gameData.categoria.items;
+
+  document.getElementById('carta-titulo').textContent = 'La Carta de hoy';
+  document.getElementById('carta-cat-label').textContent = gameData.categoria.nombre;
+
+  // Ref emojis
+  const refEl = document.getElementById('carta-ref');
+  refEl.innerHTML = items.map(em => `<div class="carta-emoji-ref">${em}</div>`).join('');
+
+  // Numpad
+  const pad = document.getElementById('carta-pad');
+  pad.innerHTML = items.map((em, i) => `
+    <div class="carta-pad-btn" onclick="inputEmoji(${i+1})">${em}</div>
+  `).join('') + `<div class="carta-pad-btn del" onclick="deleteCell()">✕</div>`;
+
+  renderBoard();
+  showScreen('s-game');
+}
+
+function renderBoard() {
+  const board = document.getElementById('carta-board');
+  const items = gameData.categoria.items;
+  board.innerHTML = '';
+
+  for (let r = 0; r < 4; r++) {
+    for (let c = 0; c < 4; c++) {
+      const cell = document.createElement('div');
+      const isFixed = gameData.puzzle[r][c] !== 0;
+      const val = userBoard[r][c];
+      const isSel = selected && selected[0]===r && selected[1]===c;
+      const inQuad = selected && Math.floor(selected[0]/2)===Math.floor(r/2) && Math.floor(selected[1]/2)===Math.floor(c/2);
+      const sameVal = selected && userBoard[selected[0]][selected[1]] !== 0 && val === userBoard[selected[0]][selected[1]];
+
+      cell.className = 'carta-cell' +
+        (isFixed ? ' fixed' : '') +
+        (isSel ? ' selected' : '') +
+        (!isSel && (inQuad || sameVal) ? ' highlight' : '') +
+        (!val ? ' empty' : '') +
+        (c === 1 ? ' border-right' : '') +
+        (r === 1 ? ' border-bottom' : '');
+
+      cell.textContent = val ? items[val-1] : '';
+      if (!isFixed) cell.onclick = () => { selected = [r,c]; renderBoard(); };
+
+      board.appendChild(cell);
+    }
+  }
+}
+
+function inputEmoji(n) {
+  if (!selected) return;
+  const [r,c] = selected;
+  if (gameData.puzzle[r][c] !== 0) return;
+  userBoard[r][c] = n;
+  document.getElementById('carta-status').textContent = '';
+  renderBoard();
+}
+
+function deleteCell() {
+  if (!selected) return;
+  const [r,c] = selected;
+  if (gameData.puzzle[r][c] !== 0) return;
+  userBoard[r][c] = 0;
+  renderBoard();
+}
+
+function resetBoard() {
+  userBoard = gameData.puzzle.map(r => [...r]);
+  selected = null;
+  document.getElementById('carta-status').textContent = '';
+  renderBoard();
+}
+
+function checkBoard() {
+  const sol = gameData.solution;
+  let complete = true;
+  let correct = true;
+
+  for (let r=0;r<4;r++) for (let c=0;c<4;c++) {
+    if (userBoard[r][c] === 0) complete = false;
+    if (userBoard[r][c] !== sol[r][c]) correct = false;
+  }
+
+  const st = document.getElementById('carta-status');
+  if (!complete) { st.textContent = 'Rellena todo el tablero primero.'; return; }
+
+  if (correct) {
+    clearInterval(timerInterval);
+    const elapsed = getElapsed();
+    mostrarResultado(elapsed);
+  } else {
+    errores++;
+    st.textContent = '❌ Hay algún error. Sigue buscando.';
+    // Flash error cells
+    for (let r=0;r<4;r++) for(let c=0;c<4;c++) {
+      if (userBoard[r][c] !== sol[r][c] && gameData.puzzle[r][c] === 0) {
+        const idx = r*4+c;
+        const cells = document.querySelectorAll('.carta-cell');
+        cells[idx].classList.add('error');
+        setTimeout(() => cells[idx].classList.remove('error'), 600);
+      }
+    }
+  }
+}
+
+async function mostrarResultado(elapsed) {
+  await fetch('/api/play', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      code: CODE, bar_slug: BAR_SLUG,
+      correct: true, game_type: 'carta',
+      choice: errores, elapsed
+    })
+  });
+
+  const items = gameData.categoria.items;
+  let sub = errores === 0 ? '¡Sin errores! Perfecto.' : `Con ${errores} ${errores===1?'error':'errores'}.`;
+
+  document.getElementById('r-sub').textContent = sub;
+  document.getElementById('r-time').textContent = formatTime(elapsed);
+  document.getElementById('r-emojis').textContent = items.join(' ');
+  document.getElementById('r-categoria').textContent = gameData.categoria.nombre;
+
+  showScreen('s-result');
+  window.scrollTo(0, 0);
+  loadStats(BAR_SLUG, 'carta');
+}
+
+function doShare() {
+  const elapsed = document.getElementById('r-time').textContent;
+  const items = gameData.categoria.items.join('');
+  const errorStr = errores === 0 ? 'sin errores' : `${errores} ${errores===1?'error':'errores'}`;
+  const txt = `${items}\n¡He resuelto La Carta en ${BAR_NAME}!\n\nTiempo: ${elapsed} · ${errorStr}\n\n¿Puedes tú? → nookplay.app`;
+  if (navigator.share) navigator.share({ text: txt, url: 'https://nookplay.app' });
+  else navigator.clipboard.writeText(txt).then(() => alert('¡Copiado!'));
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+init();
+</script>
+{% endblock %}

@@ -591,3 +591,64 @@ IMPORTANTE: El lugar correcto debe estar en la posición 0 del array opciones.""
     result['correcto'] = opciones.index(correcto_nombre)
 
     return result
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# La Carta — Sudoku 4x4 con emojis
+# No necesita IA — banco de puzzles pre-cargados
+# ─────────────────────────────────────────────────────────────────────────────
+
+CARTA_CATEGORIAS = [
+    {"nombre": "Cafetería", "items": ["☕", "🥐", "🍩", "🧇"]},
+    {"nombre": "Bebidas", "items": ["🧋", "🍵", "🥤", "🍹"]},
+    {"nombre": "Frutas", "items": ["🍎", "🍋", "🍇", "🍓"]},
+    {"nombre": "Dulces", "items": ["🍰", "🍫", "🍭", "🧁"]},
+    {"nombre": "Verano", "items": ["🍦", "🍉", "🥭", "🍑"]},
+    {"nombre": "Snacks", "items": ["🥨", "🍿", "🥜", "🫙"]},
+    {"nombre": "Brunch", "items": ["🥑", "🥚", "🍞", "🥞"]},
+]
+
+CARTA_PUZZLES = [
+    {
+        "puzzle":   [[1,0,0,2],[0,2,1,0],[2,0,0,1],[0,1,2,0]],
+        "solution": [[1,3,4,2],[4,2,1,3],[2,4,3,1],[3,1,2,4]],
+    },
+    {
+        "puzzle":   [[0,1,0,3],[3,0,2,0],[0,4,0,2],[2,0,3,0]],
+        "solution": [[4,1,2,3],[3,2,1,4],[1,4,3,2],[2,3,4,1]],
+    },
+    {
+        "puzzle":   [[2,0,1,0],[0,4,0,3],[3,0,4,0],[0,1,0,2]],
+        "solution": [[2,3,1,4],[1,4,2,3],[3,2,4,1],[4,1,3,2]],
+    },
+    {
+        "puzzle":   [[0,2,0,4],[1,0,3,0],[0,3,0,1],[4,0,2,0]],
+        "solution": [[3,2,1,4],[1,4,3,2],[2,3,4,1],[4,1,2,3]],
+    },
+    {
+        "puzzle":   [[1,0,0,4],[0,3,1,0],[0,1,4,0],[4,0,0,1]],
+        "solution": [[1,2,3,4],[4,3,1,2],[2,1,4,3],[4,2,3,1]],
+    },
+    {
+        "puzzle":   [[0,4,0,2],[3,0,4,0],[0,2,0,3],[4,0,1,0]],
+        "solution": [[1,4,3,2],[3,2,4,1],[2,1,2,3],[4,3,1,2]],
+    },
+    {
+        "puzzle":   [[3,0,2,0],[0,1,0,4],[4,0,1,0],[0,2,0,3]],
+        "solution": [[3,4,2,1],[2,1,3,4],[4,3,1,2],[1,2,4,3]],
+    },
+]
+
+def generate_carta(bar_slug):
+    seed = get_day_seed(bar_slug)
+    puzzle_idx = seed % len(CARTA_PUZZLES)
+    cat_idx = (seed + 2) % len(CARTA_CATEGORIAS)
+    
+    puzzle_data = CARTA_PUZZLES[puzzle_idx]
+    categoria = CARTA_CATEGORIAS[cat_idx]
+    
+    return {
+        "categoria": categoria,
+        "puzzle": puzzle_data["puzzle"],
+        "solution": puzzle_data["solution"],
+    }
