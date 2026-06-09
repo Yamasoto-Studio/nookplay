@@ -219,6 +219,13 @@ const ACTIVITIES = [
     active: true
   },
   {
+    id: 'equilibrio',
+    name: 'Equilibrio',
+    desc: 'Soles y lunas en equilibrio perfecto. ¿Puedes resolverlo?',
+    icon: '☀️',
+    active: true
+  },
+  {
     id: 'local',
     name: 'Conexión {{ bar.city or "Local" }}',
     desc: 'Curiosidades, anécdotas y trivia de tu ciudad',
@@ -335,6 +342,7 @@ function startActivity(id) {
   if (id === 'carta') window.location = `/${BAR_SLUG}/carta?code=${validatedCode}`;
   if (id === 'reinas') window.location = `/${BAR_SLUG}/reinas?code=${validatedCode}`;
   if (id === 'local') window.location = `/${BAR_SLUG}/local?code=${validatedCode}`;
+  if (id === 'equilibrio') window.location = `/${BAR_SLUG}/equilibrio?code=${validatedCode}`;
 }
 
 function showScreen(id) {
