@@ -96,8 +96,7 @@
 
 <!-- JUEGO -->
 <div class="screen" id="s-game">
-  <div class="game-tag" style="display:block;text-align:center;width:fit-content;margin:0 auto 8px;">Conexión Local</div>
-  <div class="local-ciudad" id="l-ciudad"></div>
+  <div class="game-tag" id="l-game-tag" style="display:block;text-align:center;width:fit-content;margin:0 auto 8px;">Conexión Local</div>
   <div style="text-align:center;margin-bottom:16px;"><span class="local-tipo-badge" id="l-tipo-badge"></span></div>
   <span class="local-emoji" id="l-emoji"></span>
   <h2 class="local-titulo" id="l-titulo"></h2>
@@ -169,7 +168,9 @@ async function init() {
 }
 
 function renderGame() {
-  document.getElementById('l-ciudad').textContent = gameData.ciudad.toUpperCase();
+  const tagEl = document.getElementById('l-game-tag');
+  if (gameData.ciudad) tagEl.textContent = 'Conexión ' + gameData.ciudad;
+  else tagEl.textContent = 'Conexión Local';
   document.getElementById('l-tipo-badge').textContent = TIPO_LABELS[gameData.tipo] || gameData.tipo;
   document.getElementById('l-emoji').textContent = gameData.emoji_titulo;
   document.getElementById('l-titulo').textContent = gameData.titulo;
