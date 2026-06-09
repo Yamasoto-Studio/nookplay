@@ -205,6 +205,13 @@ const ACTIVITIES = [
     active: true
   },
   {
+    id: 'conexiones',
+    name: 'Las Conexiones',
+    desc: '8 palabras. 2 grupos ocultos. ¿Ves el patrón?',
+    icon: '🔗',
+    active: true
+  },
+  {
     id: 'horoscopo',
     name: 'Tu Horóscopo',
     desc: 'Las estrellas tienen algo que decirte hoy',
@@ -301,6 +308,7 @@ function startActivity(id) {
   if (id === 'crimen') window.location = `/${BAR_SLUG}/crimen?code=${validatedCode}`;
   if (id === 'impostor') window.location = `/${BAR_SLUG}/impostor?code=${validatedCode}`;
   if (id === 'dilema') window.location = `/${BAR_SLUG}/dilema?code=${validatedCode}`;
+  if (id === 'conexiones') window.location = `/${BAR_SLUG}/conexiones?code=${validatedCode}`;
 }
 
 function showScreen(id) {

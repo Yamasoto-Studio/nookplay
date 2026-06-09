@@ -1,0 +1,372 @@
+{% extends "game_base.html" %}
+{% block title %}Las Conexiones — {{ bar.name }}{% endblock %}
+{% block og_title %}¿Puedes encontrar las conexiones? — {{ bar.name }}{% endblock %}
+{% block og_description %}8 palabras. 2 grupos ocultos. Encuentra qué las conecta. Juega en {{ bar.name }} con Nookplay.{% endblock %}
+{% block og_url %}/{{ bar.slug }}/conexiones{% endblock %}
+
+{% block game_content %}
+<style>
+.conn-instruccion {
+  font-size: 14px; color: var(--text-secondary);
+  text-align: center; margin-bottom: 20px; line-height: 1.5;
+}
+.conn-intentos {
+  display: flex; justify-content: center; gap: 8px; margin-bottom: 20px;
+}
+.conn-intento {
+  width: 12px; height: 12px; border-radius: 50%;
+  background: var(--bar-primary);
+  transition: all 0.3s;
+}
+.conn-intento.usado { background: var(--border); }
+
+.conn-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.conn-palabra {
+  padding: 16px 8px;
+  background: var(--bar-bg-subtle);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-md);
+  font-size: 15px; font-weight: 700;
+  text-align: center; cursor: pointer;
+  transition: all 0.15s; user-select: none;
+  letter-spacing: 0.5px;
+  color: var(--text);
+  min-height: 56px;
+  display: flex; align-items: center; justify-content: center;
+}
+.conn-palabra:hover { border-color: var(--bar-accent-dark); }
+.conn-palabra.seleccionada {
+  border-color: var(--bar-primary);
+  background: color-mix(in srgb, var(--bar-primary) 15%, white);
+  transform: scale(1.03);
+}
+.conn-palabra.correcta {
+  background: var(--bar-primary);
+  color: var(--bar-primary-text);
+  border-color: var(--bar-primary);
+  cursor: default;
+}
+.conn-palabra.incorrecta {
+  animation: shake 0.4s ease;
+}
+.conn-palabra.descartada {
+  opacity: 0.35;
+  cursor: default;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+
+.conn-grupo-revelado {
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  text-align: center;
+  animation: fadeIn 0.4s ease;
+}
+@keyframes fadeIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+
+.conn-grupo-nombre {
+  font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
+  text-transform: uppercase; opacity: 0.8; margin-bottom: 6px;
+}
+.conn-grupo-palabras {
+  font-size: 14px; font-weight: 600; line-height: 1.6;
+}
+
+.btn-confirmar {
+  width: 100%; padding: 14px;
+  background: var(--bar-accent-dark); color: #fff;
+  border: none; border-radius: var(--radius-md);
+  font-size: 15px; font-weight: 600; cursor: pointer;
+  font-family: inherit; transition: opacity 0.15s;
+  margin-bottom: 10px;
+}
+.btn-confirmar:disabled { opacity: 0.35; cursor: not-allowed; }
+.btn-confirmar:not(:disabled):hover { opacity: 0.85; }
+
+.conn-feedback {
+  text-align: center; font-size: 14px; font-weight: 500;
+  min-height: 22px; margin-bottom: 8px;
+  color: var(--bar-primary);
+}
+
+/* Resultado */
+.conn-result-title {
+  font-size: 28px; font-weight: 700;
+  text-align: center; margin-bottom: 6px;
+}
+.conn-result-title.ganado { color: var(--success, #3A7D44); }
+.conn-result-title.perdido { color: var(--danger, #B03030); }
+.conn-result-sub {
+  font-size: 15px; color: var(--text-secondary);
+  text-align: center; margin-bottom: 20px; line-height: 1.6;
+}
+.conn-explicacion {
+  background: var(--bar-bg-subtle); border: 1px solid var(--border);
+  border-radius: var(--radius-md); padding: 14px;
+  margin-bottom: 10px; font-size: 13px; line-height: 1.6;
+  color: var(--text-secondary);
+}
+.conn-trampa-label {
+  font-size: 11px; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--bar-primary); margin-bottom: 4px;
+}
+</style>
+
+<!-- LOADING -->
+<div class="screen active" id="s-loading">
+  <div class="loading"><div class="loading-spinner"></div><p>Preparando las conexiones de hoy...</p></div>
+</div>
+
+<!-- JUEGO -->
+<div class="screen" id="s-game">
+  <div class="game-tag">Las Conexiones</div>
+  <h2 class="headline" id="conn-titulo" style="text-align:center; margin-bottom:6px;">Encuentra los 2 grupos</h2>
+  <p class="conn-instruccion">Selecciona 4 palabras que tengan algo en común.<br>Tienes <strong>3 intentos</strong>.</p>
+
+  <div id="grupos-revelados"></div>
+
+  <div class="conn-intentos" id="conn-intentos">
+    <div class="conn-intento" id="i0"></div>
+    <div class="conn-intento" id="i1"></div>
+    <div class="conn-intento" id="i2"></div>
+  </div>
+
+  <div class="conn-grid" id="conn-grid"></div>
+
+  <div class="conn-feedback" id="conn-feedback"></div>
+  <button class="btn-confirmar" id="btn-confirmar" disabled onclick="confirmar()">
+    Confirmar grupo (0/4)
+  </button>
+  <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
+</div>
+
+<!-- RESULTADO -->
+<div class="screen" id="s-result">
+  <div class="conn-result-title" id="r-title"></div>
+  <p class="conn-result-sub" id="r-sub"></p>
+
+  <div id="r-grupos"></div>
+
+  <div class="conn-explicacion">
+    <div class="conn-trampa-label">🪤 La trampa del día</div>
+    <strong id="r-trampa-palabra"></strong> — <span id="r-trampa-exp"></span>
+  </div>
+
+  {% include "components/stats.html" %}
+
+  <button class="btn-share" onclick="doShare()">📤 Compartir resultado</button>
+  <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
+  <div class="tomorrow">Mañana, nuevas conexiones te esperan.<br>Vuelve a tomar un café.</div>
+</div>
+
+<script>
+const BAR_SLUG = "{{ bar.slug }}";
+const BAR_NAME = "{{ bar.name }}";
+const CODE = new URLSearchParams(window.location.search).get('code') || '';
+
+let gameData = null;
+let seleccionadas = [];
+let intentosUsados = 0;
+let intentosMax = 3;
+let gruposAdivinados = 0;
+let ganado = false;
+let startTime = null;
+
+async function init() {
+  try {
+    const res = await fetch('/api/conexiones', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG })
+    });
+    gameData = await res.json();
+    renderGame();
+    startTime = Date.now();
+  } catch(e) {
+    document.getElementById('s-loading').innerHTML = `
+      <div class="error-msg">No se pudo cargar el juego.<br>
+      <button class="btn-secondary" onclick="location.reload()">Reintentar</button></div>`;
+  }
+}
+
+function renderGame() {
+  const grid = document.getElementById('conn-grid');
+  grid.innerHTML = gameData.palabras_mezcladas.map(p => `
+    <div class="conn-palabra" id="p-${p}" onclick="togglePalabra('${p}')">${p}</div>
+  `).join('');
+  showScreen('s-game');
+}
+
+function togglePalabra(palabra) {
+  const el = document.getElementById('p-' + palabra);
+  if (!el || el.classList.contains('correcta') || el.classList.contains('descartada')) return;
+
+  if (el.classList.contains('seleccionada')) {
+    el.classList.remove('seleccionada');
+    seleccionadas = seleccionadas.filter(p => p !== palabra);
+  } else if (seleccionadas.length < 4) {
+    el.classList.add('seleccionada');
+    seleccionadas.push(palabra);
+  }
+
+  const btn = document.getElementById('btn-confirmar');
+  btn.disabled = seleccionadas.length !== 4;
+  btn.textContent = `Confirmar grupo (${seleccionadas.length}/4)`;
+  document.getElementById('conn-feedback').textContent = '';
+}
+
+function confirmar() {
+  if (seleccionadas.length !== 4) return;
+
+  const grupoA = gameData.grupo_a.palabras;
+  const grupoB = gameData.grupo_b.palabras;
+
+  const esA = seleccionadas.every(p => grupoA.includes(p)) && grupoA.every(p => seleccionadas.includes(p));
+  const esB = seleccionadas.every(p => grupoB.includes(p)) && grupoB.every(p => seleccionadas.includes(p));
+
+  if (esA || esB) {
+    const grupo = esA ? gameData.grupo_a : gameData.grupo_b;
+    const colorIdx = gruposAdivinados === 0 ? 'first' : 'second';
+
+    // Mark correct
+    seleccionadas.forEach(p => {
+      document.getElementById('p-' + p).classList.remove('seleccionada');
+      document.getElementById('p-' + p).classList.add('correcta');
+    });
+
+    // Reveal group
+    const revelados = document.getElementById('grupos-revelados');
+    const div = document.createElement('div');
+    div.className = 'conn-grupo-revelado';
+    div.style.background = gruposAdivinados === 0
+      ? 'color-mix(in srgb, var(--bar-primary) 20%, white)'
+      : 'color-mix(in srgb, var(--bar-accent-dark) 15%, white)';
+    div.style.border = gruposAdivinados === 0
+      ? '2px solid var(--bar-primary)'
+      : '2px solid var(--bar-accent-dark)';
+    div.innerHTML = `
+      <div class="conn-grupo-nombre">${grupo.nombre}</div>
+      <div class="conn-grupo-palabras">${grupo.palabras.join(' · ')}</div>
+    `;
+    revelados.appendChild(div);
+
+    gruposAdivinados++;
+    seleccionadas = [];
+    document.getElementById('conn-feedback').textContent = '✅ ¡Grupo correcto!';
+
+    if (gruposAdivinados === 2) {
+      ganado = true;
+      setTimeout(() => mostrarResultado(), 800);
+    }
+  } else {
+    // Wrong
+    intentosUsados++;
+    document.getElementById('i' + (intentosUsados - 1)).classList.add('usado');
+
+    seleccionadas.forEach(p => {
+      const el = document.getElementById('p-' + p);
+      el.classList.add('incorrecta');
+      setTimeout(() => el.classList.remove('incorrecta'), 500);
+      el.classList.remove('seleccionada');
+    });
+
+    const cercano = esCercano();
+    document.getElementById('conn-feedback').textContent = cercano
+      ? '❌ Casi... ¡una no encaja!'
+      : '❌ No es ese grupo. Sigue buscando.';
+
+    seleccionadas = [];
+    document.getElementById('btn-confirmar').disabled = true;
+    document.getElementById('btn-confirmar').textContent = 'Confirmar grupo (0/4)';
+
+    if (intentosUsados >= intentosMax) {
+      setTimeout(() => mostrarResultado(), 600);
+    }
+  }
+}
+
+function esCercano() {
+  const grupoA = gameData.grupo_a.palabras;
+  const grupoB = gameData.grupo_b.palabras;
+  const enA = seleccionadas.filter(p => grupoA.includes(p)).length;
+  const enB = seleccionadas.filter(p => grupoB.includes(p)).length;
+  return enA === 3 || enB === 3;
+}
+
+async function mostrarResultado() {
+  const elapsed = startTime ? Math.round((Date.now() - startTime) / 1000) : 0;
+  await fetch('/api/play', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      code: CODE, bar_slug: BAR_SLUG,
+      correct: ganado, game_type: 'conexiones',
+      choice: gruposAdivinados, elapsed
+    })
+  });
+
+  const title = document.getElementById('r-title');
+  title.textContent = ganado ? '¡Las encontraste!' : 'Se acabaron los intentos.';
+  title.className = 'conn-result-title ' + (ganado ? 'ganado' : 'perdido');
+
+  document.getElementById('r-sub').textContent = ganado
+    ? `Resuelto con ${intentosUsados === 0 ? 'ningún fallo' : intentosUsados + (intentosUsados === 1 ? ' fallo' : ' fallos')}.`
+    : 'Las conexiones eran más difíciles hoy.';
+
+  // Show both groups
+  const rGrupos = document.getElementById('r-grupos');
+  [gameData.grupo_a, gameData.grupo_b].forEach((g, i) => {
+    const div = document.createElement('div');
+    div.className = 'conn-grupo-revelado';
+    div.style.background = i === 0
+      ? 'color-mix(in srgb, var(--bar-primary) 20%, white)'
+      : 'color-mix(in srgb, var(--bar-accent-dark) 15%, white)';
+    div.style.border = i === 0
+      ? '2px solid var(--bar-primary)'
+      : '2px solid var(--bar-accent-dark)';
+    div.innerHTML = `
+      <div class="conn-grupo-nombre">${g.nombre}</div>
+      <div class="conn-grupo-palabras">${g.palabras.join(' · ')}</div>
+      <div style="font-size:12px; opacity:0.7; margin-top:4px;">${g.explicacion}</div>
+    `;
+    rGrupos.appendChild(div);
+  });
+
+  document.getElementById('r-trampa-palabra').textContent = gameData.trampa;
+  document.getElementById('r-trampa-exp').textContent = gameData.explicacion_trampa;
+
+  showScreen('s-result');
+  window.scrollTo(0, 0);
+  loadStats(BAR_SLUG, 'conexiones');
+}
+
+function doShare() {
+  const emojis = ['🟣', '⚫'];
+  const intentosStr = ganado
+    ? `Resuelto con ${intentosUsados} ${intentosUsados === 1 ? 'fallo' : 'fallos'}`
+    : 'Sin resolver hoy';
+  const txt = `🔗 Las Conexiones de hoy en ${BAR_NAME}\n\n${intentosStr}\n\n¿Puedes tú? → nookplay.app`;
+  if (navigator.share) navigator.share({ text: txt, url: 'https://nookplay.app' });
+  else navigator.clipboard.writeText(txt).then(() => alert('¡Copiado!'));
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+init();
+</script>
+{% endblock %}

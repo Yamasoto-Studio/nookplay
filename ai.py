@@ -310,3 +310,99 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
     text = data['content'][0]['text'].strip()
     text = text.replace('```json', '').replace('```', '').strip()
     return json.loads(text)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Las Conexiones generator
+# ─────────────────────────────────────────────────────────────────────────────
+
+CATEGORIAS_CONEXIONES = [
+    "gastronomía y cocina",
+    "deportes y juegos",
+    "naturaleza y animales",
+    "cine y series",
+    "música y artistas",
+    "viajes y geografía",
+    "tecnología y ciencia",
+    "historia y cultura",
+    "palabras y lenguaje",
+    "objetos cotidianos",
+]
+
+def generate_conexiones(bar_name, bar_slug):
+    today = str(date.today())
+    api_key = os.environ.get('ANTHROPIC_API_KEY')
+    seed = get_day_seed(bar_slug)
+    categoria = CATEGORIAS_CONEXIONES[(seed + 9) % len(CATEGORIAS_CONEXIONES)]
+
+    prompt = """Eres un experto en juegos de palabras y asociaciones. Creas retos de conexiones para grupos de personas en un bar.
+
+FECHA: """ + today + """
+CATEGORÍA BASE: """ + categoria + """
+
+Crea un reto "Las Conexiones" con estas reglas:
+
+1. Exactamente 8 palabras en total — 2 grupos de 4
+2. Cada grupo tiene una categoría oculta que las conecta
+3. TRAMPA OBLIGATORIA: al menos 1 palabra parece pertenecer a ambos grupos pero solo va en uno
+4. Las palabras deben ser reconocibles para cualquier persona adulta española
+5. Las categorías no pueden ser obvias — tienen que hacer pensar
+6. Nivel de dificultad: MEDIO — se puede resolver pero no es inmediato
+7. Tono: divertido, sorprendente, con un punto de "¡cómo no lo vi!"
+8. Los grupos deben tener nombres cortos y reveladores (máx 4 palabras)
+
+TIPOS DE CONEXIONES que funcionan bien:
+- Palabras que van antes/después de otra ("__ de leche", "café __")
+- Cosas que comparten una característica inesperada
+- Nombres que son también otra cosa (doble significado)
+- Partes de algo mayor
+- Palabras relacionadas con un concepto poco obvio
+
+Devuelve SOLO un objeto JSON válido, sin markdown:
+{
+  "grupo_a": {
+    "nombre": "Nombre corto del grupo A",
+    "palabras": ["PALABRA1", "PALABRA2", "PALABRA3", "PALABRA4"],
+    "explicacion": "Por qué estas 4 palabras van juntas (1 frase)"
+  },
+  "grupo_b": {
+    "nombre": "Nombre corto del grupo B", 
+    "palabras": ["PALABRA5", "PALABRA6", "PALABRA7", "PALABRA8"],
+    "explicacion": "Por qué estas 4 palabras van juntas (1 frase)"
+  },
+  "trampa": "PALABRA_TRAMPA",
+  "explicacion_trampa": "Por qué esta palabra engaña y en qué grupo va realmente (1 frase)"
+}
+
+IMPORTANTE: Las palabras deben estar en MAYÚSCULAS."""
+
+    response = requests.post(
+        'https://api.anthropic.com/v1/messages',
+        headers={
+            'x-api-key': api_key,
+            'anthropic-version': '2023-06-01',
+            'content-type': 'application/json'
+        },
+        json={
+            'model': 'claude-sonnet-4-5',
+            'max_tokens': 800,
+            'messages': [{'role': 'user', 'content': prompt}]
+        },
+        timeout=60
+    )
+
+    data = response.json()
+    if 'content' not in data:
+        raise Exception(f"API error: {data.get('error', data)}")
+
+    text = data['content'][0]['text'].strip()
+    text = text.replace('```json', '').replace('```', '').strip()
+    result = json.loads(text)
+    
+    # Mezclar las 8 palabras aleatoriamente
+    import random as _random
+    todas = result['grupo_a']['palabras'] + result['grupo_b']['palabras']
+    _random.shuffle(todas)
+    result['palabras_mezcladas'] = todas
+    
+    return result
