@@ -1,0 +1,272 @@
+{% extends "game_base.html" %}
+{% block title %}El Oráculo — {{ bar.name }}{% endblock %}
+{% block og_title %}Tu horóscopo de hoy — {{ bar.name }}{% endblock %}
+{% block og_description %}El oráculo más irreverente del mundo. ¿Qué te depara hoy?{% endblock %}
+{% block og_url %}/{{ bar.slug }}/oraculo{% endblock %}
+
+{% block game_content %}
+<style>
+.oraculo-intro {
+  font-size: 15px; color: var(--text-secondary);
+  text-align: center; margin-bottom: 20px; line-height: 1.5;
+}
+.signos-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.signo-btn {
+  background: var(--bar-bg-subtle);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px 8px;
+  cursor: pointer; font-family: inherit;
+  text-align: center; transition: all 0.15s;
+  display: flex; flex-direction: column;
+  align-items: center; gap: 4px;
+}
+.signo-btn:hover { border-color: var(--bar-primary); transform: scale(1.03); }
+.signo-btn.activo {
+  border-color: var(--bar-primary);
+  background: color-mix(in srgb, var(--bar-primary) 12%, white);
+}
+.signo-emoji { font-size: 22px; line-height: 1; }
+.signo-nombre { font-size: 11px; font-weight: 600; color: var(--text); letter-spacing: 0.3px; }
+.signo-fechas { font-size: 9px; color: var(--text-muted); }
+
+/* Predicción */
+.prediccion-card {
+  background: color-mix(in srgb, var(--bar-primary) 8%, white);
+  border: 2px solid var(--bar-primary);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  margin-bottom: 16px;
+  animation: fadeIn 0.4s ease;
+}
+@keyframes fadeIn { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:translateY(0); } }
+
+.pred-header {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 14px;
+}
+.pred-emoji { font-size: 32px; }
+.pred-signo { font-size: 20px; font-weight: 700; color: var(--text); }
+.pred-fechas { font-size: 12px; color: var(--text-muted); }
+.pred-texto {
+  font-size: 16px; line-height: 1.7;
+  color: var(--text); margin-bottom: 14px;
+}
+.pred-consejo {
+  background: rgba(255,255,255,0.7);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  font-size: 13px; color: var(--text-secondary);
+  line-height: 1.5;
+  border-left: 3px solid var(--bar-primary);
+}
+.pred-consejo-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--bar-primary);
+  margin-bottom: 4px;
+}
+
+.frase-dia {
+  background: var(--bar-bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  text-align: center;
+  font-size: 14px; color: var(--text-secondary);
+  font-style: italic; line-height: 1.6;
+  margin-bottom: 16px;
+}
+.frase-dia-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.btn-ver-todos {
+  width: 100%; padding: 12px;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-size: 14px; cursor: pointer;
+  font-family: inherit; margin-bottom: 10px;
+}
+.btn-ver-todos:hover { background: var(--bar-bg-subtle); }
+
+.todos-signos { display: none; }
+.todos-signos.visible { display: block; }
+.mini-signo {
+  display: flex; gap: 12px; align-items: flex-start;
+  padding: 12px 0; border-bottom: 1px solid var(--border);
+}
+.mini-signo:last-child { border-bottom: none; }
+.mini-emoji { font-size: 20px; flex-shrink: 0; margin-top: 2px; }
+.mini-nombre { font-size: 12px; font-weight: 700; color: var(--bar-primary); margin-bottom: 3px; }
+.mini-pred { font-size: 13px; color: var(--text); line-height: 1.5; }
+</style>
+
+<!-- LOADING -->
+<div class="screen active" id="s-loading">
+  <div class="loading"><div class="loading-spinner"></div><p>Consultando los astros...</p></div>
+</div>
+
+<!-- SELECTOR DE SIGNO -->
+<div class="screen" id="s-signos">
+  <div class="game-tag" style="display:block; text-align:center; width:fit-content; margin:0 auto 12px;">El Oráculo</div>
+  <h2 class="headline" style="text-align:center; margin-bottom:6px;">¿Cuál es tu signo?</h2>
+  <p class="oraculo-intro">El oráculo más irreverente del universo.<br>Sin energías cósmicas. Sin filtros.</p>
+  <div class="signos-grid" id="signos-grid"></div>
+  <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
+</div>
+
+<!-- PREDICCIÓN -->
+<div class="screen" id="s-prediccion">
+  <div class="game-tag" style="display:block; text-align:center; width:fit-content; margin:0 auto 12px;">El Oráculo</div>
+  <div class="prediccion-card" id="pred-card"></div>
+  <div class="frase-dia" id="frase-dia"></div>
+
+  {% include "components/stats.html" %}
+
+  <button class="btn-ver-todos" onclick="toggleTodos()">Ver todos los signos 👁️</button>
+  <div class="todos-signos" id="todos-signos"></div>
+
+  <button class="btn-share" onclick="doShare()">📤 Compartir mi predicción</button>
+  <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
+  <div class="tomorrow">Mañana, el oráculo vuelve a hablar.<br>Vuelve a tomar un café.</div>
+</div>
+
+<script>
+const BAR_SLUG = "{{ bar.slug }}";
+const BAR_NAME = "{{ bar.name }}";
+const CODE = new URLSearchParams(window.location.search).get('code') || '';
+
+const SIGNOS = [
+  {nombre:"Aries", emoji:"♈", fechas:"21 mar – 19 abr"},
+  {nombre:"Tauro", emoji:"♉", fechas:"20 abr – 20 may"},
+  {nombre:"Géminis", emoji:"♊", fechas:"21 may – 20 jun"},
+  {nombre:"Cáncer", emoji:"♋", fechas:"21 jun – 22 jul"},
+  {nombre:"Leo", emoji:"♌", fechas:"23 jul – 22 ago"},
+  {nombre:"Virgo", emoji:"♍", fechas:"23 ago – 22 sep"},
+  {nombre:"Libra", emoji:"♎", fechas:"23 sep – 22 oct"},
+  {nombre:"Escorpio", emoji:"♏", fechas:"23 oct – 21 nov"},
+  {nombre:"Sagitario", emoji:"♐", fechas:"22 nov – 21 dic"},
+  {nombre:"Capricornio", emoji:"♑", fechas:"22 dic – 19 ene"},
+  {nombre:"Acuario", emoji:"♒", fechas:"20 ene – 18 feb"},
+  {nombre:"Piscis", emoji:"♓", fechas:"19 feb – 20 mar"},
+];
+
+let gameData = null;
+let signoElegido = null;
+let todosMostrados = false;
+
+async function init() {
+  try {
+    const res = await fetch('/api/oraculo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG })
+    });
+    gameData = await res.json();
+    renderSignos();
+  } catch(e) {
+    document.getElementById('s-loading').innerHTML = `
+      <div class="error-msg">El oráculo está ocupado.<br>
+      <button class="btn-secondary" onclick="location.reload()">Reintentar</button></div>`;
+  }
+}
+
+function renderSignos() {
+  const grid = document.getElementById('signos-grid');
+  grid.innerHTML = SIGNOS.map(s => `
+    <button class="signo-btn" onclick="elegirSigno('${s.nombre}')">
+      <div class="signo-emoji">${s.emoji}</div>
+      <div class="signo-nombre">${s.nombre}</div>
+      <div class="signo-fechas">${s.fechas}</div>
+    </button>
+  `).join('');
+  showScreen('s-signos');
+}
+
+async function elegirSigno(nombre) {
+  signoElegido = nombre;
+  const signo = SIGNOS.find(s => s.nombre === nombre);
+  const data = gameData.signos[nombre];
+
+  // Register play
+  await fetch('/api/play', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      code: CODE, bar_slug: BAR_SLUG,
+      correct: true, game_type: 'oraculo', choice: SIGNOS.indexOf(signo)
+    })
+  });
+
+  // Render prediction
+  document.getElementById('pred-card').innerHTML = `
+    <div class="pred-header">
+      <div class="pred-emoji">${signo.emoji}</div>
+      <div>
+        <div class="pred-signo">${signo.nombre}</div>
+        <div class="pred-fechas">${signo.fechas}</div>
+      </div>
+    </div>
+    <div class="pred-texto">${data.prediccion}</div>
+    <div class="pred-consejo">
+      <div class="pred-consejo-label">📌 El consejo del día</div>
+      ${data.consejo}
+    </div>
+  `;
+
+  // Frase del día
+  document.getElementById('frase-dia').innerHTML = `
+    <div class="frase-dia-label">🔮 Frase del día</div>
+    "${gameData.frase_del_dia}"
+  `;
+
+  // Todos los signos
+  const todosEl = document.getElementById('todos-signos');
+  todosEl.innerHTML = SIGNOS.map(s => `
+    <div class="mini-signo">
+      <div class="mini-emoji">${s.emoji}</div>
+      <div>
+        <div class="mini-nombre">${s.nombre}</div>
+        <div class="mini-pred">${gameData.signos[s.nombre].prediccion}</div>
+      </div>
+    </div>
+  `).join('');
+
+  showScreen('s-prediccion');
+  window.scrollTo(0, 0);
+  loadStats(BAR_SLUG, 'oraculo');
+}
+
+function toggleTodos() {
+  const el = document.getElementById('todos-signos');
+  const btn = document.querySelector('.btn-ver-todos');
+  todosMostrados = !todosMostrados;
+  el.classList.toggle('visible', todosMostrados);
+  btn.textContent = todosMostrados ? 'Ocultar signos 🙈' : 'Ver todos los signos 👁️';
+}
+
+function doShare() {
+  const signo = SIGNOS.find(s => s.nombre === signoElegido);
+  const data = gameData.signos[signoElegido];
+  const txt = `${signo.emoji} Mi horóscopo de hoy en ${BAR_NAME}\n\n*${signoElegido}*\n"${data.prediccion}"\n\n¿Y el tuyo? → nookplay.app`;
+  if (navigator.share) navigator.share({ text: txt, url: 'https://nookplay.app' });
+  else navigator.clipboard.writeText(txt).then(() => alert('¡Copiado!'));
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+init();
+</script>
+{% endblock %}

@@ -406,3 +406,91 @@ IMPORTANTE: Las palabras deben estar en MAYÚSCULAS."""
     result['palabras_mezcladas'] = todas
     
     return result
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# El Oráculo — generador de horóscopos con humor
+# ─────────────────────────────────────────────────────────────────────────────
+
+SIGNOS = [
+    {"nombre": "Aries", "emoji": "♈", "fechas": "21 mar – 19 abr"},
+    {"nombre": "Tauro", "emoji": "♉", "fechas": "20 abr – 20 may"},
+    {"nombre": "Géminis", "emoji": "♊", "fechas": "21 may – 20 jun"},
+    {"nombre": "Cáncer", "emoji": "♋", "fechas": "21 jun – 22 jul"},
+    {"nombre": "Leo", "emoji": "♌", "fechas": "23 jul – 22 ago"},
+    {"nombre": "Virgo", "emoji": "♍", "fechas": "23 ago – 22 sep"},
+    {"nombre": "Libra", "emoji": "♎", "fechas": "23 sep – 22 oct"},
+    {"nombre": "Escorpio", "emoji": "♏", "fechas": "23 oct – 21 nov"},
+    {"nombre": "Sagitario", "emoji": "♐", "fechas": "22 nov – 21 dic"},
+    {"nombre": "Capricornio", "emoji": "♑", "fechas": "22 dic – 19 ene"},
+    {"nombre": "Acuario", "emoji": "♒", "fechas": "20 ene – 18 feb"},
+    {"nombre": "Piscis", "emoji": "♓", "fechas": "19 feb – 20 mar"},
+]
+
+def generate_oraculo(bar_slug):
+    today = str(date.today())
+    from datetime import datetime
+    dia_semana = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"][datetime.now().weekday()]
+    api_key = os.environ.get('ANTHROPIC_API_KEY')
+
+    signos_nombres = [s["nombre"] for s in SIGNOS]
+
+    prompt = """Eres el oráculo más irreverente y divertido del mundo. Escribes horóscopos con humor seco, ironía y referencias cotidianas. Nada de misticismo cursi. Todo con cariño pero sin filtros.
+
+FECHA: """ + today + """
+DÍA: """ + dia_semana + """
+
+Escribe el horóscopo de HOY para los 12 signos del zodíaco.
+
+REGLAS DE ESTILO:
+1. Cada predicción entre 2-3 frases. Directa, con gancho.
+2. Tono: como si un amigo muy gracioso te dijera la verdad con humor. Ni cursi ni cruel.
+3. Referencia el día de la semana cuando tenga gracia (ej: "Es """ + dia_semana + """, así que...")
+4. Al menos 3 signos deben tener una referencia cruzada a otro signo (ej: "Hoy los Leo te van a sacar de quicio", "Evita a los Tauro antes del mediodía")
+5. Al menos 2 signos deben tener una referencia a algo muy cotidiano (el café, el móvil, el ascensor, el tráfico, etc.)
+6. Una predicción puede ser absurda si tiene lógica interna
+7. Usa la personalidad conocida de cada signo pero dándole la vuelta
+8. NUNCA uses palabras como "universo", "energía cósmica", "vibración", "manifestar"
+9. Acaba siempre con una "predicción concreta" absurda pero específica del día
+
+Devuelve SOLO un objeto JSON válido, sin markdown:
+{
+  "signos": {
+    "Aries": {"prediccion": "...", "consejo": "Una frase de consejo absurdo pero concreto"},
+    "Tauro": {"prediccion": "...", "consejo": "..."},
+    "Géminis": {"prediccion": "...", "consejo": "..."},
+    "Cáncer": {"prediccion": "...", "consejo": "..."},
+    "Leo": {"prediccion": "...", "consejo": "..."},
+    "Virgo": {"prediccion": "...", "consejo": "..."},
+    "Libra": {"prediccion": "...", "consejo": "..."},
+    "Escorpio": {"prediccion": "...", "consejo": "..."},
+    "Sagitario": {"prediccion": "...", "consejo": "..."},
+    "Capricornio": {"prediccion": "...", "consejo": "..."},
+    "Acuario": {"prediccion": "...", "consejo": "..."},
+    "Piscis": {"prediccion": "...", "consejo": "..."}
+  },
+  "frase_del_dia": "Una frase filosófica absurda que vale para todos los signos hoy"
+}"""
+
+    response = requests.post(
+        'https://api.anthropic.com/v1/messages',
+        headers={
+            'x-api-key': api_key,
+            'anthropic-version': '2023-06-01',
+            'content-type': 'application/json'
+        },
+        json={
+            'model': 'claude-sonnet-4-5',
+            'max_tokens': 2000,
+            'messages': [{'role': 'user', 'content': prompt}]
+        },
+        timeout=60
+    )
+
+    data = response.json()
+    if 'content' not in data:
+        raise Exception(f"API error: {data.get('error', data)}")
+
+    text = data['content'][0]['text'].strip()
+    text = text.replace('```json', '').replace('```', '').strip()
+    return json.loads(text)

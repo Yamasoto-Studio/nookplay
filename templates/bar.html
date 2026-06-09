@@ -212,11 +212,11 @@ const ACTIVITIES = [
     active: true
   },
   {
-    id: 'horoscopo',
-    name: 'Tu Horóscopo',
-    desc: 'Las estrellas tienen algo que decirte hoy',
-    icon: '♊',
-    active: false
+    id: 'oraculo',
+    name: 'El Oráculo',
+    desc: 'Tu horóscopo de hoy. Sin filtros ni misticismos.',
+    icon: '🔮',
+    active: true
   },
   {
     id: 'donde',
@@ -309,6 +309,7 @@ function startActivity(id) {
   if (id === 'impostor') window.location = `/${BAR_SLUG}/impostor?code=${validatedCode}`;
   if (id === 'dilema') window.location = `/${BAR_SLUG}/dilema?code=${validatedCode}`;
   if (id === 'conexiones') window.location = `/${BAR_SLUG}/conexiones?code=${validatedCode}`;
+  if (id === 'oraculo') window.location = `/${BAR_SLUG}/oraculo?code=${validatedCode}`;
 }
 
 function showScreen(id) {
