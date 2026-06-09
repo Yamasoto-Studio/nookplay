@@ -1,0 +1,278 @@
+{% extends "game_base.html" %}
+{% block title %}¿Dónde en el mundo? — {{ bar.name }}{% endblock %}
+{% block og_title %}¿Puedes adivinar el lugar? — {{ bar.name }}{% endblock %}
+{% block og_description %}5 pistas. 4 opciones. ¿Dónde en el mundo estamos? Juega en {{ bar.name }} con Nookplay.{% endblock %}
+{% block og_url %}/{{ bar.slug }}/donde{% endblock %}
+
+{% block game_content %}
+<style>
+.donde-pistas { margin-bottom: 20px; }
+.pista-item {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 12px 14px;
+  background: var(--bar-bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  margin-bottom: 8px;
+  animation: slideIn 0.3s ease;
+  cursor: default;
+}
+@keyframes slideIn { from { opacity:0; transform:translateX(-8px); } to { opacity:1; transform:translateX(0); } }
+.pista-emoji { font-size: 22px; line-height: 1; flex-shrink: 0; margin-top: 1px; }
+.pista-texto { font-size: 15px; color: var(--text); line-height: 1.5; }
+.pista-num { font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
+
+.pista-bloqueada {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px;
+  background: var(--bar-bg);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.pista-bloqueada:hover { border-color: var(--bar-primary); }
+.pista-lock { font-size: 18px; opacity: 0.4; }
+.pista-bloqueada-txt { font-size: 13px; color: var(--text-muted); }
+
+.donde-opciones {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.opcion-btn {
+  padding: 14px 10px;
+  background: var(--bar-bg-subtle);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-md);
+  font-size: 14px; font-weight: 600;
+  text-align: center; cursor: pointer;
+  font-family: inherit; color: var(--text);
+  transition: all 0.15s; line-height: 1.3;
+  min-height: 56px; display: flex;
+  align-items: center; justify-content: center;
+}
+.opcion-btn:hover { border-color: var(--bar-primary); transform: scale(1.02); }
+.opcion-btn.correcta { background: #f0fff4; border-color: #22aa55; color: #22aa55; }
+.opcion-btn.incorrecta { background: #fff0f0; border-color: #cc2222; color: #cc2222; }
+
+.donde-hint {
+  text-align: center; font-size: 13px;
+  color: var(--text-secondary); margin-bottom: 16px;
+}
+.pistas-counter {
+  text-align: center; font-size: 12px;
+  color: var(--text-muted); margin-bottom: 12px;
+}
+
+/* Resultado */
+.donde-result-lugar {
+  font-size: 26px; font-weight: 700;
+  text-align: center; color: var(--text); margin-bottom: 4px;
+}
+.donde-result-pais {
+  font-size: 15px; color: var(--text-secondary);
+  text-align: center; margin-bottom: 16px;
+}
+.donde-dato {
+  background: var(--bar-bg-subtle); border: 1px solid var(--border);
+  border-radius: var(--radius-md); padding: 14px;
+  margin-bottom: 12px;
+}
+.donde-dato-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--bar-primary); margin-bottom: 6px;
+}
+.donde-dato-txt { font-size: 14px; color: var(--text); line-height: 1.6; }
+</style>
+
+<!-- LOADING -->
+<div class="screen active" id="s-loading">
+  <div class="loading"><div class="loading-spinner"></div><p>Preparando el destino de hoy...</p></div>
+</div>
+
+<!-- JUEGO -->
+<div class="screen" id="s-game">
+  <div class="game-tag" style="display:block; text-align:center; width:fit-content; margin:0 auto 12px;">¿Dónde en el mundo?</div>
+  <h2 class="headline" style="text-align:center; margin-bottom:6px;">Adivina el lugar</h2>
+  <p class="donde-hint">Descubre las pistas una a una.<br>Cuantas menos necesites, mejor.</p>
+
+  <div class="pistas-counter" id="pistas-counter">Pista 1 de 5 revelada</div>
+  <div class="donde-pistas" id="donde-pistas"></div>
+
+  <div class="donde-opciones" id="donde-opciones" style="display:none;"></div>
+
+  <button class="btn-primary" id="btn-siguiente-pista" onclick="revelarSiguientePista()" style="margin-bottom:10px;">
+    👁️ Ver siguiente pista
+  </button>
+  <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
+</div>
+
+<!-- RESULTADO -->
+<div class="screen" id="s-result">
+  <div class="result-big" id="r-headline"></div>
+  <p class="result-sub" id="r-sub"></p>
+  <div class="donde-result-lugar" id="r-lugar"></div>
+  <div class="donde-result-pais" id="r-pais"></div>
+
+  <div class="donde-dato">
+    <div class="donde-dato-label">📍 ¿Por qué vale la pena?</div>
+    <div class="donde-dato-txt" id="r-interesante"></div>
+  </div>
+  <div class="donde-dato">
+    <div class="donde-dato-label">💡 Dato curioso</div>
+    <div class="donde-dato-txt" id="r-dato"></div>
+  </div>
+
+  {% include "components/stats.html" %}
+
+  <button class="btn-share" onclick="doShare()">📤 Compartir resultado</button>
+  <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
+  <div class="tomorrow">Mañana, un nuevo destino te espera.<br>Vuelve a tomar un café.</div>
+</div>
+
+<script>
+const BAR_SLUG = "{{ bar.slug }}";
+const BAR_NAME = "{{ bar.name }}";
+const CODE = new URLSearchParams(window.location.search).get('code') || '';
+
+let gameData = null;
+let pistasReveladas = 0;
+let respondido = false;
+let startTime = null;
+
+async function init() {
+  try {
+    const res = await fetch('/api/donde', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG })
+    });
+    gameData = await res.json();
+    revelarSiguientePista(); // Revela la primera automáticamente
+    startTime = Date.now();
+  } catch(e) {
+    document.getElementById('s-loading').innerHTML = `
+      <div class="error-msg">No se pudo cargar el juego.<br>
+      <button class="btn-secondary" onclick="location.reload()">Reintentar</button></div>`;
+  }
+}
+
+function revelarSiguientePista() {
+  if (pistasReveladas === 0) showScreen('s-game');
+
+  if (pistasReveladas >= gameData.pistas.length) return;
+
+  const pista = gameData.pistas[pistasReveladas];
+  pistasReveladas++;
+
+  const pistasEl = document.getElementById('donde-pistas');
+
+  // Add new pista
+  const div = document.createElement('div');
+  div.className = 'pista-item';
+  div.innerHTML = `
+    <div class="pista-emoji">${pista.emoji}</div>
+    <div>
+      <div class="pista-num">Pista ${pistasReveladas}</div>
+      <div class="pista-texto">${pista.texto}</div>
+    </div>
+  `;
+  pistasEl.appendChild(div);
+
+  // Update counter
+  document.getElementById('pistas-counter').textContent =
+    pistasReveladas < gameData.pistas.length
+      ? `${pistasReveladas} de 5 pistas reveladas`
+      : 'Todas las pistas reveladas';
+
+  // Update button or show options
+  const btnSig = document.getElementById('btn-siguiente-pista');
+  if (pistasReveladas >= 3 || pistasReveladas >= gameData.pistas.length) {
+    // Show options after 3 pistas or all revealed
+    mostrarOpciones();
+    if (pistasReveladas >= gameData.pistas.length) {
+      btnSig.style.display = 'none';
+    } else {
+      btnSig.textContent = `👁️ Ver pista ${pistasReveladas + 1}`;
+    }
+  } else {
+    btnSig.textContent = `👁️ Ver pista ${pistasReveladas + 1}`;
+  }
+}
+
+function mostrarOpciones() {
+  const opcionesEl = document.getElementById('donde-opciones');
+  if (opcionesEl.style.display !== 'none') return; // Ya mostradas
+  opcionesEl.style.display = 'grid';
+  opcionesEl.innerHTML = gameData.opciones.map((op, i) => `
+    <button class="opcion-btn" onclick="responder(${i})">${op}</button>
+  `).join('');
+}
+
+async function responder(idx) {
+  if (respondido) return;
+  respondido = true;
+
+  const correcto = idx === gameData.correcto;
+  const elapsed = startTime ? Math.round((Date.now() - startTime) / 1000) : 0;
+
+  await fetch('/api/play', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      code: CODE, bar_slug: BAR_SLUG,
+      correct: correcto, game_type: 'donde',
+      choice: pistasReveladas, elapsed
+    })
+  });
+
+  // Mark options
+  document.querySelectorAll('.opcion-btn').forEach((btn, i) => {
+    if (i === gameData.correcto) btn.classList.add('correcta');
+    else if (i === idx && !correcto) btn.classList.add('incorrecta');
+    btn.onclick = null;
+  });
+
+  // Show result after short delay
+  setTimeout(() => mostrarResultado(correcto), 800);
+}
+
+function mostrarResultado(correcto) {
+  const h = document.getElementById('r-headline');
+  h.textContent = correcto ? '¡Lo encontraste!' : 'No era ese.';
+  h.className = 'result-big ' + (correcto ? 'correct' : 'wrong');
+
+  document.getElementById('r-sub').textContent = correcto
+    ? `Con ${pistasReveladas} ${pistasReveladas === 1 ? 'pista' : 'pistas'}. ${pistasReveladas <= 2 ? '¡Impresionante!' : 'Bien hecho.'}`
+    : `Era ${gameData.lugar}. Necesitabas más pistas.`;
+
+  document.getElementById('r-lugar').textContent = '📍 ' + gameData.lugar;
+  document.getElementById('r-pais').textContent = gameData.pais;
+  document.getElementById('r-interesante').textContent = gameData.por_que_interesante;
+  document.getElementById('r-dato').textContent = gameData.dato_curioso;
+
+  showScreen('s-result');
+  window.scrollTo(0, 0);
+  loadStats(BAR_SLUG, 'donde');
+}
+
+function doShare() {
+  const correcto = document.getElementById('r-headline').textContent === '¡Lo encontraste!';
+  const txt = correcto
+    ? `🌍 He adivinado el lugar en ${BAR_NAME}\n\n📍 ${gameData.lugar} — con solo ${pistasReveladas} ${pistasReveladas === 1 ? 'pista' : 'pistas'}\n\n¿Puedes tú? → nookplay.app`
+    : `🌍 No he adivinado el lugar en ${BAR_NAME}\n\nEra 📍 ${gameData.lugar}\n\n¿Lo sabías tú? → nookplay.app`;
+  if (navigator.share) navigator.share({ text: txt, url: 'https://nookplay.app' });
+  else navigator.clipboard.writeText(txt).then(() => alert('¡Copiado!'));
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+init();
+</script>
+{% endblock %}

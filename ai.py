@@ -505,3 +505,89 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
     text = data['content'][0]['text'].strip()
     text = text.replace('```json', '').replace('```', '').strip()
     return json.loads(text)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ¿Dónde en el mundo? generator
+# ─────────────────────────────────────────────────────────────────────────────
+
+def generate_donde(bar_slug):
+    today = str(date.today())
+    api_key = os.environ.get('ANTHROPIC_API_KEY')
+    seed = get_day_seed(bar_slug)
+
+    prompt = """Eres un experto en geografía y cultura mundial. Creas retos de adivinanza de lugares para grupos en un bar.
+
+FECHA: """ + today + """
+
+Crea un reto "¿Dónde en el mundo?" con estas reglas:
+
+1. Elige un lugar real — puede ser una ciudad, país, región, monumento o lugar icónico
+2. Crea exactamente 5 pistas progresivas — de más vaga a más reveladora
+3. Cada pista usa emojis relevantes al contenido + texto corto y evocador
+4. Las primeras 2 pistas son muy vagas (continente, clima, algo cultural genérico)
+5. Las pistas 3-4 son más específicas (gastronomía, costumbres, arquitectura)
+6. La pista 5 es casi reveladora (algo muy característico del lugar)
+7. Crea 4 opciones de respuesta: el lugar correcto + 3 trampas creíbles que podrían encajar con las pistas
+8. Las trampas deben ser lugares que comparten alguna característica con el correcto
+9. Nivel de dificultad: MEDIO — conocimiento cultural general, no trivia de experto
+10. Evita capitales mundiales demasiado obvias (París, Roma, Nueva York) — busca lugares sorprendentes
+
+TIPOS DE PISTAS que funcionan bien:
+- Emojis de gastronomía típica
+- Emojis de clima o geografía
+- Referencias a costumbres o fiestas
+- Referencias a arquitectura o paisaje
+- Curiosidades culturales
+
+Devuelve SOLO un objeto JSON válido, sin markdown:
+{
+  "lugar": "Nombre del lugar correcto",
+  "pais": "País o región",
+  "pistas": [
+    {"emoji": "🌍🌿", "texto": "Pista 1 muy vaga"},
+    {"emoji": "🌶️🎵", "texto": "Pista 2"},
+    {"emoji": "🏛️🌊", "texto": "Pista 3"},
+    {"emoji": "🍷🧀", "texto": "Pista 4"},
+    {"emoji": "🎭🌸", "texto": "Pista 5 casi reveladora"}
+  ],
+  "opciones": ["Lugar correcto", "Trampa 1", "Trampa 2", "Trampa 3"],
+  "correcto": 0,
+  "dato_curioso": "Un dato sorprendente sobre este lugar. 1-2 frases.",
+  "por_que_interesante": "Por qué vale la pena conocer este lugar. 1 frase."
+}
+
+IMPORTANTE: El lugar correcto debe estar en la posición 0 del array opciones."""
+
+    response = requests.post(
+        'https://api.anthropic.com/v1/messages',
+        headers={
+            'x-api-key': api_key,
+            'anthropic-version': '2023-06-01',
+            'content-type': 'application/json'
+        },
+        json={
+            'model': 'claude-sonnet-4-5',
+            'max_tokens': 1000,
+            'messages': [{'role': 'user', 'content': prompt}]
+        },
+        timeout=60
+    )
+
+    data = response.json()
+    if 'content' not in data:
+        raise Exception(f"API error: {data.get('error', data)}")
+
+    text = data['content'][0]['text'].strip()
+    text = text.replace('```json', '').replace('```', '').strip()
+    result = json.loads(text)
+
+    # Mezclar opciones manteniendo referencia al correcto
+    import random as _random
+    opciones = result['opciones'][:]
+    correcto_nombre = opciones[0]
+    _random.shuffle(opciones)
+    result['opciones'] = opciones
+    result['correcto'] = opciones.index(correcto_nombre)
+
+    return result
