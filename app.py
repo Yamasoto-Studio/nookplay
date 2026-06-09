@@ -1329,14 +1329,17 @@ def local_api():
     if pregenerated:
         import json as _json
         game_data = _json.loads(pregenerated['content'])
+        # Ensure ciudad is always present
+        if 'ciudad' not in game_data:
+            game_data['ciudad'] = bar['city'] or ''
         _game_cache[cache_key] = game_data
         db.close()
         return jsonify(game_data)
 
+    city = bar['city'] or 'tu ciudad'
+    province = bar['province'] or ''
     db.close()
     try:
-        city = bar['city'] or 'tu ciudad'
-        province = bar['province'] or ''
         game_data = generate_conexion_local(bar['name'], city, province, bar_slug)
         _game_cache[cache_key] = game_data
         return jsonify(game_data)
