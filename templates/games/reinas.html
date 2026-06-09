@@ -56,6 +56,28 @@
   text-align: center; font-size: 14px; font-weight: 500;
   min-height: 22px; margin-bottom: 10px;
 }
+.btn-hint {
+  position: relative; overflow: hidden;
+  background: transparent; color: var(--text-secondary);
+  border: 1px solid var(--border); border-radius: var(--radius-md);
+  padding: 10px; font-size: 13px; cursor: pointer;
+  font-family: inherit; flex: 1;
+  transition: all 0.15s;
+}
+.btn-hint:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-hint-timer {
+  position: absolute; left: 0; top: 0; height: 100%;
+  background: color-mix(in srgb, var(--bar-primary) 20%, transparent);
+  width: 0%; transition: width linear;
+  pointer-events: none;
+}
+.hint-cell {
+  animation: hint-pulse 0.5s ease 3;
+}
+@keyframes hint-pulse {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.4); outline: 4px solid #FFD700; outline-offset: -4px; }
+}
 
 /* Resultado */
 .reinas-result-time {
@@ -85,6 +107,10 @@
   <div class="reinas-status" id="reinas-status"></div>
   <div style="display:flex; gap:8px; margin-bottom:10px;">
     <button class="btn-secondary" onclick="resetBoard()" style="flex:1; padding:10px;">↺ Reiniciar</button>
+    <button class="btn-hint" id="btn-hint" onclick="showHint()">
+      <div class="btn-hint-timer" id="hint-timer"></div>
+      <span id="hint-label">💡 Pista</span>
+    </button>
     <button class="btn-secondary" onclick="openHelp()" style="flex:1; padding:10px;">? Normas</button>
   </div>
   <button class="btn-back-game" style="width:100%; justify-content:center;" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
@@ -391,6 +417,61 @@ function doShare() {
   const txt = `👑 He resuelto Las Reinas en ${BAR_NAME}\n\nTiempo: ${elapsed}\n\n¿Puedes tú? → nookplay.app`;
   if (navigator.share) navigator.share({ text: txt, url: 'https://nookplay.app' });
   else navigator.clipboard.writeText(txt).then(() => alert('¡Copiado!'));
+}
+
+let hintUsed = false;
+let hintTimeout = null;
+
+function showHint() {
+  const btn = document.getElementById('btn-hint');
+  if (btn.disabled || solved) return;
+  btn.disabled = true;
+  hintUsed = true;
+
+  const n = gameData.size;
+  const sol = gameData.solution;
+
+  // Find a cell that is part of the solution and not yet placed
+  const pending = sol.filter(([r,c]) => board[r][c] !== 2);
+  if (pending.length === 0) return;
+
+  // Pick random pending solution cell
+  const [hr, hc] = pending[Math.floor(Math.random() * pending.length)];
+
+  // Highlight the cell
+  const cells = document.querySelectorAll('.reinas-cell');
+  const idx = hr * n + hc;
+  const cell = cells[idx];
+  if (cell) {
+    cell.classList.add('hint-cell');
+    cell.style.outline = '4px solid #FFD700';
+    cell.style.outlineOffset = '-4px';
+    cell.style.zIndex = '10';
+  }
+
+  // Animate timer bar
+  const timerEl = document.getElementById('hint-timer');
+  const labelEl = document.getElementById('hint-label');
+  labelEl.textContent = '💡 Pista activa...';
+  timerEl.style.transition = 'none';
+  timerEl.style.width = '100%';
+  requestAnimationFrame(() => {
+    timerEl.style.transition = 'width 5s linear';
+    timerEl.style.width = '0%';
+  });
+
+  // Remove hint after 5s
+  hintTimeout = setTimeout(() => {
+    if (cell) {
+      cell.classList.remove('hint-cell');
+      cell.style.outline = '';
+      cell.style.outlineOffset = '';
+      cell.style.zIndex = '';
+    }
+    labelEl.textContent = '💡 Pista (usada)';
+    timerEl.style.width = '0%';
+    // Button stays disabled after use
+  }, 5000);
 }
 
 function showScreen(id) {
