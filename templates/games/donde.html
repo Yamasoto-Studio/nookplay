@@ -99,14 +99,15 @@
   <h2 class="headline" style="text-align:center; margin-bottom:6px;">Adivina el lugar</h2>
   <p class="donde-hint">Descubre las pistas una a una.<br>Cuantas menos necesites, mejor.</p>
 
-  <div class="pistas-counter" id="pistas-counter">Pista 1 de 5 revelada</div>
+  <div class="pistas-counter" id="pistas-counter"></div>
   <div class="donde-pistas" id="donde-pistas"></div>
-
-  <div class="donde-opciones" id="donde-opciones" style="display:none;"></div>
 
   <button class="btn-primary" id="btn-siguiente-pista" onclick="revelarSiguientePista()" style="margin-bottom:10px;">
     👁️ Ver siguiente pista
   </button>
+
+  <div class="donde-opciones" id="donde-opciones"></div>
+
   <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
 </div>
 
@@ -161,7 +162,11 @@ async function init() {
 }
 
 function revelarSiguientePista() {
-  if (pistasReveladas === 0) showScreen('s-game');
+  if (pistasReveladas === 0) {
+    showScreen('s-game');
+    // Show options immediately
+    mostrarOpciones();
+  }
 
   if (pistasReveladas >= gameData.pistas.length) return;
 
@@ -169,8 +174,6 @@ function revelarSiguientePista() {
   pistasReveladas++;
 
   const pistasEl = document.getElementById('donde-pistas');
-
-  // Add new pista
   const div = document.createElement('div');
   div.className = 'pista-item';
   div.innerHTML = `
@@ -182,31 +185,19 @@ function revelarSiguientePista() {
   `;
   pistasEl.appendChild(div);
 
-  // Update counter
-  document.getElementById('pistas-counter').textContent =
-    pistasReveladas < gameData.pistas.length
-      ? `${pistasReveladas} de 5 pistas reveladas`
-      : 'Todas las pistas reveladas';
-
-  // Update button or show options
   const btnSig = document.getElementById('btn-siguiente-pista');
-  if (pistasReveladas >= 3 || pistasReveladas >= gameData.pistas.length) {
-    // Show options after 3 pistas or all revealed
-    mostrarOpciones();
-    if (pistasReveladas >= gameData.pistas.length) {
-      btnSig.style.display = 'none';
-    } else {
-      btnSig.textContent = `👁️ Ver pista ${pistasReveladas + 1}`;
-    }
+  if (pistasReveladas >= gameData.pistas.length) {
+    btnSig.style.display = 'none';
+    document.getElementById('pistas-counter').textContent = 'Todas las pistas reveladas';
   } else {
     btnSig.textContent = `👁️ Ver pista ${pistasReveladas + 1}`;
+    document.getElementById('pistas-counter').textContent =
+      `${pistasReveladas} de 5 pistas — responde cuando quieras`;
   }
 }
 
 function mostrarOpciones() {
   const opcionesEl = document.getElementById('donde-opciones');
-  if (opcionesEl.style.display !== 'none') return; // Ya mostradas
-  opcionesEl.style.display = 'grid';
   opcionesEl.innerHTML = gameData.opciones.map((op, i) => `
     <button class="opcion-btn" onclick="responder(${i})">${op}</button>
   `).join('');
@@ -245,9 +236,17 @@ function mostrarResultado(correcto) {
   h.textContent = correcto ? '¡Lo encontraste!' : 'No era ese.';
   h.className = 'result-big ' + (correcto ? 'correct' : 'wrong');
 
-  document.getElementById('r-sub').textContent = correcto
-    ? `Con ${pistasReveladas} ${pistasReveladas === 1 ? 'pista' : 'pistas'}. ${pistasReveladas <= 2 ? '¡Impresionante!' : 'Bien hecho.'}`
-    : `Era ${gameData.lugar}. Necesitabas más pistas.`;
+  let subMsg = '';
+  if (correcto) {
+    if (pistasReveladas === 1) subMsg = '¡Con solo 1 pista! Eso es talento.';
+    else if (pistasReveladas === 2) subMsg = '¡Con 2 pistas! Muy buen ojo.';
+    else if (pistasReveladas === 3) subMsg = 'Con 3 pistas. Bien hecho.';
+    else if (pistasReveladas === 4) subMsg = 'Con 4 pistas. Casi lo necesitabas todo.';
+    else subMsg = 'Con todas las pistas. La próxima vez, antes.';
+  } else {
+    subMsg = `Era ${gameData.lugar}. Con más pistas lo hubieras visto.`;
+  }
+  document.getElementById('r-sub').textContent = subMsg;
 
   document.getElementById('r-lugar').textContent = '📍 ' + gameData.lugar;
   document.getElementById('r-pais').textContent = gameData.pais;
