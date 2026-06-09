@@ -332,10 +332,10 @@ body {
 }
 
 .activity-icon {
-  font-size: 36px;
+  font-size: 44px;
   flex-shrink: 0;
-  width: 52px;
-  height: 52px;
+  width: 60px;
+  height: 60px;
   display: flex;
   align-items: center;
   justify-content: center;
