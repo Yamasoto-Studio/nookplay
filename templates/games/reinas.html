@@ -6,77 +6,77 @@
 
 {% block game_content %}
 <style>
-.reinas-intro {
-  font-size: 14px; color: var(--text-secondary);
-  text-align: center; margin-bottom: 8px; line-height: 1.5;
-}
 .reinas-reglas {
   background: var(--bar-bg-subtle); border-radius: var(--radius-md);
   padding: 12px 14px; margin-bottom: 16px; font-size: 13px;
   color: var(--text-secondary); line-height: 1.8;
 }
-
 .reinas-board {
-  display: grid;
-  gap: 2px;
+  display: grid; gap: 2px;
   background: var(--border-strong);
   border: 3px solid var(--border-strong);
-  border-radius: 10px;
-  overflow: hidden;
-  margin-bottom: 16px;
-  width: 100%;
+  border-radius: 10px; overflow: hidden;
+  margin-bottom: 12px; width: 100%;
 }
 .reinas-cell {
   display: flex; align-items: center; justify-content: center;
   cursor: pointer; user-select: none;
-  transition: all 0.1s;
-  position: relative;
-  aspect-ratio: 1;
+  transition: filter 0.1s; position: relative;
+  aspect-ratio: 1; font-weight: 700;
 }
-.reinas-cell:hover { filter: brightness(0.92); }
-.reinas-cell.has-x { font-size: 18px; color: rgba(0,0,0,0.4); font-weight: 700; }
-.reinas-cell.has-queen { font-size: 28px; }
+.reinas-cell:active { filter: brightness(0.85); }
+.reinas-cell.state-x { color: rgba(0,0,0,0.5); font-size: 16px; }
+.reinas-cell.state-queen { font-size: 28px; }
 .reinas-cell.conflict {
-  outline: 3px solid #E24B4A;
-  outline-offset: -3px;
+  outline: 3px solid #E24B4A; outline-offset: -3px;
 }
-.reinas-cell.conflict.has-queen::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: rgba(226,75,74,0.25);
-  border-radius: 2px;
+.reinas-cell.hint-glow {
+  animation: hint-glow 0.6s ease 4;
+  outline: 3px solid #FFD700; outline-offset: -3px;
+}
+@keyframes hint-glow {
+  0%,100% { filter: brightness(1); }
+  50% { filter: brightness(1.3); }
 }
 
-.reinas-counter {
-  text-align: center; font-size: 13px; color: var(--text-muted);
-  margin-bottom: 10px;
-}
-.reinas-status {
-  text-align: center; font-size: 14px; font-weight: 500;
-  min-height: 22px; margin-bottom: 10px;
-}
+.reinas-counter { text-align:center; font-size:13px; color:var(--text-muted); margin-bottom:8px; }
+.reinas-status { text-align:center; font-size:14px; font-weight:500; min-height:20px; margin-bottom:10px; }
+
 .btn-hint {
-  position: relative; overflow: hidden;
+  position: relative; overflow: hidden; flex: 1;
   background: transparent; color: var(--text-secondary);
   border: 1px solid var(--border); border-radius: var(--radius-md);
-  padding: 10px; font-size: 13px; cursor: pointer;
-  font-family: inherit; flex: 1;
-  transition: all 0.15s;
+  padding: 10px 8px; font-size: 12px; cursor: pointer;
+  font-family: inherit; text-align: center;
 }
 .btn-hint:disabled { opacity: 0.4; cursor: not-allowed; }
-.btn-hint-timer {
+.btn-hint-bar {
   position: absolute; left: 0; top: 0; height: 100%;
-  background: color-mix(in srgb, var(--bar-primary) 20%, transparent);
-  width: 0%; transition: width linear;
-  pointer-events: none;
+  background: color-mix(in srgb, #FFD700 30%, transparent);
+  pointer-events: none; width: 0%;
 }
-.hint-cell {
-  animation: hint-pulse 0.5s ease 3;
+
+/* Help modal */
+.help-modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.6); z-index: 1000;
+  align-items: flex-end; justify-content: center;
 }
-@keyframes hint-pulse {
-  0%, 100% { filter: brightness(1); }
-  50% { filter: brightness(1.4); outline: 4px solid #FFD700; outline-offset: -4px; }
+.help-modal-overlay.open { display: flex; }
+.help-modal {
+  background: #fff; border-radius: 20px 20px 0 0;
+  padding: 24px 20px 36px; width: 100%; max-width: 480px;
+  max-height: 85vh; overflow-y: auto;
+}
+.help-example-grid {
+  display: grid; grid-template-columns: repeat(3,1fr);
+  gap: 2px; background: #888;
+  border: 2px solid #888; border-radius: 6px;
+  overflow: hidden; margin-bottom: 8px;
+}
+.heg-cell {
+  height: 40px; display: flex; align-items: center;
+  justify-content: center; font-size: 16px;
 }
 
 /* Resultado */
@@ -94,133 +94,129 @@
 
 <!-- JUEGO -->
 <div class="screen" id="s-game">
-  <div class="game-tag" style="display:block; text-align:center; width:fit-content; margin:0 auto 12px;">Las Reinas</div>
-  <h2 class="headline" style="text-align:center; margin-bottom:8px;">Coloca todas las 👑</h2>
+  <div class="game-tag" style="display:block;text-align:center;width:fit-content;margin:0 auto 12px;">Las Reinas</div>
+  <h2 class="headline" style="text-align:center;margin-bottom:8px;">Coloca todas las 👑</h2>
   <div class="reinas-reglas">
-    <strong>1 toque</strong> → marca ✕ (aquí no puede ir)<br>
-    <strong>2 toques</strong> → coloca 👑 (aquí va la reina)<br>
+    <strong>1 toque</strong> → ✕ (aquí no puede ir)<br>
+    <strong>2 toques</strong> → 👑 (coloca la reina)<br>
     <strong>3 toques</strong> → borra<br>
-    Una 👑 por fila, columna y región. Sin tocarse.
+    Una 👑 por fila, columna y región de color. Sin tocarse.
   </div>
   <div class="reinas-counter" id="reinas-counter"></div>
   <div class="reinas-board" id="reinas-board"></div>
   <div class="reinas-status" id="reinas-status"></div>
-  <div style="display:flex; gap:8px; margin-bottom:10px;">
-    <button class="btn-secondary" onclick="resetBoard()" style="flex:1; padding:10px;">↺ Reiniciar</button>
-    <button class="btn-hint" id="btn-hint" onclick="showHint()">
-      <div class="btn-hint-timer" id="hint-timer"></div>
-      <span id="hint-label">💡 Pista</span>
+  <div style="display:flex;gap:8px;margin-bottom:10px;">
+    <button class="btn-secondary" onclick="resetBoard()" style="flex:1;padding:10px;font-size:13px;">↺ Reiniciar</button>
+    <button class="btn-hint" id="hint-1" onclick="useHint(0)">
+      <div class="btn-hint-bar" id="hint-bar-0"></div>
+      💡 Pista 1
     </button>
-    <button class="btn-secondary" onclick="openHelp()" style="flex:1; padding:10px;">? Normas</button>
+    <button class="btn-hint" id="hint-2" onclick="useHint(1)">
+      <div class="btn-hint-bar" id="hint-bar-1"></div>
+      💡 Pista 2
+    </button>
+    <button class="btn-hint" id="hint-3" onclick="useHint(2)">
+      <div class="btn-hint-bar" id="hint-bar-2"></div>
+      💡 Pista 3
+    </button>
+    <button class="btn-secondary" onclick="openHelp()" style="flex:1;padding:10px;font-size:13px;">? Normas</button>
   </div>
-  <button class="btn-back-game" style="width:100%; justify-content:center;" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
-
-  <!-- Modal normas -->
-  <div id="help-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:1000; align-items:flex-end; justify-content:center; padding:0;">
-    <div style="background:#fff; border-radius:20px 20px 0 0; padding:24px 20px 36px; width:100%; max-width:480px; max-height:85vh; overflow-y:auto;">
-      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
-        <div style="font-size:17px; font-weight:600; color:var(--bar-accent-dark);">Cómo se juega</div>
-        <button onclick="closeHelp()" style="background:transparent; border:none; font-size:22px; cursor:pointer; color:var(--text-muted); padding:0; line-height:1;">✕</button>
-      </div>
-
-      <div style="font-size:14px; color:var(--text-secondary); margin-bottom:20px; line-height:1.6;">
-        Coloca exactamente <strong>una 👑 por cada fila, columna y región de color</strong>.<br>
-        Dos reinas no pueden tocarse, ni en diagonal.
-      </div>
-
-      <!-- Ejemplos visuales -->
-      <div style="font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--text-muted); margin-bottom:12px;">Ejemplos</div>
-
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px;">
-
-        <!-- Ejemplo 1: 1 toque = X -->
-        <div style="background:var(--bar-bg-subtle); border-radius:10px; padding:12px; text-align:center;">
-          <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:2px; margin-bottom:8px; background:var(--border-strong); border:2px solid var(--border-strong); border-radius:6px; overflow:hidden;">
-            <div style="background:#FF6B6B; height:40px; display:flex; align-items:center; justify-content:center; font-size:16px;"></div>
-            <div style="background:#FFA500; height:40px; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:700; color:rgba(0,0,0,0.4);">✕</div>
-            <div style="background:#FFA500; height:40px; display:flex; align-items:center; justify-content:center; font-size:16px;"></div>
-            <div style="background:#FF6B6B; height:40px; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:700; color:rgba(0,0,0,0.4);">✕</div>
-            <div style="background:#339AF0; height:40px; display:flex; align-items:center; justify-content:center; font-size:16px;"></div>
-            <div style="background:#339AF0; height:40px; display:flex; align-items:center; justify-content:center; font-size:16px;"></div>
-            <div style="background:#51CF66; height:40px; display:flex; align-items:center; justify-content:center; font-size:16px;"></div>
-            <div style="background:#51CF66; height:40px; display:flex; align-items:center; justify-content:center; font-size:16px;"></div>
-            <div style="background:#339AF0; height:40px; display:flex; align-items:center; justify-content:center; font-size:16px;"></div>
-          </div>
-          <div style="font-size:12px; font-weight:600; color:var(--text); margin-bottom:2px;">1 toque → ✕</div>
-          <div style="font-size:11px; color:var(--text-muted);">Marca donde no puede ir</div>
-        </div>
-
-        <!-- Ejemplo 2: 2 toques = reina -->
-        <div style="background:var(--bar-bg-subtle); border-radius:10px; padding:12px; text-align:center;">
-          <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:2px; margin-bottom:8px; background:var(--border-strong); border:2px solid var(--border-strong); border-radius:6px; overflow:hidden;">
-            <div style="background:#FF6B6B; height:40px; display:flex; align-items:center; justify-content:center; font-size:20px;">👑</div>
-            <div style="background:#FFA500; height:40px; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:700; color:rgba(0,0,0,0.4);">✕</div>
-            <div style="background:#FFA500; height:40px; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:700; color:rgba(0,0,0,0.4);">✕</div>
-            <div style="background:#FF6B6B; height:40px; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:700; color:rgba(0,0,0,0.4);">✕</div>
-            <div style="background:#339AF0; height:40px; display:flex; align-items:center; justify-content:center; font-size:16px;"></div>
-            <div style="background:#339AF0; height:40px; display:flex; align-items:center; justify-content:center; font-size:16px;"></div>
-            <div style="background:#51CF66; height:40px; display:flex; align-items:center; justify-content:center; font-size:16px;"></div>
-            <div style="background:#51CF66; height:40px; display:flex; align-items:center; justify-content:center; font-size:16px;"></div>
-            <div style="background:#339AF0; height:40px; display:flex; align-items:center; justify-content:center; font-size:16px;"></div>
-          </div>
-          <div style="font-size:12px; font-weight:600; color:var(--text); margin-bottom:2px;">2 toques → 👑</div>
-          <div style="font-size:11px; color:var(--text-muted);">Coloca la reina</div>
-        </div>
-
-        <!-- Ejemplo 3: conflicto misma fila -->
-        <div style="background:var(--bar-bg-subtle); border-radius:10px; padding:12px; text-align:center;">
-          <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:2px; margin-bottom:8px; background:var(--border-strong); border:2px solid var(--border-strong); border-radius:6px; overflow:hidden;">
-            <div style="background:#FF6B6B; height:40px; display:flex; align-items:center; justify-content:center; font-size:20px; outline:3px solid #E24B4A; outline-offset:-3px;">👑</div>
-            <div style="background:#FFA500; height:40px; display:flex; align-items:center; justify-content:center; font-size:16px;"></div>
-            <div style="background:#FFA500; height:40px; display:flex; align-items:center; justify-content:center; font-size:20px; outline:3px solid #E24B4A; outline-offset:-3px;">👑</div>
-            <div style="background:#FF6B6B; height:40px; display:flex; align-items:center; justify-content:center;"></div>
-            <div style="background:#339AF0; height:40px; display:flex; align-items:center; justify-content:center;"></div>
-            <div style="background:#339AF0; height:40px; display:flex; align-items:center; justify-content:center;"></div>
-            <div style="background:#51CF66; height:40px; display:flex; align-items:center; justify-content:center;"></div>
-            <div style="background:#51CF66; height:40px; display:flex; align-items:center; justify-content:center;"></div>
-            <div style="background:#339AF0; height:40px; display:flex; align-items:center; justify-content:center;"></div>
-          </div>
-          <div style="font-size:12px; font-weight:600; color:#E24B4A; margin-bottom:2px;">❌ Conflicto de fila</div>
-          <div style="font-size:11px; color:var(--text-muted);">Dos reinas en la misma fila</div>
-        </div>
-
-        <!-- Ejemplo 4: conflicto diagonal -->
-        <div style="background:var(--bar-bg-subtle); border-radius:10px; padding:12px; text-align:center;">
-          <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:2px; margin-bottom:8px; background:var(--border-strong); border:2px solid var(--border-strong); border-radius:6px; overflow:hidden;">
-            <div style="background:#FF6B6B; height:40px; display:flex; align-items:center; justify-content:center; font-size:20px; outline:3px solid #E24B4A; outline-offset:-3px;">👑</div>
-            <div style="background:#FFA500; height:40px; display:flex; align-items:center; justify-content:center;"></div>
-            <div style="background:#FFA500; height:40px; display:flex; align-items:center; justify-content:center;"></div>
-            <div style="background:#FF6B6B; height:40px; display:flex; align-items:center; justify-content:center;"></div>
-            <div style="background:#339AF0; height:40px; display:flex; align-items:center; justify-content:center; font-size:20px; outline:3px solid #E24B4A; outline-offset:-3px;">👑</div>
-            <div style="background:#339AF0; height:40px; display:flex; align-items:center; justify-content:center;"></div>
-            <div style="background:#51CF66; height:40px; display:flex; align-items:center; justify-content:center;"></div>
-            <div style="background:#51CF66; height:40px; display:flex; align-items:center; justify-content:center;"></div>
-            <div style="background:#339AF0; height:40px; display:flex; align-items:center; justify-content:center;"></div>
-          </div>
-          <div style="font-size:12px; font-weight:600; color:#E24B4A; margin-bottom:2px;">❌ Conflicto diagonal</div>
-          <div style="font-size:11px; color:var(--text-muted);">Dos reinas se tocan</div>
-        </div>
-
-      </div>
-
-      <button onclick="closeHelp()" style="width:100%; padding:13px; background:var(--bar-primary); color:var(--bar-primary-text); border:none; border-radius:10px; font-size:15px; font-weight:600; cursor:pointer; font-family:inherit;">¡Entendido, a jugar!</button>
-    </div>
-  </div>
+  <button class="btn-back-game" style="width:100%;justify-content:center;" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
 </div>
 
 <!-- RESULTADO -->
 <div class="screen" id="s-result">
-  <div class="game-tag" style="display:block; text-align:center; width:fit-content; margin:0 auto 12px;">Las Reinas</div>
+  <div class="game-tag" style="display:block;text-align:center;width:fit-content;margin:0 auto 12px;">Las Reinas</div>
   <div class="result-big correct" style="text-align:center;">👑 ¡Resuelto!</div>
   <p class="result-sub" style="text-align:center;" id="r-sub"></p>
   <div class="reinas-result-time" id="r-time"></div>
-  <div style="text-align:center; font-size:14px; color:var(--text-secondary); margin-bottom:20px;">tiempo</div>
-
+  <div style="text-align:center;font-size:14px;color:var(--text-secondary);margin-bottom:20px;">tiempo</div>
   {% include "components/stats.html" %}
-
   <button class="btn-share" onclick="doShare()">📤 Compartir resultado</button>
   <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
   <div class="tomorrow">Mañana, un nuevo tablero te espera.<br>Vuelve a tomar un café.</div>
+</div>
+
+<!-- MODAL NORMAS -->
+<div class="help-modal-overlay" id="help-modal" onclick="closeHelp(event)">
+  <div class="help-modal">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <div style="font-size:17px;font-weight:600;">Cómo se juega</div>
+      <button onclick="closeHelp()" style="background:transparent;border:none;font-size:22px;cursor:pointer;color:var(--text-muted);padding:0;">✕</button>
+    </div>
+    <div style="font-size:14px;color:var(--text-secondary);margin-bottom:20px;line-height:1.7;">
+      Coloca exactamente <strong>una 👑 por cada fila, columna y región de color</strong>.<br>
+      Dos reinas no pueden tocarse, ni en diagonal.
+    </div>
+    <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px;">Ejemplos</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
+
+      <div style="background:var(--bar-bg-subtle);border-radius:10px;padding:12px;text-align:center;">
+        <div class="help-example-grid">
+          <div class="heg-cell" style="background:#FF6B6B;"></div>
+          <div class="heg-cell" style="background:#FFA500;color:rgba(0,0,0,0.45);font-weight:700;">✕</div>
+          <div class="heg-cell" style="background:#FFA500;color:rgba(0,0,0,0.45);font-weight:700;">✕</div>
+          <div class="heg-cell" style="background:#FF6B6B;color:rgba(0,0,0,0.45);font-weight:700;">✕</div>
+          <div class="heg-cell" style="background:#339AF0;"></div>
+          <div class="heg-cell" style="background:#339AF0;"></div>
+          <div class="heg-cell" style="background:#51CF66;"></div>
+          <div class="heg-cell" style="background:#51CF66;"></div>
+          <div class="heg-cell" style="background:#339AF0;"></div>
+        </div>
+        <div style="font-size:12px;font-weight:600;margin-bottom:2px;">1 toque → ✕</div>
+        <div style="font-size:11px;color:var(--text-muted);">Marca donde no puede ir</div>
+      </div>
+
+      <div style="background:var(--bar-bg-subtle);border-radius:10px;padding:12px;text-align:center;">
+        <div class="help-example-grid">
+          <div class="heg-cell" style="background:#FF6B6B;font-size:20px;">👑</div>
+          <div class="heg-cell" style="background:#FFA500;color:rgba(0,0,0,0.45);font-weight:700;">✕</div>
+          <div class="heg-cell" style="background:#FFA500;color:rgba(0,0,0,0.45);font-weight:700;">✕</div>
+          <div class="heg-cell" style="background:#FF6B6B;color:rgba(0,0,0,0.45);font-weight:700;">✕</div>
+          <div class="heg-cell" style="background:#339AF0;"></div>
+          <div class="heg-cell" style="background:#339AF0;"></div>
+          <div class="heg-cell" style="background:#51CF66;"></div>
+          <div class="heg-cell" style="background:#51CF66;"></div>
+          <div class="heg-cell" style="background:#339AF0;"></div>
+        </div>
+        <div style="font-size:12px;font-weight:600;margin-bottom:2px;">2 toques → 👑</div>
+        <div style="font-size:11px;color:var(--text-muted);">Coloca la reina</div>
+      </div>
+
+      <div style="background:var(--bar-bg-subtle);border-radius:10px;padding:12px;text-align:center;">
+        <div class="help-example-grid">
+          <div class="heg-cell" style="background:#FF6B6B;font-size:20px;outline:3px solid #E24B4A;outline-offset:-3px;">👑</div>
+          <div class="heg-cell" style="background:#FFA500;"></div>
+          <div class="heg-cell" style="background:#FFA500;font-size:20px;outline:3px solid #E24B4A;outline-offset:-3px;">👑</div>
+          <div class="heg-cell" style="background:#FF6B6B;"></div>
+          <div class="heg-cell" style="background:#339AF0;"></div>
+          <div class="heg-cell" style="background:#339AF0;"></div>
+          <div class="heg-cell" style="background:#51CF66;"></div>
+          <div class="heg-cell" style="background:#51CF66;"></div>
+          <div class="heg-cell" style="background:#339AF0;"></div>
+        </div>
+        <div style="font-size:12px;font-weight:600;color:#E24B4A;margin-bottom:2px;">❌ Misma fila</div>
+        <div style="font-size:11px;color:var(--text-muted);">Dos reinas en la misma fila</div>
+      </div>
+
+      <div style="background:var(--bar-bg-subtle);border-radius:10px;padding:12px;text-align:center;">
+        <div class="help-example-grid">
+          <div class="heg-cell" style="background:#FF6B6B;font-size:20px;outline:3px solid #E24B4A;outline-offset:-3px;">👑</div>
+          <div class="heg-cell" style="background:#FFA500;"></div>
+          <div class="heg-cell" style="background:#FFA500;"></div>
+          <div class="heg-cell" style="background:#FF6B6B;"></div>
+          <div class="heg-cell" style="background:#339AF0;font-size:20px;outline:3px solid #E24B4A;outline-offset:-3px;">👑</div>
+          <div class="heg-cell" style="background:#339AF0;"></div>
+          <div class="heg-cell" style="background:#51CF66;"></div>
+          <div class="heg-cell" style="background:#51CF66;"></div>
+          <div class="heg-cell" style="background:#339AF0;"></div>
+        </div>
+        <div style="font-size:12px;font-weight:600;color:#E24B4A;margin-bottom:2px;">❌ Diagonal</div>
+        <div style="font-size:11px;color:var(--text-muted);">Dos reinas se tocan</div>
+      </div>
+    </div>
+    <button onclick="closeHelp()" style="width:100%;padding:13px;background:var(--bar-primary);color:var(--bar-primary-text);border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;">¡Entendido, a jugar!</button>
+  </div>
 </div>
 
 <script>
@@ -229,10 +225,11 @@ const BAR_NAME = "{{ bar.name }}";
 const CODE = new URLSearchParams(window.location.search).get('code') || '';
 
 let gameData = null;
-let board = []; // 0=empty, 1=X, 2=queen
+let board = [];
 let startTime = null;
-let timerInterval = null;
 let solved = false;
+let hintsUsed = 0;
+let hintsPlaced = [];
 
 async function init() {
   try {
@@ -245,86 +242,39 @@ async function init() {
     const n = gameData.size;
     board = Array(n).fill(null).map(() => Array(n).fill(0));
     renderBoard();
-    startTimer();
+    startTime = Date.now();
     showScreen('s-game');
   } catch(e) {
     document.getElementById('s-loading').innerHTML = `
-      <div class="error-msg">No se pudo cargar el juego.<br>
+      <div class="error-msg">No se pudo cargar.<br>
       <button class="btn-secondary" onclick="location.reload()">Reintentar</button></div>`;
   }
 }
 
-function startTimer() {
-  startTime = Date.now();
-}
-
-function getElapsed() {
-  return Math.floor((Date.now() - startTime) / 1000);
-}
-
-function formatTime(s) {
-  const m = Math.floor(s / 60);
-  const sec = s % 60;
-  return `${m}:${sec.toString().padStart(2,'0')}`;
-}
-
-function getQueenCount() {
-  return board.flat().filter(v => v === 2).length;
-}
+function getElapsed() { return Math.floor((Date.now() - startTime) / 1000); }
+function formatTime(s) { return `${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}`; }
 
 function getConflicts() {
   const n = gameData.size;
   const conflicts = new Set();
+  const queens = [];
+  for (let r=0;r<n;r++) for (let c=0;c<n;c++) if (board[r][c]===2) queens.push([r,c]);
 
-  for (let r=0; r<n; r++) {
-    for (let c=0; c<n; c++) {
-      if (!board[r][c]) continue;
-
-      // Check row
-      for (let cc=0; cc<n; cc++) {
-        if (cc !== c && board[r][cc] === 2) {
-          conflicts.add(`${r},${c}`);
-          conflicts.add(`${r},${cc}`);
-        }
-      }
-      // Check col
-      for (let rr=0; rr<n; rr++) {
-        if (rr !== r && board[rr][c] === 2) {
-          conflicts.add(`${r},${c}`);
-          conflicts.add(`${rr},${c}`);
-        }
-      }
-      // Check region
-      const reg = gameData.regions[r][c];
-      for (let rr=0; rr<n; rr++) {
-        for (let cc=0; cc<n; cc++) {
-          if ((rr !== r || cc !== c) && board[rr][cc] === 2 && gameData.regions[rr][cc] === reg) {
-            conflicts.add(`${r},${c}`);
-            conflicts.add(`${rr},${cc}`);
-          }
-        }
-      }
-      // Check adjacency (including diagonal)
-      for (let dr=-1; dr<=1; dr++) {
-        for (let dc=-1; dc<=1; dc++) {
-          if (dr===0 && dc===0) continue;
-          const nr=r+dr, nc=c+dc;
-          if (nr>=0 && nr<n && nc>=0 && nc<n && board[nr][nc] === 2) {
-            conflicts.add(`${r},${c}`);
-            conflicts.add(`${nr},${nc}`);
-          }
-        }
+  for (let i=0;i<queens.length;i++) {
+    const [r1,c1] = queens[i];
+    for (let j=i+1;j<queens.length;j++) {
+      const [r2,c2] = queens[j];
+      const sameRow = r1===r2;
+      const sameCol = c1===c2;
+      const sameReg = gameData.regions[r1][c1] === gameData.regions[r2][c2];
+      const adjacent = Math.abs(r1-r2)<=1 && Math.abs(c1-c2)<=1;
+      if (sameRow || sameCol || sameReg || adjacent) {
+        conflicts.add(`${r1},${c1}`);
+        conflicts.add(`${r2},${c2}`);
       }
     }
   }
   return conflicts;
-}
-
-function checkWin() {
-  const n = gameData.size;
-  if (getQueenCount() !== n) return false;
-  if (getConflicts().size > 0) return false;
-  return true;
 }
 
 function renderBoard() {
@@ -332,167 +282,158 @@ function renderBoard() {
   const boardEl = document.getElementById('reinas-board');
   boardEl.style.gridTemplateColumns = `repeat(${n}, 1fr)`;
   boardEl.innerHTML = '';
-
   const conflicts = getConflicts();
-  const queensPlaced = getQueenCount();
+  const queens = board.flat().filter(v=>v===2).length;
+  document.getElementById('reinas-counter').textContent = `${queens} de ${n} reinas colocadas`;
 
-  document.getElementById('reinas-counter').textContent =
-    `${queensPlaced} de ${n} reinas colocadas`;
-
-  for (let r=0; r<n; r++) {
-    for (let c=0; c<n; c++) {
+  for (let r=0;r<n;r++) {
+    for (let c=0;c<n;c++) {
       const cell = document.createElement('div');
-      const regionColor = gameData.colors[gameData.regions[r][c]];
-      const isConflict = conflicts.has(`${r},${c}`);
-      const state = board[r][c]; // 0=empty, 1=X, 2=queen
+      const state = board[r][c];
+      const isConflict = state===2 && conflicts.has(`${r},${c}`);
+      const isHintCell = hintsPlaced.some(([hr,hc])=>hr===r&&hc===c);
 
       cell.className = 'reinas-cell' +
-        (state === 2 ? ' has-queen' : '') +
-        (state === 1 ? ' has-x' : '') +
-        (isConflict ? ' conflict' : '');
+        (state===1?' state-x':'') +
+        (state===2?' state-queen':'') +
+        (isConflict?' conflict':'') +
+        (isHintCell&&state===2?' hint-placed':'');
 
-      cell.style.background = regionColor;
-      cell.style.fontSize = state === 2 ? `${Math.max(20, 32 - n * 2)}px` : '16px';
-      cell.textContent = state === 2 ? '👑' : state === 1 ? '✕' : '';
-      cell.onclick = () => toggleQueen(r, c);
-
+      cell.style.background = gameData.colors[gameData.regions[r][c]];
+      cell.style.fontSize = n <= 5 ? '28px' : '22px';
+      cell.textContent = state===2?'👑':state===1?'✕':'';
+      cell.onclick = () => toggleCell(r, c);
       boardEl.appendChild(cell);
     }
   }
-}
-
-function toggleQueen(r, c) {
-  if (solved) return;
-  board[r][c] = (board[r][c] + 1) % 3;
-  renderBoard();
 
   const st = document.getElementById('reinas-status');
-  st.textContent = '';
-
-  if (checkWin()) {
-    solved = true;
-    const elapsed = getElapsed();
-    setTimeout(() => mostrarResultado(elapsed), 400);
-  } else if (getConflicts().size > 0) {
+  if (conflicts.size > 0) {
     st.textContent = '⚠️ Hay conflictos — revisa las reglas';
     st.style.color = '#E24B4A';
+  } else {
+    st.textContent = '';
   }
+
+  if (queens === n && conflicts.size === 0) {
+    solved = true;
+    setTimeout(() => mostrarResultado(), 400);
+  }
+}
+
+function toggleCell(r, c) {
+  if (solved) return;
+  // Don't allow removing hint-placed queens
+  if (hintsPlaced.some(([hr,hc])=>hr===r&&hc===c) && board[r][c]===2) return;
+  board[r][c] = (board[r][c] + 1) % 3;
+  renderBoard();
 }
 
 function resetBoard() {
   const n = gameData.size;
-  board = Array(n).fill(null).map(() => Array(n).fill(0));
+  board = Array(n).fill(null).map(()=>Array(n).fill(0));
+  hintsPlaced = [];
+  hintsUsed = 0;
   solved = false;
   startTime = Date.now();
   document.getElementById('reinas-status').textContent = '';
+  // Re-enable hint buttons
+  for(let i=0;i<3;i++) {
+    const btn = document.getElementById(`hint-${i+1}`);
+    if(btn) { btn.disabled=false; btn.innerHTML=`<div class="btn-hint-bar" id="hint-bar-${i}"></div>💡 Pista ${i+1}`; }
+  }
   renderBoard();
 }
 
-async function mostrarResultado(elapsed) {
+function useHint(idx) {
+  if (solved || hintsUsed >= 3) return;
+  const btn = document.getElementById(`hint-${idx+1}`);
+  if (btn.disabled) return;
+
+  const n = gameData.size;
+  const sol = gameData.solution;
+
+  // Find a solution cell not yet placed by user (not already a queen)
+  const available = sol.filter(([r,c]) =>
+    board[r][c] !== 2 && !hintsPlaced.some(([hr,hc])=>hr===r&&hc===c)
+  );
+  if (available.length === 0) return;
+
+  const [hr, hc] = available[Math.floor(Math.random() * available.length)];
+
+  // Place the queen
+  board[hr][hc] = 2;
+  hintsPlaced.push([hr, hc]);
+  hintsUsed++;
+  renderBoard();
+
+  // Animate the hint button timer
+  btn.disabled = true;
+  const barEl = document.getElementById(`hint-bar-${idx}`);
+  barEl.style.transition = 'none';
+  barEl.style.width = '100%';
+  requestAnimationFrame(() => {
+    barEl.style.transition = 'width 3s linear';
+    barEl.style.width = '0%';
+  });
+  setTimeout(() => {
+    btn.innerHTML = `<div class="btn-hint-bar"></div>✓ Pista ${idx+1}`;
+  }, 3000);
+
+  // Glow the placed cell
+  const cells = document.querySelectorAll('.reinas-cell');
+  const cellIdx = hr * n + hc;
+  if (cells[cellIdx]) {
+    cells[cellIdx].classList.add('hint-glow');
+    setTimeout(() => cells[cellIdx].classList.remove('hint-glow'), 2500);
+  }
+}
+
+async function mostrarResultado() {
+  const elapsed = getElapsed();
   await fetch('/api/play', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       code: CODE, bar_slug: BAR_SLUG,
-      correct: true, game_type: 'reinas', elapsed
+      correct: true, game_type: 'reinas',
+      choice: hintsUsed, elapsed
     })
   });
 
-  const mins = Math.floor(elapsed / 60);
-  let sub = '';
-  if (elapsed < 60) sub = '¡Rapidísimo! Menos de un minuto.';
-  else if (mins < 3) sub = `${mins} minuto${mins>1?'s':''} y pico. Muy bien.`;
-  else sub = `${mins} minutos. La próxima vez, más rápido.`;
+  const mins = Math.floor(elapsed/60);
+  let sub = hintsUsed === 0
+    ? '¡Sin pistas! Eso es talento.'
+    : `Con ${hintsUsed} ${hintsUsed===1?'pista':'pistas'}.`;
+  if (elapsed < 60 && hintsUsed === 0) sub = '¡Sin pistas y en menos de un minuto!';
 
   document.getElementById('r-sub').textContent = sub;
   document.getElementById('r-time').textContent = formatTime(elapsed);
-
   showScreen('s-result');
-  window.scrollTo(0, 0);
+  window.scrollTo(0,0);
   loadStats(BAR_SLUG, 'reinas');
 }
 
 function doShare() {
   const elapsed = document.getElementById('r-time').textContent;
-  const txt = `👑 He resuelto Las Reinas en ${BAR_NAME}\n\nTiempo: ${elapsed}\n\n¿Puedes tú? → nookplay.app`;
+  const hintStr = hintsUsed === 0 ? 'sin pistas' : `${hintsUsed} ${hintsUsed===1?'pista':'pistas'}`;
+  const txt = `👑 He resuelto Las Reinas en ${BAR_NAME}\n\nTiempo: ${elapsed} · ${hintStr}\n\n¿Puedes tú? → nookplay.app`;
   if (navigator.share) navigator.share({ text: txt, url: 'https://nookplay.app' });
-  else navigator.clipboard.writeText(txt).then(() => alert('¡Copiado!'));
-}
-
-let hintUsed = false;
-let hintTimeout = null;
-
-function showHint() {
-  const btn = document.getElementById('btn-hint');
-  if (btn.disabled || solved) return;
-  btn.disabled = true;
-  hintUsed = true;
-
-  const n = gameData.size;
-  const sol = gameData.solution;
-
-  // Find a cell that is part of the solution and not yet placed
-  const pending = sol.filter(([r,c]) => board[r][c] !== 2);
-  if (pending.length === 0) return;
-
-  // Pick random pending solution cell
-  const [hr, hc] = pending[Math.floor(Math.random() * pending.length)];
-
-  // Highlight the cell
-  const cells = document.querySelectorAll('.reinas-cell');
-  const idx = hr * n + hc;
-  const cell = cells[idx];
-  if (cell) {
-    cell.classList.add('hint-cell');
-    cell.style.outline = '4px solid #FFD700';
-    cell.style.outlineOffset = '-4px';
-    cell.style.zIndex = '10';
-  }
-
-  // Animate timer bar
-  const timerEl = document.getElementById('hint-timer');
-  const labelEl = document.getElementById('hint-label');
-  labelEl.textContent = '💡 Pista activa...';
-  timerEl.style.transition = 'none';
-  timerEl.style.width = '100%';
-  requestAnimationFrame(() => {
-    timerEl.style.transition = 'width 5s linear';
-    timerEl.style.width = '0%';
-  });
-
-  // Remove hint after 5s
-  hintTimeout = setTimeout(() => {
-    if (cell) {
-      cell.classList.remove('hint-cell');
-      cell.style.outline = '';
-      cell.style.outlineOffset = '';
-      cell.style.zIndex = '';
-    }
-    labelEl.textContent = '💡 Pista (usada)';
-    timerEl.style.width = '0%';
-    // Button stays disabled after use
-  }, 5000);
-}
-
-function showScreen(id) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
+  else navigator.clipboard.writeText(txt).then(()=>alert('¡Copiado!'));
 }
 
 function openHelp() {
-  const modal = document.getElementById('help-modal');
-  modal.style.display = 'flex';
+  document.getElementById('help-modal').classList.add('open');
+}
+function closeHelp(e) {
+  if (!e || e.target === document.getElementById('help-modal'))
+    document.getElementById('help-modal').classList.remove('open');
 }
 
-function closeHelp() {
-  document.getElementById('help-modal').style.display = 'none';
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
 }
-
-// Close modal clicking outside
-document.addEventListener('click', (e) => {
-  const modal = document.getElementById('help-modal');
-  if (e.target === modal) closeHelp();
-});
 
 init();
 </script>
