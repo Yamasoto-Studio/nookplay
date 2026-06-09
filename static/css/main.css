@@ -1,30 +1,32 @@
 /* ─────────────────────────────────────────────
    Nookplay — Design System
-   Brand: #C4622D (terracota)
-   Background: #F7F2EB (crema)
+   Brand: #8100DD (morado)
+   Secondary: #DD00A4 (magenta)
+   Background: #F5F5F5
 ───────────────────────────────────────────── */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
   /* Nookplay brand */
-  --nook-brand: #C4622D;
-  --nook-brand-light: #F0E0D4;
+  --nook-brand: #8100DD;
+  --nook-brand-light: #E8D0F8;
+  --nook-secondary: #DD00A4;
 
   /* Bar theme (overridden per bar) */
-  --bar-primary: #C4622D;
+  --bar-primary: #8100DD;
   --bar-primary-text: #FFFFFF;
-  --bar-bg: #F7F2EB;
+  --bar-bg: #F5F5F5;
   --bar-bg-card: #FFFFFF;
-  --bar-bg-subtle: #F0EBE3;
-  --bar-accent-dark: #1A1A1A;
+  --bar-bg-subtle: #EDE0F8;
+  --bar-accent-dark: #1A0A2E;
 
   /* Neutrals */
-  --text: #1A1A1A;
-  --text-secondary: #6B6059;
-  --text-muted: #A89B91;
-  --border: #E5DDD5;
-  --border-strong: #C4B8AE;
+  --text: #1A0A2E;
+  --text-secondary: #5A4A6B;
+  --text-muted: #9B8AAB;
+  --border: #DDD0EE;
+  --border-strong: #BBA8D8;
   --success: #3A7D44;
   --danger: #B03030;
 
@@ -143,7 +145,7 @@ body {
 /* ── Buttons ── */
 .btn-primary {
   width: 100%; padding: 14px;
-  background: var(--bar-accent-dark);
+  background: var(--nook-secondary, #DD00A4);
   color: #fff;
   border: none; border-radius: var(--radius-md);
   font-size: 15px; font-weight: 600;
