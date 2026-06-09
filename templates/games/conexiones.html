@@ -266,9 +266,23 @@ function confirmar() {
     seleccionadas = [];
     document.getElementById('conn-feedback').textContent = '✅ ¡Grupo correcto!';
 
-    if (gruposAdivinados === 2) {
-      ganado = true;
-      setTimeout(() => mostrarResultado(), 800);
+    if (gruposAdivinados === 1) {
+      // Auto-reveal second group after short delay
+      setTimeout(() => {
+        const otroGrupo = esA ? gameData.grupo_b : gameData.grupo_a;
+        const div = document.createElement('div');
+        div.className = 'conn-grupo-revelado';
+        div.style.background = 'color-mix(in srgb, var(--bar-accent-dark) 15%, white)';
+        div.style.border = '2px solid var(--bar-accent-dark)';
+        div.innerHTML = `
+          <div class="conn-grupo-nombre">${otroGrupo.nombre}</div>
+          <div class="conn-grupo-palabras">${otroGrupo.palabras.join(' · ')}</div>
+        `;
+        document.getElementById('grupos-revelados').appendChild(div);
+        ganado = true;
+        gruposAdivinados = 2;
+        setTimeout(() => mostrarResultado(), 800);
+      }, 600);
     }
   } else {
     // Wrong
