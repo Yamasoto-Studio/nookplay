@@ -219,6 +219,13 @@ const ACTIVITIES = [
     active: true
   },
   {
+    id: 'reinas',
+    name: 'Las Reinas',
+    desc: 'Coloca una 👑 en cada región, fila y columna',
+    icon: '👑',
+    active: true
+  },
+  {
     id: 'carta',
     name: 'La Carta',
     desc: 'Sudoku 4×4 con emojis. ¿Cuánto tardas?',
@@ -319,6 +326,7 @@ function startActivity(id) {
   if (id === 'oraculo') window.location = `/${BAR_SLUG}/oraculo?code=${validatedCode}`;
   if (id === 'donde') window.location = `/${BAR_SLUG}/donde?code=${validatedCode}`;
   if (id === 'carta') window.location = `/${BAR_SLUG}/carta?code=${validatedCode}`;
+  if (id === 'reinas') window.location = `/${BAR_SLUG}/reinas?code=${validatedCode}`;
 }
 
 function showScreen(id) {

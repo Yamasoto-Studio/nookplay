@@ -1,0 +1,309 @@
+{% extends "game_base.html" %}
+{% block title %}Las Reinas — {{ bar.name }}{% endblock %}
+{% block og_title %}¿Puedes colocar todas las reinas? — {{ bar.name }}{% endblock %}
+{% block og_description %}Una corona por región, fila y columna. Sin que se toquen.{% endblock %}
+{% block og_url %}/{{ bar.slug }}/reinas{% endblock %}
+
+{% block game_content %}
+<style>
+.reinas-intro {
+  font-size: 14px; color: var(--text-secondary);
+  text-align: center; margin-bottom: 8px; line-height: 1.5;
+}
+.reinas-reglas {
+  background: var(--bar-bg-subtle); border-radius: var(--radius-md);
+  padding: 12px 14px; margin-bottom: 16px; font-size: 13px;
+  color: var(--text-secondary); line-height: 1.8;
+}
+
+.reinas-board {
+  display: grid;
+  gap: 2px;
+  background: var(--border-strong);
+  border: 3px solid var(--border-strong);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 16px;
+  width: 100%;
+}
+.reinas-cell {
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; user-select: none;
+  transition: all 0.1s;
+  position: relative;
+  aspect-ratio: 1;
+}
+.reinas-cell:hover { filter: brightness(0.92); }
+.reinas-cell.has-queen { font-size: 28px; }
+.reinas-cell.conflict {
+  outline: 3px solid #E24B4A;
+  outline-offset: -3px;
+  animation: pulse-red 0.4s ease;
+}
+@keyframes pulse-red {
+  0%, 100% { outline-color: #E24B4A; }
+  50% { outline-color: #ff8080; }
+}
+.reinas-cell.solved { animation: pop 0.3s ease; }
+@keyframes pop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+.reinas-counter {
+  text-align: center; font-size: 13px; color: var(--text-muted);
+  margin-bottom: 10px;
+}
+.reinas-status {
+  text-align: center; font-size: 14px; font-weight: 500;
+  min-height: 22px; margin-bottom: 10px;
+}
+
+/* Resultado */
+.reinas-result-time {
+  font-size: 48px; font-weight: 700;
+  text-align: center; color: var(--bar-primary);
+  margin-bottom: 4px; line-height: 1;
+}
+</style>
+
+<!-- LOADING -->
+<div class="screen active" id="s-loading">
+  <div class="loading"><div class="loading-spinner"></div><p>Preparando el tablero...</p></div>
+</div>
+
+<!-- JUEGO -->
+<div class="screen" id="s-game">
+  <div class="game-tag" style="display:block; text-align:center; width:fit-content; margin:0 auto 12px;">Las Reinas</div>
+  <h2 class="headline" style="text-align:center; margin-bottom:8px;">Coloca todas las 👑</h2>
+  <div class="reinas-reglas">
+    ♟ Una 👑 por cada <strong>fila</strong> y <strong>columna</strong><br>
+    ♟ Una 👑 por cada <strong>región de color</strong><br>
+    ♟ Dos reinas no pueden <strong>tocarse</strong> (ni en diagonal)
+  </div>
+  <div class="reinas-counter" id="reinas-counter"></div>
+  <div class="reinas-board" id="reinas-board"></div>
+  <div class="reinas-status" id="reinas-status"></div>
+  <button class="btn-secondary" onclick="resetBoard()" style="width:100%; padding:10px; margin-bottom:10px;">↺ Reiniciar</button>
+  <button class="btn-back-game" style="width:100%; justify-content:center;" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
+</div>
+
+<!-- RESULTADO -->
+<div class="screen" id="s-result">
+  <div class="game-tag" style="display:block; text-align:center; width:fit-content; margin:0 auto 12px;">Las Reinas</div>
+  <div class="result-big correct" style="text-align:center;">👑 ¡Resuelto!</div>
+  <p class="result-sub" style="text-align:center;" id="r-sub"></p>
+  <div class="reinas-result-time" id="r-time"></div>
+  <div style="text-align:center; font-size:14px; color:var(--text-secondary); margin-bottom:20px;">tiempo</div>
+
+  {% include "components/stats.html" %}
+
+  <button class="btn-share" onclick="doShare()">📤 Compartir resultado</button>
+  <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
+  <div class="tomorrow">Mañana, un nuevo tablero te espera.<br>Vuelve a tomar un café.</div>
+</div>
+
+<script>
+const BAR_SLUG = "{{ bar.slug }}";
+const BAR_NAME = "{{ bar.name }}";
+const CODE = new URLSearchParams(window.location.search).get('code') || '';
+
+let gameData = null;
+let board = [];
+let startTime = null;
+let timerInterval = null;
+let solved = false;
+
+async function init() {
+  try {
+    const res = await fetch('/api/reinas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG })
+    });
+    gameData = await res.json();
+    const n = gameData.size;
+    board = Array(n).fill(null).map(() => Array(n).fill(false));
+    renderBoard();
+    startTimer();
+    showScreen('s-game');
+  } catch(e) {
+    document.getElementById('s-loading').innerHTML = `
+      <div class="error-msg">No se pudo cargar el juego.<br>
+      <button class="btn-secondary" onclick="location.reload()">Reintentar</button></div>`;
+  }
+}
+
+function startTimer() {
+  startTime = Date.now();
+}
+
+function getElapsed() {
+  return Math.floor((Date.now() - startTime) / 1000);
+}
+
+function formatTime(s) {
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return `${m}:${sec.toString().padStart(2,'0')}`;
+}
+
+function getQueenCount() {
+  return board.flat().filter(v => v).length;
+}
+
+function getConflicts() {
+  const n = gameData.size;
+  const conflicts = new Set();
+
+  for (let r=0; r<n; r++) {
+    for (let c=0; c<n; c++) {
+      if (!board[r][c]) continue;
+
+      // Check row
+      for (let cc=0; cc<n; cc++) {
+        if (cc !== c && board[r][cc]) {
+          conflicts.add(`${r},${c}`);
+          conflicts.add(`${r},${cc}`);
+        }
+      }
+      // Check col
+      for (let rr=0; rr<n; rr++) {
+        if (rr !== r && board[rr][c]) {
+          conflicts.add(`${r},${c}`);
+          conflicts.add(`${rr},${c}`);
+        }
+      }
+      // Check region
+      const reg = gameData.regions[r][c];
+      for (let rr=0; rr<n; rr++) {
+        for (let cc=0; cc<n; cc++) {
+          if ((rr !== r || cc !== c) && board[rr][cc] && gameData.regions[rr][cc] === reg) {
+            conflicts.add(`${r},${c}`);
+            conflicts.add(`${rr},${cc}`);
+          }
+        }
+      }
+      // Check adjacency (including diagonal)
+      for (let dr=-1; dr<=1; dr++) {
+        for (let dc=-1; dc<=1; dc++) {
+          if (dr===0 && dc===0) continue;
+          const nr=r+dr, nc=c+dc;
+          if (nr>=0 && nr<n && nc>=0 && nc<n && board[nr][nc]) {
+            conflicts.add(`${r},${c}`);
+            conflicts.add(`${nr},${nc}`);
+          }
+        }
+      }
+    }
+  }
+  return conflicts;
+}
+
+function checkWin() {
+  const n = gameData.size;
+  if (getQueenCount() !== n) return false;
+  if (getConflicts().size > 0) return false;
+  return true;
+}
+
+function renderBoard() {
+  const n = gameData.size;
+  const boardEl = document.getElementById('reinas-board');
+  boardEl.style.gridTemplateColumns = `repeat(${n}, 1fr)`;
+  boardEl.innerHTML = '';
+
+  const conflicts = getConflicts();
+  const queensPlaced = getQueenCount();
+
+  document.getElementById('reinas-counter').textContent =
+    `${queensPlaced} de ${n} reinas colocadas`;
+
+  for (let r=0; r<n; r++) {
+    for (let c=0; c<n; c++) {
+      const cell = document.createElement('div');
+      const regionColor = gameData.colors[gameData.regions[r][c]];
+      const isConflict = conflicts.has(`${r},${c}`);
+      const hasQueen = board[r][c];
+
+      cell.className = 'reinas-cell' +
+        (hasQueen ? ' has-queen' : '') +
+        (isConflict ? ' conflict' : '');
+
+      cell.style.background = regionColor;
+      cell.style.fontSize = `${Math.max(20, 32 - n * 2)}px`;
+      cell.textContent = hasQueen ? '👑' : '';
+      cell.onclick = () => toggleQueen(r, c);
+
+      boardEl.appendChild(cell);
+    }
+  }
+}
+
+function toggleQueen(r, c) {
+  if (solved) return;
+  board[r][c] = !board[r][c];
+  renderBoard();
+
+  const st = document.getElementById('reinas-status');
+  st.textContent = '';
+
+  if (checkWin()) {
+    solved = true;
+    const elapsed = getElapsed();
+    setTimeout(() => mostrarResultado(elapsed), 400);
+  } else if (getConflicts().size > 0) {
+    st.textContent = '⚠️ Hay conflictos — revisa las reglas';
+    st.style.color = '#E24B4A';
+  }
+}
+
+function resetBoard() {
+  const n = gameData.size;
+  board = Array(n).fill(null).map(() => Array(n).fill(false));
+  solved = false;
+  startTime = Date.now();
+  document.getElementById('reinas-status').textContent = '';
+  renderBoard();
+}
+
+async function mostrarResultado(elapsed) {
+  await fetch('/api/play', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      code: CODE, bar_slug: BAR_SLUG,
+      correct: true, game_type: 'reinas', elapsed
+    })
+  });
+
+  const mins = Math.floor(elapsed / 60);
+  let sub = '';
+  if (elapsed < 60) sub = '¡Rapidísimo! Menos de un minuto.';
+  else if (mins < 3) sub = `${mins} minuto${mins>1?'s':''} y pico. Muy bien.`;
+  else sub = `${mins} minutos. La próxima vez, más rápido.`;
+
+  document.getElementById('r-sub').textContent = sub;
+  document.getElementById('r-time').textContent = formatTime(elapsed);
+
+  showScreen('s-result');
+  window.scrollTo(0, 0);
+  loadStats(BAR_SLUG, 'reinas');
+}
+
+function doShare() {
+  const elapsed = document.getElementById('r-time').textContent;
+  const txt = `👑 He resuelto Las Reinas en ${BAR_NAME}\n\nTiempo: ${elapsed}\n\n¿Puedes tú? → nookplay.app`;
+  if (navigator.share) navigator.share({ text: txt, url: 'https://nookplay.app' });
+  else navigator.clipboard.writeText(txt).then(() => alert('¡Copiado!'));
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+init();
+</script>
+{% endblock %}
