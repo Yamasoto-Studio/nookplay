@@ -83,8 +83,103 @@
   <div class="reinas-counter" id="reinas-counter"></div>
   <div class="reinas-board" id="reinas-board"></div>
   <div class="reinas-status" id="reinas-status"></div>
-  <button class="btn-secondary" onclick="resetBoard()" style="width:100%; padding:10px; margin-bottom:10px;">↺ Reiniciar</button>
+  <div style="display:flex; gap:8px; margin-bottom:10px;">
+    <button class="btn-secondary" onclick="resetBoard()" style="flex:1; padding:10px;">↺ Reiniciar</button>
+    <button class="btn-secondary" onclick="openHelp()" style="flex:1; padding:10px;">? Normas</button>
+  </div>
   <button class="btn-back-game" style="width:100%; justify-content:center;" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
+
+  <!-- Modal normas -->
+  <div id="help-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:1000; align-items:flex-end; justify-content:center; padding:0;">
+    <div style="background:#fff; border-radius:20px 20px 0 0; padding:24px 20px 36px; width:100%; max-width:480px; max-height:85vh; overflow-y:auto;">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+        <div style="font-size:17px; font-weight:600; color:var(--bar-accent-dark);">Cómo se juega</div>
+        <button onclick="closeHelp()" style="background:transparent; border:none; font-size:22px; cursor:pointer; color:var(--text-muted); padding:0; line-height:1;">✕</button>
+      </div>
+
+      <div style="font-size:14px; color:var(--text-secondary); margin-bottom:20px; line-height:1.6;">
+        Coloca exactamente <strong>una 👑 por cada fila, columna y región de color</strong>.<br>
+        Dos reinas no pueden tocarse, ni en diagonal.
+      </div>
+
+      <!-- Ejemplos visuales -->
+      <div style="font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--text-muted); margin-bottom:12px;">Ejemplos</div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px;">
+
+        <!-- Ejemplo 1: 1 toque = X -->
+        <div style="background:var(--bar-bg-subtle); border-radius:10px; padding:12px; text-align:center;">
+          <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:2px; margin-bottom:8px; background:var(--border-strong); border:2px solid var(--border-strong); border-radius:6px; overflow:hidden;">
+            <div style="background:#FF6B6B; height:40px; display:flex; align-items:center; justify-content:center; font-size:16px;"></div>
+            <div style="background:#FFA500; height:40px; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:700; color:rgba(0,0,0,0.4);">✕</div>
+            <div style="background:#FFA500; height:40px; display:flex; align-items:center; justify-content:center; font-size:16px;"></div>
+            <div style="background:#FF6B6B; height:40px; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:700; color:rgba(0,0,0,0.4);">✕</div>
+            <div style="background:#339AF0; height:40px; display:flex; align-items:center; justify-content:center; font-size:16px;"></div>
+            <div style="background:#339AF0; height:40px; display:flex; align-items:center; justify-content:center; font-size:16px;"></div>
+            <div style="background:#51CF66; height:40px; display:flex; align-items:center; justify-content:center; font-size:16px;"></div>
+            <div style="background:#51CF66; height:40px; display:flex; align-items:center; justify-content:center; font-size:16px;"></div>
+            <div style="background:#339AF0; height:40px; display:flex; align-items:center; justify-content:center; font-size:16px;"></div>
+          </div>
+          <div style="font-size:12px; font-weight:600; color:var(--text); margin-bottom:2px;">1 toque → ✕</div>
+          <div style="font-size:11px; color:var(--text-muted);">Marca donde no puede ir</div>
+        </div>
+
+        <!-- Ejemplo 2: 2 toques = reina -->
+        <div style="background:var(--bar-bg-subtle); border-radius:10px; padding:12px; text-align:center;">
+          <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:2px; margin-bottom:8px; background:var(--border-strong); border:2px solid var(--border-strong); border-radius:6px; overflow:hidden;">
+            <div style="background:#FF6B6B; height:40px; display:flex; align-items:center; justify-content:center; font-size:20px;">👑</div>
+            <div style="background:#FFA500; height:40px; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:700; color:rgba(0,0,0,0.4);">✕</div>
+            <div style="background:#FFA500; height:40px; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:700; color:rgba(0,0,0,0.4);">✕</div>
+            <div style="background:#FF6B6B; height:40px; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:700; color:rgba(0,0,0,0.4);">✕</div>
+            <div style="background:#339AF0; height:40px; display:flex; align-items:center; justify-content:center; font-size:16px;"></div>
+            <div style="background:#339AF0; height:40px; display:flex; align-items:center; justify-content:center; font-size:16px;"></div>
+            <div style="background:#51CF66; height:40px; display:flex; align-items:center; justify-content:center; font-size:16px;"></div>
+            <div style="background:#51CF66; height:40px; display:flex; align-items:center; justify-content:center; font-size:16px;"></div>
+            <div style="background:#339AF0; height:40px; display:flex; align-items:center; justify-content:center; font-size:16px;"></div>
+          </div>
+          <div style="font-size:12px; font-weight:600; color:var(--text); margin-bottom:2px;">2 toques → 👑</div>
+          <div style="font-size:11px; color:var(--text-muted);">Coloca la reina</div>
+        </div>
+
+        <!-- Ejemplo 3: conflicto misma fila -->
+        <div style="background:var(--bar-bg-subtle); border-radius:10px; padding:12px; text-align:center;">
+          <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:2px; margin-bottom:8px; background:var(--border-strong); border:2px solid var(--border-strong); border-radius:6px; overflow:hidden;">
+            <div style="background:#FF6B6B; height:40px; display:flex; align-items:center; justify-content:center; font-size:20px; outline:3px solid #E24B4A; outline-offset:-3px;">👑</div>
+            <div style="background:#FFA500; height:40px; display:flex; align-items:center; justify-content:center; font-size:16px;"></div>
+            <div style="background:#FFA500; height:40px; display:flex; align-items:center; justify-content:center; font-size:20px; outline:3px solid #E24B4A; outline-offset:-3px;">👑</div>
+            <div style="background:#FF6B6B; height:40px; display:flex; align-items:center; justify-content:center;"></div>
+            <div style="background:#339AF0; height:40px; display:flex; align-items:center; justify-content:center;"></div>
+            <div style="background:#339AF0; height:40px; display:flex; align-items:center; justify-content:center;"></div>
+            <div style="background:#51CF66; height:40px; display:flex; align-items:center; justify-content:center;"></div>
+            <div style="background:#51CF66; height:40px; display:flex; align-items:center; justify-content:center;"></div>
+            <div style="background:#339AF0; height:40px; display:flex; align-items:center; justify-content:center;"></div>
+          </div>
+          <div style="font-size:12px; font-weight:600; color:#E24B4A; margin-bottom:2px;">❌ Conflicto de fila</div>
+          <div style="font-size:11px; color:var(--text-muted);">Dos reinas en la misma fila</div>
+        </div>
+
+        <!-- Ejemplo 4: conflicto diagonal -->
+        <div style="background:var(--bar-bg-subtle); border-radius:10px; padding:12px; text-align:center;">
+          <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:2px; margin-bottom:8px; background:var(--border-strong); border:2px solid var(--border-strong); border-radius:6px; overflow:hidden;">
+            <div style="background:#FF6B6B; height:40px; display:flex; align-items:center; justify-content:center; font-size:20px; outline:3px solid #E24B4A; outline-offset:-3px;">👑</div>
+            <div style="background:#FFA500; height:40px; display:flex; align-items:center; justify-content:center;"></div>
+            <div style="background:#FFA500; height:40px; display:flex; align-items:center; justify-content:center;"></div>
+            <div style="background:#FF6B6B; height:40px; display:flex; align-items:center; justify-content:center;"></div>
+            <div style="background:#339AF0; height:40px; display:flex; align-items:center; justify-content:center; font-size:20px; outline:3px solid #E24B4A; outline-offset:-3px;">👑</div>
+            <div style="background:#339AF0; height:40px; display:flex; align-items:center; justify-content:center;"></div>
+            <div style="background:#51CF66; height:40px; display:flex; align-items:center; justify-content:center;"></div>
+            <div style="background:#51CF66; height:40px; display:flex; align-items:center; justify-content:center;"></div>
+            <div style="background:#339AF0; height:40px; display:flex; align-items:center; justify-content:center;"></div>
+          </div>
+          <div style="font-size:12px; font-weight:600; color:#E24B4A; margin-bottom:2px;">❌ Conflicto diagonal</div>
+          <div style="font-size:11px; color:var(--text-muted);">Dos reinas se tocan</div>
+        </div>
+
+      </div>
+
+      <button onclick="closeHelp()" style="width:100%; padding:13px; background:var(--bar-primary); color:var(--bar-primary-text); border:none; border-radius:10px; font-size:15px; font-weight:600; cursor:pointer; font-family:inherit;">¡Entendido, a jugar!</button>
+    </div>
+  </div>
 </div>
 
 <!-- RESULTADO -->
@@ -302,6 +397,21 @@ function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
 }
+
+function openHelp() {
+  const modal = document.getElementById('help-modal');
+  modal.style.display = 'flex';
+}
+
+function closeHelp() {
+  document.getElementById('help-modal').style.display = 'none';
+}
+
+// Close modal clicking outside
+document.addEventListener('click', (e) => {
+  const modal = document.getElementById('help-modal');
+  if (e.target === modal) closeHelp();
+});
 
 init();
 </script>
