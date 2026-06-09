@@ -430,7 +430,18 @@ SIGNOS = [
 def generate_oraculo(bar_slug):
     today = str(date.today())
     from datetime import datetime
-    dia_semana = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"][datetime.now().weekday()]
+    now = datetime.now()
+    dia_semana = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"][now.weekday()]
+    hora = now.hour
+    if hora < 12:
+        momento = f"mañana ({hora}h)"
+    elif hora < 15:
+        momento = f"mediodía ({hora}h)"
+    elif hora < 20:
+        momento = f"tarde ({hora}h)"
+    else:
+        momento = f"noche ({hora}h)"
+    
     api_key = os.environ.get('ANTHROPIC_API_KEY')
 
     signos_nombres = [s["nombre"] for s in SIGNOS]
@@ -438,7 +449,7 @@ def generate_oraculo(bar_slug):
     prompt = """Eres el oráculo más irreverente y divertido del mundo. Escribes horóscopos con humor seco, ironía y referencias cotidianas. Nada de misticismo cursi. Todo con cariño pero sin filtros.
 
 FECHA: """ + today + """
-DÍA: """ + dia_semana + """
+DÍA: """ + dia_semana + """ por la """ + momento + """
 
 Escribe el horóscopo de HOY para los 12 signos del zodíaco.
 
