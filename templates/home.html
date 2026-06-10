@@ -241,6 +241,21 @@
   .step h3 { font-size: 18px; font-weight: 600; margin-bottom: 6px; }
   .step p { font-size: 13px; color: var(--text-sec); line-height: 1.6; }
   .step-img { width: 100%; aspect-ratio: 1; border-radius: 16px; object-fit: cover; margin-bottom: 16px; display: block; }
+  .step:nth-child(1) .step-img { animation: float1 6s ease-in-out infinite; }
+  .step:nth-child(2) .step-img { animation: float2 7s ease-in-out infinite; }
+  .step:nth-child(3) .step-img { animation: float3 5.5s ease-in-out infinite; }
+  @keyframes float1 {
+    0%, 100% { transform: translateY(0px) rotate(0deg); }
+    50% { transform: translateY(-8px) rotate(0.5deg); }
+  }
+  @keyframes float2 {
+    0%, 100% { transform: translateY(0px) rotate(0deg); }
+    50% { transform: translateY(-6px) rotate(-0.5deg); }
+  }
+  @keyframes float3 {
+    0%, 100% { transform: translateY(0px) rotate(0deg); }
+    50% { transform: translateY(-10px) rotate(0.3deg); }
+  }
 
   /* ── GAMES ── */
   .games-grid {
