@@ -260,7 +260,7 @@ GAMES_CATALOG = [
     ('carta',       'La Carta',               'Sudoku con emojis',         '/static/games/carta.png',       'starter_free', 7),
     ('equilibrio',  'Equilibrio',             'Soles y lunas',             '/static/games/equilibrio.png',  'starter_free', 8),
     ('impostor',    'El Impostor',            '¿Cuál dato es mentira?',    '/static/games/impostor.png',    'starter_free', 9),
-    ('local',       'Conexión Local',         'Trivia de tu ciudad',       '/static/games/local.png',       'pro', 10),
+    ('local',       'Conexión Local',         'Trivia de tu ciudad',       '/static/games/local.png',       'starter_free', 10),
 ]
 
 for game in GAMES_CATALOG:

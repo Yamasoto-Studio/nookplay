@@ -165,29 +165,6 @@
       </div>
     </div>
 
-    <!-- Colores -->
-    <div class="form-card">
-      <h3>Colores</h3>
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-        <div class="field">
-          <label>Color principal</label>
-          <input type="text" name="color_primary" value="{{ bar.color_primary }}" placeholder="#C4622D">
-        </div>
-        <div class="field">
-          <label>Color texto sobre principal</label>
-          <input type="text" name="color_primary_text" value="{{ bar.color_primary_text }}" placeholder="#FFFFFF">
-        </div>
-        <div class="field">
-          <label>Color fondo</label>
-          <input type="text" name="color_bg" value="{{ bar.color_bg }}" placeholder="#F7F2EB">
-        </div>
-        <div class="field">
-          <label>Color fondo sutil</label>
-          <input type="text" name="color_bg_subtle" value="{{ bar.color_bg_subtle }}" placeholder="#F0EBE3">
-        </div>
-      </div>
-    </div>
-
     <!-- Dirección -->
     <div class="form-card">
       <h3>Ubicación</h3>
@@ -372,7 +349,7 @@
       const list = document.getElementById('games-list');
       list.innerHTML = games.map(g => {
         const isLocked = !g.available && !g.fixed;
-        const canToggle = !g.fixed && !isLocked && (g.active || canSelectMore || !isStarter);
+        const canToggle = g.selectable && !isLocked;
 
         let statusText = '';
         let badgeHtml = '';
@@ -394,7 +371,7 @@
           rowClass += ' active-row';
           toggleClass += ' on';
         } else {
-          statusText = isStarter ? 'Seleccionar como juego libre' : 'Inactivo';
+          statusText = isStarter ? 'Toca para seleccionar como juego libre' : 'Inactivo — toca para activar';
           rowClass += ' inactive-row';
           toggleClass += ' off';
         }
@@ -427,22 +404,24 @@
 
   async function toggleGame(slug, activate) {
     const plan = CURRENT_PLAN;
+    // For starter: deactivate previous free game when activating a new one
     if (plan === 'starter' && activate) {
-      // Deactivate current free game first
       const res = await fetch('/api/bar-games/' + PANEL_BAR_SLUG);
       const games = await res.json();
-      const currentFree = games.find(g => !g.fixed && g.active && g.available);
-      if (currentFree) {
+      const currentFree = games.find(g => !g.fixed && g.active);
+      if (currentFree && currentFree.slug !== slug) {
         await fetch('/api/admin/bar-games', {
           method:'POST', headers:{'Content-Type':'application/json'},
           body: JSON.stringify({bar_slug: PANEL_BAR_SLUG, game_slug: currentFree.slug, active: false})
         });
       }
     }
-    await fetch('/api/admin/bar-games', {
+    const r = await fetch('/api/admin/bar-games', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({bar_slug: PANEL_BAR_SLUG, game_slug: slug, active: activate})
     });
+    const d = await r.json();
+    if (!d.ok) { alert('Error al guardar. Inténtalo de nuevo.'); return; }
     await loadGames();
   }
 

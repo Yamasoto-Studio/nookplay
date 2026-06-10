@@ -1463,7 +1463,7 @@ Mensaje:
 STARTER_FIXED = ["crimen","dilema","reinas","conexiones"]
 STARTER_FREE_GAMES = ["oraculo","donde","carta","equilibrio","impostor"]
 PRO_GAMES = ["crimen","dilema","reinas","conexiones","oraculo","donde","carta","equilibrio","impostor"]
-PRO_ONLY_GAMES = ["local"]
+PRO_ONLY_GAMES = []  # Todos los juegos disponibles desde starter_free
 ALL_GAMES = ["crimen","dilema","reinas","conexiones","oraculo","donde","carta","equilibrio","impostor","local"]
 
 
@@ -1490,30 +1490,28 @@ def get_bar_games(bar_slug):
         slug = g["slug"]
         is_active = slug in active_slugs
 
-        # Determine availability and type based on plan
         if plan in ("gift", "total"):
-            available = True
             is_fixed = False
+            available = True
             selectable = True
         elif plan == "pro":
-            available = slug not in PRO_ONLY_GAMES
             is_fixed = False
-            selectable = available
+            available = True
+            selectable = True
         else:  # starter
             is_fixed = slug in STARTER_FIXED
-            available = is_fixed or (slug in STARTER_FREE_GAMES and is_active)
-            selectable = not is_fixed and slug in STARTER_FREE_GAMES
+            available = is_fixed or slug in STARTER_FREE_GAMES
+            selectable = not is_fixed  # fijos no son seleccionables
 
         result.append({
             "slug": slug,
             "name": g["name"],
             "description": g["description"],
             "icon": g["icon"],
-            "active": is_active and (available or is_fixed),
-            "available": available or is_fixed,
+            "active": is_active,
+            "available": available,
             "fixed": is_fixed,
             "selectable": selectable,
-            "plan_required": g["plan_min"],
         })
 
     return jsonify(result)
