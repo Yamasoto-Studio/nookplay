@@ -241,20 +241,14 @@
   .step h3 { font-size: 18px; font-weight: 600; margin-bottom: 6px; }
   .step p { font-size: 13px; color: var(--text-sec); line-height: 1.6; }
   .step-img { width: 100%; aspect-ratio: 1; border-radius: 16px; object-fit: cover; margin-bottom: 16px; display: block; }
-  .step:nth-child(1) .step-img { animation: float1 6s ease-in-out infinite; }
-  .step:nth-child(2) .step-img { animation: float2 7s ease-in-out infinite; }
-  .step:nth-child(3) .step-img { animation: float3 5.5s ease-in-out infinite; }
-  @keyframes float1 {
-    0%, 100% { transform: translateY(0px) rotate(0deg); }
-    50% { transform: translateY(-8px) rotate(0.5deg); }
+  .step-img {
+    animation: stepFloat 6s ease-in-out infinite;
   }
-  @keyframes float2 {
-    0%, 100% { transform: translateY(0px) rotate(0deg); }
-    50% { transform: translateY(-6px) rotate(-0.5deg); }
-  }
-  @keyframes float3 {
-    0%, 100% { transform: translateY(0px) rotate(0deg); }
-    50% { transform: translateY(-10px) rotate(0.3deg); }
+  .step:nth-child(2) .step-img { animation-delay: -2s; }
+  .step:nth-child(3) .step-img { animation-delay: -4s; }
+  @keyframes stepFloat {
+    0%, 100% { transform: translateY(0px) rotate(0deg); box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+    50% { transform: translateY(-10px) rotate(0.4deg); box-shadow: 0 18px 32px rgba(0,0,0,0.12); }
   }
 
   /* ── GAMES ── */
@@ -493,19 +487,19 @@
     <p class="section-sub">Sin apps. Sin registros. Sin permisos. Solo el móvil que ya tienes en el bolsillo.</p>
     <div class="steps">
       <div class="step">
-        <img src="/static/landing/step1.png" alt="El cliente descubre Nookplay" class="step-img">
+        <img src="/static/landing/step1.png" alt="El cliente descubre Nookplay" class="step-img" style="animation-delay:0s;">
         <div class="step-num">1</div>
         <h3>El cliente descubre Nookplay</h3>
         <p>Un QR en la mesa, en la barra o en la entrada. Lo escanea por curiosidad. Sin instalar nada, sin registrarse.</p>
       </div>
       <div class="step">
-        <img src="/static/landing/step2.png" alt="Introduce el código" class="step-img">
+        <img src="/static/landing/step2.png" alt="Introduce el código" class="step-img" style="animation-delay:-2s;">
         <div class="step-num">2</div>
         <h3>Introduce el código del local</h3>
         <p>Un código semanal, impreso en el ticket o visible en el local. Acceso instantáneo al juego del día.</p>
       </div>
       <div class="step">
-        <img src="/static/landing/step3.png" alt="Juega y vuelve" class="step-img">
+        <img src="/static/landing/step3.png" alt="Juega y vuelve" class="step-img" style="animation-delay:-4s;">
         <div class="step-num">3</div>
         <h3>Juega, debate y vuelve</h3>
         <p>Cada día hay algo nuevo. El cliente que jugó hoy, vuelve mañana a ver si puede más.</p>
