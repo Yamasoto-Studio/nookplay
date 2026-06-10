@@ -550,22 +550,22 @@ async function searchAddress() {
 async function saveChanges() {
   const form = document.getElementById('admin-form');
   const data = {
-    welcome_message: form.welcome_message.value,
-    promo_active: form.promo_active.checked ? 1 : 0,
-    description: form.description.value,
-    owner_name: form.owner_name.value,
-    staff_names: form.staff_names.value,
-    color_primary: form.color_primary.value,
-    color_primary_text: form.color_primary_text.value,
-    color_bg: form.color_bg.value,
-    color_bg_subtle: form.color_bg_subtle.value,
-    address: form.address.value,
-    city: form.city.value,
-    province: form.province.value,
-    zip_code: form.zip_code.value,
-    country: form.country.value,
-    latitude: form.latitude.value || null,
-    longitude: form.longitude.value || null,
+    welcome_message: form.welcome_message ? form.welcome_message.value : '',
+    promo_active: form.promo_active ? (form.promo_active.checked ? 1 : 0) : 0,
+    description: form.description ? form.description.value : '',
+    owner_name: form.owner_name ? form.owner_name.value : '',
+    staff_names: form.staff_names ? form.staff_names.value : '',
+    color_primary: form.color_primary ? form.color_primary.value : '',
+    color_primary_text: form.color_primary_text ? form.color_primary_text.value : '',
+    color_bg: form.color_bg ? form.color_bg.value : '',
+    color_bg_subtle: form.color_bg_subtle ? form.color_bg_subtle.value : '',
+    address: form.address ? form.address.value : '',
+    city: form.city ? form.city.value : '',
+    province: form.province ? form.province.value : '',
+    zip_code: form.zip_code ? form.zip_code.value : '',
+    country: form.country ? form.country.value : '',
+    latitude: form.latitude ? (form.latitude.value || null) : null,
+    longitude: form.longitude ? (form.longitude.value || null) : null,
     products: []
   };
 

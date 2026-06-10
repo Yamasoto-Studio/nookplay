@@ -1519,7 +1519,7 @@ def get_bar_games(bar_slug):
 
 @app.route("/api/admin/bar-games", methods=["POST"])
 def save_bar_games():
-    if "user_id" not in session:
+    if "admin_user_id" not in session:
         return jsonify({"error": "Unauthorized"}), 401
 
     data = request.get_json()
@@ -1533,7 +1533,7 @@ def save_bar_games():
         db.close()
         return jsonify({"error": "Bar not found"}), 404
 
-    user = db.execute("SELECT * FROM admin_users WHERE id = ?", (session["user_id"],)).fetchone()
+    user = db.execute("SELECT * FROM admin_users WHERE id = ?", (session["admin_user_id"],)).fetchone()
     if user["role"] != "superadmin" and user["bar_slug"] != bar_slug:
         db.close()
         return jsonify({"error": "Unauthorized"}), 401
