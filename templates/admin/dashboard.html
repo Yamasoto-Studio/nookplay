@@ -57,6 +57,12 @@
     .bar-row { grid-template-columns: 1fr auto; }
     .bar-row > *:not(:first-child):not(:last-child) { display: none; }
   }
+
+  .plan-badge { font-size:12px; font-weight:600; padding:3px 10px; border-radius:20px; white-space:nowrap; }
+  .plan-badge.plan-starter { background:#FFF3E0; color:#E65100; border:1px solid #FFCC80; }
+  .plan-badge.plan-pro     { background:#F3F0FF; color:#4527A0; border:1px solid #B39DDB; }
+  .plan-badge.plan-total   { background:#FFF8E1; color:#F57F17; border:1px solid #FFD54F; }
+  .plan-badge.plan-gift    { background:#E8F5E9; color:#2E7D32; border:1px solid #A5D6A7; }
 </style>
 
 <div class="sa-wrap">
@@ -109,7 +115,12 @@
         <div class="bar-name">{{ bar.name }}</div>
         <div class="bar-city">{{ bar.city }}{% if bar.province %}, {{ bar.province }}{% endif %}</div>
       </div>
-      <div><span class="plan-badge plan-{{ bar.plan or 'gift' }}">{{ bar.plan or 'gift' }}</span></div>
+      <div>
+          <span class="plan-badge plan-{{ bar.plan or 'gift' }}">
+            {{ '🥉' if (bar.plan or 'gift') == 'starter' else ('🥈' if (bar.plan or 'gift') == 'pro' else ('🥇' if (bar.plan or 'gift') == 'total' else '🎁')) }}
+            {{ (bar.plan or 'gift')|capitalize }}
+          </span>
+        </div>
       <div><span class="status-{{ bar.plan_status or 'active' }}">{{ '✓ Activo' if (bar.plan_status or 'active') == 'active' else '✗ Expirado' }}</span></div>
       <div class="plays-count">{{ bar.plays_count }}</div>
       <div><a href="/admin/{{ bar.slug }}" class="btn-edit">Gestionar →</a></div>
