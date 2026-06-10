@@ -182,78 +182,16 @@ function renderPromoItem(product, container_id) {
 
 let menuPromoIdx = -1;
 
-const ACTIVITIES = [
-  {
-    id: 'crimen',
-    name: 'El Crimen del Día',
-    desc: 'Resuelve el misterio',
-    icon: '/static/games/crimen.png',
-    active: true
-  },
-  {
-    id: 'impostor',
-    name: 'El Impostor',
-    desc: '¿Cuál dato es mentira?',
-    icon: '/static/games/impostor.png',
-    active: true
-  },
-  {
-    id: 'dilema',
-    name: 'El Dilema',
-    desc: '¿Tú qué harías?',
-    icon: '/static/games/dilema.png',
-    active: true
-  },
-  {
-    id: 'conexiones',
-    name: 'Las Conexiones',
-    desc: '8 palabras, 2 grupos',
-    icon: '/static/games/conexiones.png',
-    active: true
-  },
-  {
-    id: 'oraculo',
-    name: 'El Oráculo',
-    desc: 'Horóscopo sin filtros',
-    icon: '/static/games/oraculo.png',
-    active: true
-  },
-  {
-    id: 'equilibrio',
-    name: 'Equilibrio',
-    desc: 'Soles y lunas',
-    icon: '/static/games/equilibrio.png',
-    active: true
-  },
-  {
-    id: 'local',
-    name: 'Conexión {{ bar.city or "Local" }}',
-    desc: 'Curiosidades, anécdotas y trivia de tu ciudad',
-    icon: '/static/games/local.png',
-    active: true
-  },
-  {
-    id: 'reinas',
-    name: 'Las Reinas',
-    desc: 'Puzzle de coronas',
-    icon: '/static/games/reinas.png',
-    active: true
-  },
-  {
-    id: 'carta',
-    name: 'La Carta',
-    desc: 'Sudoku con emojis',
-    icon: '/static/games/carta.png',
-    active: true
-  },
-  {
-    id: 'donde',
-    name: '¿Dónde en el mundo?',
-    desc: 'Adivina el lugar',
-    icon: '/static/games/donde.png',
-    active: true
+let ACTIVITIES = [];
+
+async function loadActivities() {
+  try {
+    const res = await fetch(`/api/bar-games/${BAR_SLUG}`);
+    ACTIVITIES = await res.json();
+  } catch(e) {
+    ACTIVITIES = [];
   }
-];
+}
 
 async function validateCode() {
   const code = document.getElementById('code-input').value.trim().toUpperCase();
@@ -297,7 +235,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-function showMenu() {
+async function showMenu() {
+  if (!ACTIVITIES.length) await loadActivities();
   const welcomeEl = document.getElementById('menu-welcome');
   // Strip trailing fixed phrase if already included in custom message
   let customMsg = BAR_WELCOME || `Bienvenido al ${BAR_NAME}.`;
@@ -307,14 +246,14 @@ function showMenu() {
 
   const list = document.getElementById('activities-list');
   list.innerHTML = ACTIVITIES.map(a => `
-    <div class="activity-card-grid ${a.active ? '' : 'activity-dim'}" ${a.active ? `onclick="startActivity('${a.id}')"` : ''}>
+    <div class="activity-card-grid ${a.active ? '' : 'activity-dim'}" ${a.active ? `onclick="startActivity('${a.slug}')"` : ''}>
       <div class="activity-img-wrap">
         ${a.icon.startsWith('/') ? `<img src="${a.icon}" alt="${a.name}" class="activity-img">` : `<span class="activity-img-emoji">${a.icon}</span>`}
-        ${a.active ? '' : '<div class="activity-plan-overlay">Plan Avanzado</div>'}
+        ${!a.available ? `<div class="activity-plan-overlay">${a.plan_required === 'pro' ? 'Plan Pro' : 'Plan Avanzado'}</div>` : ''}
       </div>
       <div class="activity-grid-info">
         <div class="activity-name">${a.name}</div>
-        <div class="activity-desc">${a.desc}</div>
+        <div class="activity-desc">${a.description}</div>
       </div>
     </div>
   `).join('');
@@ -332,16 +271,17 @@ function showMenu() {
 }
 
 function startActivity(id) {
-  if (id === 'crimen') window.location = `/${BAR_SLUG}/crimen?code=${validatedCode}`;
-  if (id === 'impostor') window.location = `/${BAR_SLUG}/impostor?code=${validatedCode}`;
-  if (id === 'dilema') window.location = `/${BAR_SLUG}/dilema?code=${validatedCode}`;
-  if (id === 'conexiones') window.location = `/${BAR_SLUG}/conexiones?code=${validatedCode}`;
-  if (id === 'oraculo') window.location = `/${BAR_SLUG}/oraculo?code=${validatedCode}`;
-  if (id === 'donde') window.location = `/${BAR_SLUG}/donde?code=${validatedCode}`;
-  if (id === 'carta') window.location = `/${BAR_SLUG}/carta?code=${validatedCode}`;
-  if (id === 'reinas') window.location = `/${BAR_SLUG}/reinas?code=${validatedCode}`;
-  if (id === 'local') window.location = `/${BAR_SLUG}/local?code=${validatedCode}`;
-  if (id === 'equilibrio') window.location = `/${BAR_SLUG}/equilibrio?code=${validatedCode}`;
+  const slug = id;
+  if (slug === 'crimen') window.location = `/${BAR_SLUG}/crimen?code=${validatedCode}`;
+  if (slug === 'impostor') window.location = `/${BAR_SLUG}/impostor?code=${validatedCode}`;
+  if (slug === 'dilema') window.location = `/${BAR_SLUG}/dilema?code=${validatedCode}`;
+  if (slug === 'conexiones') window.location = `/${BAR_SLUG}/conexiones?code=${validatedCode}`;
+  if (slug === 'oraculo') window.location = `/${BAR_SLUG}/oraculo?code=${validatedCode}`;
+  if (slug === 'donde') window.location = `/${BAR_SLUG}/donde?code=${validatedCode}`;
+  if (slug === 'carta') window.location = `/${BAR_SLUG}/carta?code=${validatedCode}`;
+  if (slug === 'reinas') window.location = `/${BAR_SLUG}/reinas?code=${validatedCode}`;
+  if (slug === 'local') window.location = `/${BAR_SLUG}/local?code=${validatedCode}`;
+  if (slug === 'equilibrio') window.location = `/${BAR_SLUG}/equilibrio?code=${validatedCode}`;
 }
 
 function showScreen(id) {

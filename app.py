@@ -1450,6 +1450,94 @@ Mensaje:
         app.logger.error(f'Contact email error: {e}')
         return jsonify({'ok': False, 'error': str(e)}), 500
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Games management
+# ─────────────────────────────────────────────────────────────────────────────
+
+PLAN_LEVELS = {"gift": 99, "total": 3, "pro": 2, "starter": 1}
+
+PLAN_GAME_LIMITS = {
+    "starter": {"fixed": ["crimen","dilema","reinas","conexiones"], "free_slots": 1},
+    "pro":     {"fixed": [], "free_slots": 10},
+    "total":   {"fixed": [], "free_slots": 99},
+    "gift":    {"fixed": [], "free_slots": 99},
+}
+
+STARTER_FREE_GAMES = ["oraculo","donde","carta","equilibrio","impostor"]
+PRO_ONLY_GAMES = ["local"]
+
+
+@app.route("/api/bar-games/<bar_slug>")
+def get_bar_games(bar_slug):
+    db = get_db()
+    bar = db.execute("SELECT * FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
+    if not bar:
+        db.close()
+        return jsonify({"error": "Not found"}), 404
+
+    plan = bar["plan"] or "starter"
+    all_games = db.execute("SELECT * FROM games WHERE active = 1 ORDER BY position").fetchall()
+    bar_games_rows = db.execute(
+        "SELECT game_slug, active FROM bar_games WHERE bar_id = ?",
+        (bar["id"],)
+    ).fetchall()
+    db.close()
+
+    active_slugs = {bg["game_slug"] for bg in bar_games_rows if bg["active"]}
+    fixed = PLAN_GAME_LIMITS.get(plan, PLAN_GAME_LIMITS["starter"])["fixed"]
+
+    result = []
+    for g in all_games:
+        slug = g["slug"]
+        is_fixed = slug in fixed
+        is_active = slug in active_slugs
+        available = (
+            plan in ("gift", "total") or
+            (plan == "pro" and slug not in PRO_ONLY_GAMES) or
+            (plan == "starter" and (is_fixed or (slug in STARTER_FREE_GAMES and is_active)))
+        )
+        result.append({
+            "slug": slug,
+            "name": g["name"],
+            "description": g["description"],
+            "icon": g["icon"],
+            "active": is_active and available,
+            "available": available,
+            "fixed": is_fixed,
+            "plan_required": g["plan_min"],
+        })
+
+    return jsonify(result)
+
+
+@app.route("/api/admin/bar-games", methods=["POST"])
+def save_bar_games():
+    if "user_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    data = request.get_json()
+    bar_slug = data.get("bar_slug")
+    game_slug = data.get("game_slug")
+    active = data.get("active", True)
+
+    db = get_db()
+    bar = db.execute("SELECT * FROM bars WHERE slug = ?", (bar_slug,)).fetchone()
+    if not bar:
+        db.close()
+        return jsonify({"error": "Bar not found"}), 404
+
+    user = db.execute("SELECT * FROM admin_users WHERE id = ?", (session["user_id"],)).fetchone()
+    if user["role"] != "superadmin" and user["bar_slug"] != bar_slug:
+        db.close()
+        return jsonify({"error": "Unauthorized"}), 401
+
+    sql = "INSERT INTO bar_games (bar_id, game_slug, active) VALUES (?, ?, ?) ON CONFLICT(bar_id, game_slug) DO UPDATE SET active = excluded.active"
+    db.execute(sql, (bar["id"], game_slug, 1 if active else 0))
+    db.commit()
+    db.close()
+    return jsonify({"ok": True})
+
 @app.route('/static/og.png')
 def og_image():
     from flask import send_file

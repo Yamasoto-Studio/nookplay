@@ -217,5 +217,81 @@ if not existing_code:
 else:
     print(f'Código semanal ya existe: {existing_code["code"]}')
 
+
+# ── Tabla games (catálogo maestro) ─────────────────────────────────────────
+
+db.execute("""
+    CREATE TABLE IF NOT EXISTS games (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        slug        TEXT UNIQUE NOT NULL,
+        name        TEXT NOT NULL,
+        description TEXT NOT NULL,
+        icon        TEXT NOT NULL,
+        plan_min    TEXT NOT NULL DEFAULT 'starter',
+        active      INTEGER NOT NULL DEFAULT 1,
+        position    INTEGER NOT NULL DEFAULT 0
+    )
+""")
+
+# ── Tabla bar_games (juegos activos por bar) ────────────────────────────────
+
+db.execute("""
+    CREATE TABLE IF NOT EXISTS bar_games (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        bar_id      INTEGER NOT NULL,
+        game_slug   TEXT NOT NULL,
+        active      INTEGER NOT NULL DEFAULT 1,
+        UNIQUE(bar_id, game_slug),
+        FOREIGN KEY (bar_id) REFERENCES bars(id)
+    )
+""")
+
+db.commit()
+
+# ── Seed catálogo de juegos ─────────────────────────────────────────────────
+
+GAMES_CATALOG = [
+    ('crimen',      'El Crimen del Día',      'Resuelve el misterio',      '/static/games/crimen.png',      'starter', 1),
+    ('dilema',      'El Dilema',              '¿Tú qué harías?',           '/static/games/dilema.png',      'starter', 2),
+    ('reinas',      'Las Reinas',             'Puzzle de coronas',         '/static/games/reinas.png',      'starter', 3),
+    ('conexiones',  'Las Conexiones',         '8 palabras, 2 grupos',      '/static/games/conexiones.png',  'starter', 4),
+    ('oraculo',     'El Oráculo',             'Horóscopo sin filtros',     '/static/games/oraculo.png',     'starter_free', 5),
+    ('donde',       '¿Dónde en el mundo?',    'Adivina el lugar',          '/static/games/donde.png',       'starter_free', 6),
+    ('carta',       'La Carta',               'Sudoku con emojis',         '/static/games/carta.png',       'starter_free', 7),
+    ('equilibrio',  'Equilibrio',             'Soles y lunas',             '/static/games/equilibrio.png',  'starter_free', 8),
+    ('impostor',    'El Impostor',            '¿Cuál dato es mentira?',    '/static/games/impostor.png',    'starter_free', 9),
+    ('local',       'Conexión Local',         'Trivia de tu ciudad',       '/static/games/local.png',       'pro', 10),
+]
+
+for game in GAMES_CATALOG:
+    existing = db.execute("SELECT id FROM games WHERE slug = ?", (game[0],)).fetchone()
+    if not existing:
+        db.execute(
+            "INSERT INTO games (slug, name, description, icon, plan_min, position) VALUES (?,?,?,?,?,?)",
+            game
+        )
+
+db.commit()
+print('Catálogo de juegos listo.')
+
+# ── Asignar juegos por defecto a Yellow (plan gift = todos activos) ─────────
+
+bar_yellow = db.execute("SELECT id FROM bars WHERE slug = 'yellow'").fetchone()
+if bar_yellow:
+    all_games = db.execute("SELECT slug FROM games").fetchall()
+    for g in all_games:
+        existing = db.execute(
+            "SELECT id FROM bar_games WHERE bar_id = ? AND game_slug = ?",
+            (bar_yellow['id'], g['slug'])
+        ).fetchone()
+        if not existing:
+            db.execute(
+                "INSERT INTO bar_games (bar_id, game_slug, active) VALUES (?,?,1)",
+                (bar_yellow['id'], g['slug'])
+            )
+    db.commit()
+    print('Juegos de Yellow asignados.')
+
+
 db.close()
 print('✅ DB lista.')
