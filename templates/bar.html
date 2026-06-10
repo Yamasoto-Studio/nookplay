@@ -53,7 +53,7 @@
         </div>
         {% endif %}
 
-        <div id="activities-list"></div>
+        <div id="activities-list" class="activities-grid"></div>
       </div>
 
       <!-- PANTALLA: JUEGO -->
@@ -186,42 +186,42 @@ const ACTIVITIES = [
   {
     id: 'crimen',
     name: 'El Crimen del Día',
-    desc: 'Resuelve un misterio en el tiempo de un café',
+    desc: 'Resuelve el misterio',
     icon: '/static/games/crimen.png',
     active: true
   },
   {
     id: 'impostor',
     name: 'El Impostor',
-    desc: 'Cuatro datos. Uno es mentira. ¿Cuál?',
+    desc: '¿Cuál dato es mentira?',
     icon: '/static/games/impostor.png',
     active: true
   },
   {
     id: 'dilema',
     name: 'El Dilema',
-    desc: '¿Tú qué harías? Dos opciones, sin respuesta correcta',
+    desc: '¿Tú qué harías?',
     icon: '/static/games/dilema.png',
     active: true
   },
   {
     id: 'conexiones',
     name: 'Las Conexiones',
-    desc: '8 palabras. 2 grupos ocultos. ¿Ves el patrón?',
+    desc: '8 palabras, 2 grupos',
     icon: '/static/games/conexiones.png',
     active: true
   },
   {
     id: 'oraculo',
     name: 'El Oráculo',
-    desc: 'Tu horóscopo de hoy. Sin filtros ni misticismos.',
+    desc: 'Horóscopo sin filtros',
     icon: '/static/games/oraculo.png',
     active: true
   },
   {
     id: 'equilibrio',
     name: 'Equilibrio',
-    desc: 'Soles y lunas en equilibrio perfecto. ¿Puedes resolverlo?',
+    desc: 'Soles y lunas',
     icon: '/static/games/equilibrio.png',
     active: true
   },
@@ -235,21 +235,21 @@ const ACTIVITIES = [
   {
     id: 'reinas',
     name: 'Las Reinas',
-    desc: 'Coloca una 👑 en cada región, fila y columna',
+    desc: 'Puzzle de coronas',
     icon: '/static/games/reinas.png',
     active: true
   },
   {
     id: 'carta',
     name: 'La Carta',
-    desc: 'Sudoku 4×4 con emojis. ¿Cuánto tardas?',
+    desc: 'Sudoku con emojis',
     icon: '/static/games/carta.png',
     active: true
   },
   {
     id: 'donde',
     name: '¿Dónde en el mundo?',
-    desc: '5 pistas. 4 opciones. ¿Reconoces el lugar?',
+    desc: 'Adivina el lugar',
     icon: '/static/games/donde.png',
     active: true
   }
@@ -307,18 +307,15 @@ function showMenu() {
 
   const list = document.getElementById('activities-list');
   list.innerHTML = ACTIVITIES.map(a => `
-    <div class="activity-card ${a.active ? '' : 'activity-dim'}" ${a.active ? `onclick="startActivity('${a.id}')"` : ''}>
-      <div class="activity-icon">
-        ${a.icon.startsWith('/') ? `<img src="${a.icon}" alt="${a.name}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">` : a.icon}
+    <div class="activity-card-grid ${a.active ? '' : 'activity-dim'}" ${a.active ? `onclick="startActivity('${a.id}')"` : ''}>
+      <div class="activity-img-wrap">
+        ${a.icon.startsWith('/') ? `<img src="${a.icon}" alt="${a.name}" class="activity-img">` : `<span class="activity-img-emoji">${a.icon}</span>`}
+        ${a.active ? '' : '<div class="activity-plan-overlay">Plan Avanzado</div>'}
       </div>
-      <div class="activity-info">
+      <div class="activity-grid-info">
         <div class="activity-name">${a.name}</div>
         <div class="activity-desc">${a.desc}</div>
       </div>
-      ${a.active
-        ? '<div class="activity-badge">Hoy</div>'
-        : '<div class="activity-badge activity-badge-dim">Próximamente</div>'
-      }
     </div>
   `).join('');
 
