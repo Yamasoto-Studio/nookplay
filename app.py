@@ -3,6 +3,9 @@ from datetime import date, datetime, timedelta
 import sqlite3
 from ai import generate_game, generate_impostor, generate_dilema, generate_conexiones, generate_oraculo, generate_donde, generate_carta, generate_reinas, generate_conexion_local, generate_equilibrio, build_bar_context, get_day_seed
 import os
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 import json
 import random
 import string
@@ -1393,6 +1396,59 @@ def equilibrio_api():
     game_data = generate_equilibrio(bar_slug)
     _game_cache[cache_key] = game_data
     return jsonify(game_data)
+
+
+@app.route('/api/contact', methods=['POST'])
+def contact_api():
+    data = request.get_json()
+    nombre = data.get('nombre', '').strip()
+    negocio = data.get('negocio', '').strip()
+    ubicacion = data.get('ubicacion', '').strip()
+    telefono = data.get('telefono', '').strip()
+    email = data.get('email', '').strip()
+    mensaje = data.get('mensaje', '').strip()
+
+    if not nombre or not email:
+        return jsonify({'ok': False, 'error': 'Missing fields'}), 400
+
+    try:
+        smtp_host = os.environ.get('SMTP_HOST', 'smtp.gmail.com')
+        smtp_port = int(os.environ.get('SMTP_PORT', '587'))
+        smtp_user = os.environ.get('SMTP_USER', '')
+        smtp_pass = os.environ.get('SMTP_PASS', '')
+        to_email = os.environ.get('CONTACT_EMAIL', 'nookplay@yamasoto.com')
+
+        body = f"""Nueva solicitud de Nookplay
+
+Nombre: {nombre}
+Negocio: {negocio}
+Ubicación: {ubicacion}
+Teléfono: {telefono}
+Email: {email}
+
+Mensaje:
+{mensaje}
+"""
+        msg = MIMEMultipart()
+        msg['From'] = smtp_user or to_email
+        msg['To'] = to_email
+        msg['Subject'] = f'Nueva solicitud Nookplay — {negocio or nombre}'
+        msg['Reply-To'] = email
+        msg.attach(MIMEText(body, 'plain', 'utf-8'))
+
+        if smtp_user and smtp_pass:
+            with smtplib.SMTP(smtp_host, smtp_port) as server:
+                server.starttls()
+                server.login(smtp_user, smtp_pass)
+                server.send_message(msg)
+        else:
+            # Log to console if no SMTP configured
+            app.logger.info(f'CONTACT REQUEST (no SMTP): {body}')
+
+        return jsonify({'ok': True})
+    except Exception as e:
+        app.logger.error(f'Contact email error: {e}')
+        return jsonify({'ok': False, 'error': str(e)}), 500
 
 @app.route('/static/og.png')
 def og_image():

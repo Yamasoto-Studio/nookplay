@@ -380,12 +380,65 @@
     .nav { padding: 0 20px; }
     .section { padding: 60px 20px; }
   }
+
+  /* Contact modal */
+  .contact-modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6); z-index: 1000;
+    align-items: flex-end; justify-content: center;
+    padding: 0;
+  }
+  .contact-modal-overlay.open { display: flex; }
+  .contact-modal {
+    background: #fff; border-radius: 20px 20px 0 0;
+    padding: 28px 24px 40px; width: 100%; max-width: 480px;
+    max-height: 90vh; overflow-y: auto;
+  }
+  .contact-modal h3 {
+    font-size: 20px; font-weight: 700; margin-bottom: 6px;
+  }
+  .contact-modal p {
+    font-size: 14px; color: #6B6059; margin-bottom: 20px; line-height: 1.5;
+  }
+  .contact-field { margin-bottom: 14px; }
+  .contact-field label {
+    display: block; font-size: 12px; font-weight: 600;
+    color: #6B6059; margin-bottom: 4px; letter-spacing: 0.3px;
+  }
+  .contact-field input,
+  .contact-field textarea {
+    width: 100%; padding: 12px 14px;
+    border: 1.5px solid #E5DDD5; border-radius: 8px;
+    font-size: 15px; font-family: inherit; color: #1A1A1A;
+    background: #fff; box-sizing: border-box;
+    transition: border-color 0.15s;
+  }
+  .contact-field input:focus,
+  .contact-field textarea:focus {
+    outline: none; border-color: #C4622D;
+  }
+  .contact-field textarea { height: 90px; resize: none; }
+  .contact-submit {
+    width: 100%; padding: 14px;
+    background: #A8410E; color: #fff;
+    border: none; border-radius: 10px;
+    font-size: 15px; font-weight: 600; cursor: pointer;
+    font-family: inherit; margin-top: 4px;
+    transition: opacity 0.15s;
+  }
+  .contact-submit:hover { opacity: 0.88; }
+  .contact-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+  .contact-success {
+    text-align: center; padding: 20px 0;
+    font-size: 16px; color: #1A1A1A; line-height: 1.6;
+  }
+  .contact-success .big-emoji { font-size: 48px; display: block; margin-bottom: 12px; }
 </style>
 
 <!-- NAV -->
 <nav class="nav">
   <a href="/"><img src="/static/logo.svg" alt="Nookplay"></a>
-  <a href="https://wa.me/34659064284?text=Hola%2C%20me%20interesa%20a%C3%B1adir%20Nookplay%20a%20mi%20local." class="nav-cta" target="_blank">¡Quiero Nookplay!</a>
+  <button class="nav-cta" onclick="openContactModal()">¡Quiero Nookplay!</button>
 </nav>
 
 <!-- HERO -->
@@ -394,7 +447,7 @@
   <h1>El pasatiempo diario,<br><span>en tu mesa</span></h1>
   <p>Tu local, con algo que contar. Juegos nuevos cada día, sin apps, sin registros, sin datos. Solo diversión en el momento justo.</p>
   <div class="hero-btns">
-    <a href="https://wa.me/34659064284?text=Hola%2C%20me%20interesa%20a%C3%B1adir%20Nookplay%20a%20mi%20local." class="btn-primary" target="_blank">Quiero Nookplay en mi local</a>
+    <button class="btn-primary" onclick="openContactModal()">Quiero Nookplay en mi local</button>
     <a href="/yellow" class="btn-secondary">Ver demo</a>
   </div>
 </section>
@@ -514,9 +567,7 @@
 <section class="cta-section">
   <h2>Dale a tu local algo que recordar.</h2>
   <p>Gratis. Sin complicaciones. Sin datos de tus clientes.<br>Solo un momento de diversión que les hace volver.</p>
-  <a href="https://wa.me/34659064284?text=Hola%2C%20me%20interesa%20a%C3%B1adir%20Nookplay%20a%20mi%20local." class="btn-whatsapp" target="_blank">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.554 4.122 1.523 5.858L.073 23.927l6.235-1.635A11.945 11.945 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.811 9.811 0 01-5.002-1.368l-.359-.213-3.701.97.987-3.608-.234-.371A9.818 9.818 0 012.182 12C2.182 6.57 6.57 2.182 12 2.182S21.818 6.57 21.818 12 17.43 21.818 12 21.818z"/></svg>
-    Hablamos por WhatsApp
+  <button class="btn-whatsapp" onclick="openContactModal()">✉️ Contacta con nosotros
   </a>
 </section>
 
