@@ -616,4 +616,70 @@ async function loadMap() {
 loadMap();
 </script>
 
+<!-- Contact modal -->
+<div class="contact-modal-overlay" id="contact-modal" onclick="closeContactModal(event)">
+  <div class="contact-modal">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div style="font-size:18px;font-weight:700;">¿Quieres Nookplay en tu local?</div>
+      <button onclick="closeContactModal()" style="background:transparent;border:none;font-size:22px;cursor:pointer;color:#A89B91;padding:0;">✕</button>
+    </div>
+    <div id="contact-form-wrap">
+      <p style="font-size:14px;color:#6B6059;margin-bottom:20px;line-height:1.5;">Cuéntanos un poco sobre tu local y nos ponemos en contacto contigo.</p>
+      <div class="contact-field"><label>Tu nombre *</label><input type="text" id="cf-nombre" placeholder="Nombre y apellido"></div>
+      <div class="contact-field"><label>Nombre del negocio *</label><input type="text" id="cf-negocio" placeholder="Bar, cafetería, restaurante..."></div>
+      <div class="contact-field"><label>Ubicación *</label><input type="text" id="cf-ubicacion" placeholder="Ciudad o municipio"></div>
+      <div class="contact-field"><label>Teléfono</label><input type="tel" id="cf-telefono" placeholder="+34 600 000 000"></div>
+      <div class="contact-field"><label>Email de contacto *</label><input type="email" id="cf-email" placeholder="tu@email.com"></div>
+      <div class="contact-field"><label>Mensaje</label><textarea id="cf-mensaje" placeholder="Cuéntanos lo que quieras..."></textarea></div>
+      <button class="contact-submit" id="btn-contact-submit" onclick="submitContact()">Enviar solicitud</button>
+    </div>
+    <div id="contact-success" style="display:none;text-align:center;padding:20px 0;">
+      <span style="font-size:48px;display:block;margin-bottom:12px;">☕</span>
+      <strong style="font-size:16px;">¡Recibido!</strong><br>
+      <span style="font-size:14px;color:#6B6059;line-height:1.6;">Nos pondremos en contacto contigo en breve.<br>nookplay@yamasoto.com</span>
+    </div>
+  </div>
+</div>
+
+<script>
+function openContactModal() {
+  document.getElementById('contact-modal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeContactModal(e) {
+  if (!e || e.target === document.getElementById('contact-modal')) {
+    document.getElementById('contact-modal').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+}
+async function submitContact() {
+  const nombre = document.getElementById('cf-nombre').value.trim();
+  const negocio = document.getElementById('cf-negocio').value.trim();
+  const ubicacion = document.getElementById('cf-ubicacion').value.trim();
+  const telefono = document.getElementById('cf-telefono').value.trim();
+  const email = document.getElementById('cf-email').value.trim();
+  const mensaje = document.getElementById('cf-mensaje').value.trim();
+  if (!nombre || !email) { alert('Por favor, rellena al menos tu nombre y email.'); return; }
+  const btn = document.getElementById('btn-contact-submit');
+  btn.disabled = true; btn.textContent = 'Enviando...';
+  try {
+    const res = await fetch('/api/contact', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({nombre, negocio, ubicacion, telefono, email, mensaje})
+    });
+    const data = await res.json();
+    if (data.ok) {
+      document.getElementById('contact-form-wrap').style.display = 'none';
+      document.getElementById('contact-success').style.display = 'block';
+    } else {
+      btn.disabled = false; btn.textContent = 'Enviar solicitud';
+      alert('Hubo un problema. Escríbenos a nookplay@yamasoto.com');
+    }
+  } catch(e) {
+    btn.disabled = false; btn.textContent = 'Enviar solicitud';
+    alert('Hubo un problema. Escríbenos a nookplay@yamasoto.com');
+  }
+}
+</script>
+
 {% endblock %}
