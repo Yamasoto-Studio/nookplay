@@ -553,6 +553,10 @@ def admin_save():
         lng = float(lng) if lng else None
     except: pass
 
+    # Update plan if superadmin
+    if 'plan' in data and session.get('admin_role') == 'superadmin':
+        db.execute("UPDATE bars SET plan=? WHERE slug=?", (data['plan'], bar_slug))
+
     db.execute(
         "UPDATE bars SET welcome_message=?, promo_active=?, description=?, owner_name=?, staff_names=?, color_primary=?, color_primary_text=?, color_bg=?, color_bg_subtle=?, address=?, city=?, province=?, zip_code=?, country=?, latitude=?, longitude=? WHERE slug=?",
         (data.get('welcome_message',''), data.get('promo_active',0),
