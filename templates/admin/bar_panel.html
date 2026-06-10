@@ -253,202 +253,201 @@
   </form>
 
 
-  <!-- ══════════════════════════════════════════════════════════
-       SECCIÓN PLAN Y JUEGOS
-  ══════════════════════════════════════════════════════════ -->
+
+  <!-- ══ PLAN Y JUEGOS ══════════════════════════════════════════ -->
   <div style="margin-top:32px; padding-top:24px; border-top:1px solid var(--border);">
 
-    <!-- Badge del plan -->
-    <div id="plan-banner" style="border-radius:12px; padding:16px 18px; margin-bottom:24px; display:flex; align-items:center; justify-content:space-between; gap:12px;">
+    <!-- Banner del plan -->
+    <div id="plan-banner" style="border-radius:12px; padding:14px 16px; margin-bottom:24px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
       <div style="display:flex; align-items:center; gap:12px;">
-        <span id="plan-star" style="font-size:36px; line-height:1;"></span>
+        <span id="plan-star" style="font-size:32px; line-height:1;"></span>
         <div>
-          <div id="plan-name" style="font-size:16px; font-weight:700; color:var(--text);"></div>
-          <div id="plan-desc" style="font-size:12px; color:var(--text-muted); margin-top:2px;"></div>
+          <div id="plan-name" style="font-size:15px; font-weight:700; color:var(--text);"></div>
+          <div id="plan-desc" style="font-size:12px; color:var(--text-muted); margin-top:1px;"></div>
         </div>
       </div>
       {% if admin_role == 'superadmin' %}
-      <div id="plan-selector-wrap">
-        <select id="plan-select" onchange="changePlan(this.value)" style="font-size:13px; font-weight:600; padding:6px 12px; border-radius:20px; border:1px solid var(--border); background:white; cursor:pointer; font-family:inherit;">
-          <option value="starter">🥉 Starter</option>
-          <option value="pro">🥈 Pro</option>
-          <option value="total">🥇 Total</option>
-          <option value="gift">🎁 Gift</option>
-        </select>
-      </div>
+      <select id="plan-select" onchange="changePlan(this.value)" style="font-size:13px; font-weight:600; padding:7px 14px; border-radius:20px; border:1.5px solid var(--border); background:white; cursor:pointer; font-family:inherit; color:var(--text);">
+        <option value="starter">🥉 Starter — 4 fijos + 1 libre</option>
+        <option value="pro">🥈 Pro — hasta 10 a elegir</option>
+        <option value="total">🥇 Total — todos los juegos</option>
+        <option value="gift">🎁 Gift — todos (gratuito)</option>
+      </select>
       {% else %}
-      <a href="mailto:nookplay@yamasoto.com?subject=Upgrade plan {{ bar.name }}" style="font-size:12px; font-weight:600; color:var(--accent); text-decoration:none; background:white; padding:6px 12px; border-radius:20px; border:1px solid var(--accent); white-space:nowrap;">Mejorar plan →</a>
+      <a href="mailto:nookplay@yamasoto.com?subject=Upgrade {{ bar.name }}" style="font-size:12px; font-weight:600; color:var(--accent); text-decoration:none; padding:6px 14px; border-radius:20px; border:1px solid var(--accent); white-space:nowrap;">Mejorar plan →</a>
       {% endif %}
     </div>
 
-    <!-- Juegos fijos -->
-    <div style="font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--text-muted); margin-bottom:10px;">Incluidos en tu plan</div>
-    <div id="games-fixed-grid" style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:20px;"></div>
-
-    <!-- Juego libre (starter) -->
-    <div id="free-game-section" style="display:none;">
-      <div style="font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--text-muted); margin-bottom:10px;">Tu juego libre — elige uno</div>
-      <div id="games-free-list" style="display:flex; flex-direction:column; gap:8px; margin-bottom:20px;"></div>
-    </div>
-
-    <!-- Juegos elegibles (pro/total) -->
-    <div id="pro-game-section" style="display:none;">
-      <div style="font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--text-muted); margin-bottom:10px;">Activa o desactiva juegos</div>
-      <div id="games-pro-grid" style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:20px;"></div>
-    </div>
-
-    <!-- Juegos bloqueados -->
-    <div id="locked-section" style="display:none;">
-      <div style="font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--text-muted); opacity:0.5; margin-bottom:10px;">No disponibles en tu plan</div>
-      <div id="games-locked-grid" style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:20px;"></div>
-    </div>
+    <!-- Lista de juegos -->
+    <div style="font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--text-muted); margin-bottom:10px;">Juegos</div>
+    <div id="games-list" style="border:1px solid var(--border); border-radius:12px; overflow:hidden;"></div>
+    <div id="games-hint" style="font-size:12px; color:var(--text-muted); text-align:center; margin-top:8px; min-height:18px;"></div>
 
   </div>
 
   <style>
-  .gcard { border-radius:10px; overflow:hidden; }
-  .gcard img { width:100%; aspect-ratio:1; object-fit:cover; display:block; }
-  .gcard-label { font-size:10px; font-weight:600; color:var(--text); padding:6px 8px 2px; line-height:1.2; }
-  .gcard-sub { font-size:9px; color:var(--text-muted); padding:0 8px 6px; }
-  .gcard-fixed { border:2px solid var(--accent); background:var(--bg-card); }
-  .gcard-fixed .gcard-sub { color:var(--accent); font-weight:600; }
-  .gcard-locked { border:1px dashed var(--border); opacity:0.4; background:var(--bg-card); }
-  .gfree-row { display:flex; align-items:center; gap:12px; padding:10px 12px; background:var(--bg-card); border:2px solid var(--border); border-radius:10px; cursor:pointer; transition:border-color 0.15s; }
-  .gfree-row:hover { border-color:var(--accent); }
-  .gfree-row.selected { border-color:var(--accent); background:color-mix(in srgb, var(--accent) 8%, white); }
-  .gfree-row img { width:40px; height:40px; border-radius:6px; object-fit:cover; flex-shrink:0; }
-  .gfree-row .gfree-name { font-size:13px; font-weight:600; color:var(--text); flex:1; }
-  .gfree-row .gfree-check { font-size:18px; opacity:0; margin-left:auto; }
-  .gfree-row.selected .gfree-check { opacity:1; }
-  .gpro-card { border-radius:10px; overflow:hidden; cursor:pointer; transition:border-color 0.15s, opacity 0.15s; background:var(--bg-card); border:2px solid var(--border); }
-  .gpro-card:hover { border-color:var(--accent); }
-  .gpro-card.on { border-color:var(--accent); }
-  .gpro-card.off { opacity:0.5; }
-  .gpro-card img { width:100%; aspect-ratio:1; object-fit:cover; display:block; }
-  .gpro-label { font-size:10px; font-weight:600; color:var(--text); padding:6px 8px 2px; }
-  .gpro-status { font-size:9px; padding:0 8px 6px; }
-  .gpro-card.on .gpro-status { color:var(--accent); font-weight:600; }
-  .gpro-card.off .gpro-status { color:var(--text-muted); }
+  .game-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 16px; border-bottom: 1px solid var(--border);
+    background: white; transition: background 0.1s;
+  }
+  .game-row:last-child { border-bottom: none; }
+  .game-row-img { width: 44px; height: 44px; border-radius: 8px; object-fit: cover; flex-shrink: 0; }
+  .game-row-info { flex: 1; min-width: 0; }
+  .game-row-name { font-size: 14px; font-weight: 600; color: var(--text); }
+  .game-row-status { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+  .game-row.active-row .game-row-name { color: var(--text); }
+  .game-row.inactive-row { background: #fafafa; }
+  .game-row.inactive-row .game-row-name { color: var(--text-muted); }
+  .game-row.locked-row { background: #f9f9f9; opacity: 0.5; }
+  .game-toggle {
+    width: 44px; height: 26px; border-radius: 13px;
+    border: none; cursor: pointer; flex-shrink: 0;
+    transition: background 0.2s; position: relative;
+  }
+  .game-toggle::after {
+    content: ''; position: absolute;
+    width: 20px; height: 20px; border-radius: 50%;
+    background: white; top: 3px; transition: left 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+  .game-toggle.on { background: var(--accent); }
+  .game-toggle.on::after { left: 21px; }
+  .game-toggle.off { background: #ccc; }
+  .game-toggle.off::after { left: 3px; }
+  .game-toggle.disabled { cursor: not-allowed; opacity: 0.6; }
+  .game-badge {
+    font-size: 10px; font-weight: 600; padding: 2px 8px;
+    border-radius: 10px; flex-shrink: 0; white-space: nowrap;
+  }
+  .badge-fixed { background: #FFF3E0; color: #E65100; }
+  .badge-locked { background: #f0f0f0; color: #999; }
   </style>
 
   <script>
   const PANEL_BAR_SLUG = '{{ bar.slug }}';
-  const PANEL_PLAN = '{{ bar.plan or "starter" }}';
+  let CURRENT_PLAN = '{{ bar.plan or "starter" }}';
 
-  const PLAN_CONFIG = {
-    starter: { star:'🥉', color:'#FFF3E0', border:'#FFCC80', name:'Plan Starter', desc:'4 juegos fijos + 1 a elegir' },
-    pro:     { star:'🥈', color:'#F3F0FF', border:'#B39DDB', name:'Plan Pro',     desc:'Hasta 10 juegos a elegir' },
-    total:   { star:'🥇', color:'#FFF8E1', border:'#FFD54F', name:'Plan Total',   desc:'Todos los juegos incluidos' },
-    gift:    { star:'🎁', color:'#E8F5E9', border:'#A5D6A7', name:'Plan Gift',    desc:'Todos los juegos (regalo)' },
+  const PLAN_CFG = {
+    starter: { star:'🥉', bg:'#FFF3E0', border:'#FFCC80', name:'Plan Starter', desc:'4 juegos fijos + 1 libre a elegir' },
+    pro:     { star:'🥈', bg:'#F3F0FF', border:'#B39DDB', name:'Plan Pro',     desc:'Hasta 10 juegos a elegir' },
+    total:   { star:'🥇', bg:'#FFF8E1', border:'#FFD54F', name:'Plan Total',   desc:'Todos los juegos incluidos' },
+    gift:    { star:'🎁', bg:'#E8F5E9', border:'#A5D6A7', name:'Plan Gift',    desc:'Todos los juegos (regalo)' },
   };
 
-  function renderPlanBanner(plan) {
-    const cfg = PLAN_CONFIG[plan] || PLAN_CONFIG.starter;
-    const banner = document.getElementById('plan-banner');
-    banner.style.background = cfg.color;
-    banner.style.border = '1.5px solid ' + cfg.border;
-    document.getElementById('plan-star').textContent = cfg.star;
-    document.getElementById('plan-name').textContent = cfg.name;
-    document.getElementById('plan-desc').textContent = cfg.desc;
+  function renderBanner(plan) {
+    const c = PLAN_CFG[plan] || PLAN_CFG.starter;
+    const b = document.getElementById('plan-banner');
+    b.style.background = c.bg;
+    b.style.border = '1.5px solid ' + c.border;
+    document.getElementById('plan-star').textContent = c.star;
+    document.getElementById('plan-name').textContent = c.name;
+    document.getElementById('plan-desc').textContent = c.desc;
     const sel = document.getElementById('plan-select');
     if (sel) sel.value = plan;
   }
 
   async function changePlan(newPlan) {
+    CURRENT_PLAN = newPlan;
     const res = await fetch('/admin/api/save', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
+      method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ bar_slug: PANEL_BAR_SLUG, plan: newPlan })
     });
     const data = await res.json();
-    if (data.ok) {
-      renderPlanBanner(newPlan);
-      loadGamesPanel();
-    }
+    if (data.ok) { renderBanner(newPlan); await loadGames(); }
+    else alert('Error al cambiar plan');
   }
 
-  async function loadGamesPanel() {
+  async function loadGames() {
     try {
       const res = await fetch('/api/bar-games/' + PANEL_BAR_SLUG);
       const games = await res.json();
-      if (games.error) { console.error('Games error:', games.error); return; }
+      if (!Array.isArray(games)) return;
 
-      const plan = (document.getElementById('plan-select') ? document.getElementById('plan-select').value : null) || PANEL_PLAN;
-      const fixed = games.filter(g => g.fixed);
-      const free = games.filter(g => !g.fixed && g.available);
-      const locked = games.filter(g => !g.available);
+      const plan = CURRENT_PLAN;
+      const isStarter = plan === 'starter';
+      const freeActive = games.filter(g => !g.fixed && g.active && g.available);
+      const canSelectMore = !isStarter || freeActive.length === 0;
 
-      renderPlanBanner(plan);
+      const list = document.getElementById('games-list');
+      list.innerHTML = games.map(g => {
+        const isLocked = !g.available && !g.fixed;
+        const canToggle = !g.fixed && !isLocked && (g.active || canSelectMore || !isStarter);
 
-      // Fixed games
-      const fixedGrid = document.getElementById('games-fixed-grid');
-      fixedGrid.innerHTML = fixed.map(g => `
-        <div class="gcard gcard-fixed">
-          <img src="${g.icon}" alt="${g.name}">
-          <div class="gcard-label">${g.name}</div>
-          <div class="gcard-sub">✓ Siempre activo</div>
-        </div>
-      `).join('');
+        let statusText = '';
+        let badgeHtml = '';
+        let rowClass = 'game-row';
+        let toggleClass = 'game-toggle';
 
-      // Free / pro section
-      if (plan === 'starter') {
-        document.getElementById('free-game-section').style.display = 'block';
-        document.getElementById('pro-game-section').style.display = 'none';
-        const freeList = document.getElementById('games-free-list');
-        freeList.innerHTML = free.map(g => `
-          <div class="gfree-row ${g.active ? 'selected' : ''}" onclick="selectFreeGame('${g.slug}')">
-            <img src="${g.icon}" alt="${g.name}">
-            <span class="gfree-name">${g.name}</span>
-            <span class="gfree-check">✓</span>
+        if (g.fixed) {
+          statusText = 'Siempre incluido en tu plan';
+          badgeHtml = '<span class="game-badge badge-fixed">Fijo</span>';
+          rowClass += ' active-row';
+          toggleClass += ' on disabled';
+        } else if (isLocked) {
+          statusText = 'Requiere plan superior';
+          badgeHtml = '<span class="game-badge badge-locked">Plan Pro</span>';
+          rowClass += ' locked-row';
+          toggleClass += ' off disabled';
+        } else if (g.active) {
+          statusText = isStarter ? 'Tu juego libre activo' : 'Activo';
+          rowClass += ' active-row';
+          toggleClass += ' on';
+        } else {
+          statusText = isStarter ? 'Seleccionar como juego libre' : 'Inactivo';
+          rowClass += ' inactive-row';
+          toggleClass += ' off';
+        }
+
+        const onclick = canToggle ? `onclick="toggleGame('${g.slug}', ${!g.active})"` : '';
+
+        return `<div class="${rowClass}">
+          <img src="${g.icon}" alt="${g.name}" class="game-row-img">
+          <div class="game-row-info">
+            <div class="game-row-name">${g.name}</div>
+            <div class="game-row-status">${statusText}</div>
           </div>
-        `).join('');
+          ${badgeHtml}
+          <button class="${toggleClass}" ${onclick} aria-label="${g.active ? 'Desactivar' : 'Activar'} ${g.name}"></button>
+        </div>`;
+      }).join('');
+
+      // Hint for starter
+      const hint = document.getElementById('games-hint');
+      if (isStarter) {
+        hint.textContent = freeActive.length > 0
+          ? 'Puedes cambiar tu juego libre en cualquier momento.'
+          : 'Selecciona un juego libre de la lista.';
       } else {
-        document.getElementById('free-game-section').style.display = 'none';
-        document.getElementById('pro-game-section').style.display = free.length ? 'block' : 'none';
-        const proGrid = document.getElementById('games-pro-grid');
-        proGrid.innerHTML = free.map(g => `
-          <div class="gpro-card ${g.active ? 'on' : 'off'}" onclick="toggleGame('${g.slug}', ${!g.active})">
-            <img src="${g.icon}" alt="${g.name}">
-            <div class="gpro-label">${g.name}</div>
-            <div class="gpro-status">${g.active ? '✓ Activo' : 'Inactivo'}</div>
-          </div>
-        `).join('');
+        hint.textContent = '';
       }
 
-      // Locked
-      document.getElementById('locked-section').style.display = locked.length ? 'block' : 'none';
-      document.getElementById('games-locked-grid').innerHTML = locked.map(g => `
-        <div class="gcard gcard-locked">
-          <img src="${g.icon}" alt="${g.name}">
-          <div class="gcard-label">${g.name}</div>
-          <div class="gcard-sub">Plan Pro</div>
-        </div>
-      `).join('');
-
-    } catch(e) { console.error('loadGamesPanel error:', e); }
-  }
-
-  async function selectFreeGame(slug) {
-    const res = await fetch('/api/bar-games/' + PANEL_BAR_SLUG);
-    const games = await res.json();
-    const free = games.filter(g => !g.fixed && g.available);
-    for (const g of free) {
-      await fetch('/api/admin/bar-games', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({bar_slug: PANEL_BAR_SLUG, game_slug: g.slug, active: g.slug === slug})
-      });
-    }
-    loadGamesPanel();
+    } catch(e) { console.error('loadGames error:', e); }
   }
 
   async function toggleGame(slug, activate) {
+    const plan = CURRENT_PLAN;
+    if (plan === 'starter' && activate) {
+      // Deactivate current free game first
+      const res = await fetch('/api/bar-games/' + PANEL_BAR_SLUG);
+      const games = await res.json();
+      const currentFree = games.find(g => !g.fixed && g.active && g.available);
+      if (currentFree) {
+        await fetch('/api/admin/bar-games', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({bar_slug: PANEL_BAR_SLUG, game_slug: currentFree.slug, active: false})
+        });
+      }
+    }
     await fetch('/api/admin/bar-games', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({bar_slug: PANEL_BAR_SLUG, game_slug: slug, active: activate})
     });
-    loadGamesPanel();
+    await loadGames();
   }
 
-  loadGamesPanel();
+  renderBanner(CURRENT_PLAN);
+  loadGames();
   </script>
 
 

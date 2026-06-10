@@ -1459,17 +1459,12 @@ Mensaje:
 # Games management
 # ─────────────────────────────────────────────────────────────────────────────
 
-PLAN_LEVELS = {"gift": 99, "total": 3, "pro": 2, "starter": 1}
-
-PLAN_GAME_LIMITS = {
-    "starter": {"fixed": ["crimen","dilema","reinas","conexiones"], "free_slots": 1},
-    "pro":     {"fixed": [], "free_slots": 10},
-    "total":   {"fixed": [], "free_slots": 99},
-    "gift":    {"fixed": [], "free_slots": 99},
-}
-
+# Plan config
+STARTER_FIXED = ["crimen","dilema","reinas","conexiones"]
 STARTER_FREE_GAMES = ["oraculo","donde","carta","equilibrio","impostor"]
+PRO_GAMES = ["crimen","dilema","reinas","conexiones","oraculo","donde","carta","equilibrio","impostor"]
 PRO_ONLY_GAMES = ["local"]
+ALL_GAMES = ["crimen","dilema","reinas","conexiones","oraculo","donde","carta","equilibrio","impostor","local"]
 
 
 @app.route("/api/bar-games/<bar_slug>")
@@ -1489,26 +1484,35 @@ def get_bar_games(bar_slug):
     db.close()
 
     active_slugs = {bg["game_slug"] for bg in bar_games_rows if bg["active"]}
-    fixed = PLAN_GAME_LIMITS.get(plan, PLAN_GAME_LIMITS["starter"])["fixed"]
 
     result = []
     for g in all_games:
         slug = g["slug"]
-        is_fixed = slug in fixed
         is_active = slug in active_slugs
-        available = (
-            plan in ("gift", "total") or
-            (plan == "pro" and slug not in PRO_ONLY_GAMES) or
-            (plan == "starter" and (is_fixed or (slug in STARTER_FREE_GAMES and is_active)))
-        )
+
+        # Determine availability and type based on plan
+        if plan in ("gift", "total"):
+            available = True
+            is_fixed = False
+            selectable = True
+        elif plan == "pro":
+            available = slug not in PRO_ONLY_GAMES
+            is_fixed = False
+            selectable = available
+        else:  # starter
+            is_fixed = slug in STARTER_FIXED
+            available = is_fixed or (slug in STARTER_FREE_GAMES and is_active)
+            selectable = not is_fixed and slug in STARTER_FREE_GAMES
+
         result.append({
             "slug": slug,
             "name": g["name"],
             "description": g["description"],
             "icon": g["icon"],
-            "active": is_active and available,
-            "available": available,
+            "active": is_active and (available or is_fixed),
+            "available": available or is_fixed,
             "fixed": is_fixed,
+            "selectable": selectable,
             "plan_required": g["plan_min"],
         })
 
