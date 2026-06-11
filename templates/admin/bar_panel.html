@@ -288,7 +288,7 @@
     background: white; top: 3px; transition: left 0.2s;
     box-shadow: 0 1px 3px rgba(0,0,0,0.2);
   }
-  .game-toggle.on { background: var(--accent); }
+  .game-toggle.on { background: #2EA862; }
   .game-toggle.on::after { left: 21px; }
   .game-toggle.off { background: #ccc; }
   .game-toggle.off::after { left: 3px; }
@@ -403,19 +403,8 @@
   }
 
   async function toggleGame(slug, activate) {
-    const plan = CURRENT_PLAN;
-    // For starter: deactivate previous free game when activating a new one
-    if (plan === 'starter' && activate) {
-      const res = await fetch('/api/bar-games/' + PANEL_BAR_SLUG);
-      const games = await res.json();
-      const currentFree = games.find(g => !g.fixed && g.active);
-      if (currentFree && currentFree.slug !== slug) {
-        await fetch('/api/admin/bar-games', {
-          method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({bar_slug: PANEL_BAR_SLUG, game_slug: currentFree.slug, active: false})
-        });
-      }
-    }
+    // En plan Starter el servidor aplica selección única automáticamente:
+    // activar un juego libre desactiva el anterior
     const r = await fetch('/api/admin/bar-games', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({bar_slug: PANEL_BAR_SLUG, game_slug: slug, active: activate})

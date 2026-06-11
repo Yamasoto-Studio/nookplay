@@ -245,7 +245,9 @@ async function showMenu() {
   welcomeEl.innerHTML = `${customMsg}<br><span class="menu-welcome-sub">Elige tu pasatiempo de hoy.</span>`;
 
   const list = document.getElementById('activities-list');
-  list.innerHTML = ACTIVITIES.map(a => `
+  // Juegos jugables primero; los inactivos/bloqueados siempre al final
+  const sortedActivities = [...ACTIVITIES].sort((a, b) => (b.active ? 1 : 0) - (a.active ? 1 : 0));
+  list.innerHTML = sortedActivities.map(a => `
     <div class="activity-card-grid ${a.active ? '' : 'activity-dim'}" ${a.active ? `onclick="startActivity('${a.slug}')"` : ''}>
       <div class="activity-img-wrap">
         ${a.icon.startsWith('/') ? `<img src="${a.icon}" alt="${a.name}" class="activity-img">` : `<span class="activity-img-emoji">${a.icon}</span>`}

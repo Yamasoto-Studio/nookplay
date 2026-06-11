@@ -1481,9 +1481,23 @@ def get_bar_games(bar_slug):
         "SELECT game_slug, active FROM bar_games WHERE bar_id = ?",
         (bar["id"],)
     ).fetchall()
-    db.close()
 
     active_slugs = {bg["game_slug"] for bg in bar_games_rows if bg["active"]}
+
+    # Starter: autoreparación — si hay más de un juego libre activo
+    # (datos antiguos), conservar solo el primero y desactivar el resto
+    if plan == "starter":
+        free_active = [s for s in active_slugs if s not in STARTER_FIXED]
+        if len(free_active) > 1:
+            keep = free_active[0]
+            for extra in free_active[1:]:
+                db.execute(
+                    "UPDATE bar_games SET active = 0 WHERE bar_id = ? AND game_slug = ?",
+                    (bar["id"], extra),
+                )
+                active_slugs.discard(extra)
+            db.commit()
+    db.close()
 
     result = []
     for g in all_games:
@@ -1502,6 +1516,8 @@ def get_bar_games(bar_slug):
             is_fixed = slug in STARTER_FIXED
             available = is_fixed or slug in STARTER_FREE_GAMES
             selectable = not is_fixed  # fijos no son seleccionables
+            if is_fixed:
+                is_active = True  # los fijos siempre están activos
 
         result.append({
             "slug": slug,
@@ -1538,8 +1554,29 @@ def save_bar_games():
         db.close()
         return jsonify({"error": "Unauthorized"}), 401
 
+    plan = bar["plan"] or "starter"
+
+    # Validaciones de plan (server-side, fuente única de verdad)
+    if plan == "starter":
+        if game_slug in STARTER_FIXED and not active:
+            db.close()
+            return jsonify({"error": "Los juegos fijos del plan Starter no se pueden desactivar"}), 400
+        if active and game_slug not in STARTER_FIXED and game_slug not in STARTER_FREE_GAMES:
+            db.close()
+            return jsonify({"error": "Este juego requiere un plan superior"}), 400
+
     sql = "INSERT INTO bar_games (bar_id, game_slug, active) VALUES (?, ?, ?) ON CONFLICT(bar_id, game_slug) DO UPDATE SET active = excluded.active"
     db.execute(sql, (bar["id"], game_slug, 1 if active else 0))
+
+    # Starter: comportamiento de selección única — activar un juego libre
+    # desactiva automáticamente cualquier otro juego libre (y limpia datos antiguos)
+    if plan == "starter" and active and game_slug not in STARTER_FIXED:
+        placeholders = ",".join("?" * len(STARTER_FIXED))
+        db.execute(
+            f"UPDATE bar_games SET active = 0 WHERE bar_id = ? AND game_slug != ? AND game_slug NOT IN ({placeholders})",
+            (bar["id"], game_slug, *STARTER_FIXED),
+        )
+
     db.commit()
     db.close()
     return jsonify({"ok": True})
