@@ -116,6 +116,11 @@
       <div class="field">
         <label for="welcome_message">Tu mensaje personalizado</label>
         <input type="text" id="welcome_message" name="welcome_message" value="{{ bar.welcome_message }}" placeholder="Bienvenido al {{ bar.name }}.">
+      </div>
+      <div class="field">
+        <label for="tomorrow_message">Frase de despedida</label>
+        <input type="text" id="tomorrow_message" name="tomorrow_message" value="{{ bar.tomorrow_message or '' }}" placeholder="Vuelve a tomar un café.">
+        <div class="field-hint">Aparece al final de cada juego. Si lo dejas vacío: "Vuelve a tomar un café."</div>
         <div class="field-hint">Aparece al entrar al juego. Solo la primera parte — "Elige tu pasatiempo de hoy." se añade automáticamente.</div>
       </div>
     </div>
@@ -681,6 +686,7 @@ async function saveChanges() {
   const form = document.getElementById('admin-form');
   const data = {
     welcome_message: form.welcome_message ? form.welcome_message.value : '',
+    tomorrow_message: form.tomorrow_message ? form.tomorrow_message.value : '',
     promo_active: form.promo_active ? (form.promo_active.checked ? 1 : 0) : 0,
     description: form.description ? form.description.value : '',
     owner_name: form.owner_name ? form.owner_name.value : '',

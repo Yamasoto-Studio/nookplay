@@ -140,6 +140,7 @@ migrations = [
     "ALTER TABLE bars ADD COLUMN color_bg_subtle TEXT DEFAULT '#F0EBE3'",
     "ALTER TABLE bars ADD COLUMN color_accent_dark TEXT DEFAULT '#1A1A1A'",
     "ALTER TABLE bars ADD COLUMN welcome_message TEXT DEFAULT ''",
+    "ALTER TABLE bars ADD COLUMN tomorrow_message TEXT DEFAULT ''",
     "ALTER TABLE bars ADD COLUMN updated_at TEXT DEFAULT (datetime('now'))",
     "ALTER TABLE plays ADD COLUMN game_type TEXT DEFAULT 'crimen'",
     "ALTER TABLE plays ADD COLUMN choice INTEGER DEFAULT -1",

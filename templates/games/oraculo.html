@@ -137,7 +137,7 @@
 
   <button class="btn-share" onclick="doShare()">📤 Compartir mi predicción</button>
   <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
-  <div class="tomorrow">Mañana, el oráculo vuelve a hablar.<br>Vuelve a tomar un café.</div>
+  <div class="tomorrow">Mañana, el oráculo vuelve a hablar.<br>{{ bar.tomorrow_message or 'Vuelve a tomar un café.' }}</div>
 </div>
 
 <script>
