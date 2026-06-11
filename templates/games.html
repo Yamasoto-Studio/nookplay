@@ -131,7 +131,7 @@
   .plans-inner { max-width: 960px; margin: 0 auto; }
   .plans-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    grid-template-columns: repeat(3, 1fr);
     gap: 16px; margin-top: 36px;
   }
   .plan-card {
@@ -342,7 +342,7 @@
       <img src="/static/games/local.png" alt="Conexión Local" class="game-card-img">
       <div class="game-card-body">
         <div class="game-card-name">Conexión Local</div>
-        <div class="game-card-desc">Trivia, anécdotas y leyendas de la ciudad del bar. Contenido hiperlocal generado por IA.</div>
+        <div class="game-card-desc">Trivia, anécdotas y leyendas de la ciudad del local. Contenido hiperlocal generado por IA.</div>
         <span class="game-card-badge badge-free">Elegible en Starter</span>
       </div>
     </div>
@@ -362,12 +362,12 @@
       <div class="plan-card">
         <div class="plan-name">Starter</div>
         <div class="plan-price">6,95€ <span>/ mes</span></div>
-        <div class="plan-desc">Para empezar. 4 juegos fijos más 1 a elegir entre los 6 disponibles.</div>
+        <div class="plan-desc">Para empezar. 4 juegos fijos más 1 a elegir del catálogo.</div>
         <ul class="plan-features">
           <li>4 juegos fijos incluidos</li>
           <li>1 juego libre a elegir</li>
-          <li>Panel de administración</li>
-          <li>Código semanal de acceso</li>
+          <li>Colores y logo propios</li>
+          <li>Código de acceso semanal</li>
           <li>Estadísticas básicas</li>
         </ul>
       </div>
@@ -376,37 +376,26 @@
         <div class="plan-badge">MÁS POPULAR</div>
         <div class="plan-name">Pro</div>
         <div class="plan-price">9,95€ <span>/ mes</span></div>
-        <div class="plan-desc">Todos los juegos disponibles. Activa y desactiva los que quieras.</div>
+        <div class="plan-desc">Hasta 10 juegos a elegir libremente del catálogo completo.</div>
         <ul class="plan-features">
-          <li>Todos los juegos activos</li>
-          <li>Elección libre de catálogo</li>
-          <li>Panel completo</li>
-          <li>Estadísticas avanzadas</li>
-          <li>Productos promocionados</li>
+          <li>Hasta 10 juegos a elegir</li>
+          <li>Elección libre del catálogo</li>
+          <li>Colores y logo propios</li>
+          <li>Código de acceso semanal</li>
+          <li>Estadísticas básicas</li>
         </ul>
       </div>
 
       <div class="plan-card">
         <div class="plan-name">Premium</div>
         <div class="plan-price">14,95€ <span>/ mes</span></div>
-        <div class="plan-desc">Todo lo del plan Pro más personalización avanzada y soporte prioritario.</div>
+        <div class="plan-desc">Acceso a todo el catálogo de juegos, ahora y cuando crezca.</div>
         <ul class="plan-features">
-          <li>Todo lo del plan Pro</li>
+          <li>Todos los juegos del catálogo</li>
+          <li>Acceso a novedades al instante</li>
           <li>Colores y logo propios</li>
-          <li>WhatsApp automático</li>
-          <li>Soporte prioritario</li>
-          <li>Próximas novedades antes</li>
-        </ul>
-      </div>
-
-      <div class="plan-card">
-        <div class="plan-name">Gift</div>
-        <div class="plan-price" style="font-size:20px; padding-top:3px;">Gratuito</div>
-        <div class="plan-desc">Para pilotos y primeros clientes. Todos los juegos sin coste.</div>
-        <ul class="plan-features">
-          <li>Todos los juegos incluidos</li>
-          <li>Sin permanencia</li>
-          <li>Panel completo</li>
+          <li>Código de acceso semanal</li>
+          <li>Estadísticas avanzadas</li>
         </ul>
       </div>
 
@@ -437,7 +426,7 @@
     <div id="contact-form-wrap">
       <p style="font-size:14px;color:#6B6059;margin-bottom:20px;line-height:1.5;">Cuéntanos un poco sobre tu local y nos ponemos en contacto contigo.</p>
       <div class="contact-field"><label>Tu nombre *</label><input type="text" id="cf-nombre" placeholder="Nombre y apellido"></div>
-      <div class="contact-field"><label>Nombre del negocio *</label><input type="text" id="cf-negocio" placeholder="Bar, cafetería, restaurante..."></div>
+      <div class="contact-field"><label>Nombre del negocio *</label><input type="text" id="cf-negocio" placeholder="Bar, cafetería, clínica..."></div>
       <div class="contact-field"><label>Ubicación *</label><input type="text" id="cf-ubicacion" placeholder="Ciudad o municipio"></div>
       <div class="contact-field"><label>Teléfono</label><input type="tel" id="cf-telefono" placeholder="+34 600 000 000"></div>
       <div class="contact-field"><label>Email de contacto *</label><input type="email" id="cf-email" placeholder="tu@email.com"></div>

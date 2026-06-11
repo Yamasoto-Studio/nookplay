@@ -1463,12 +1463,62 @@ Mensaje:
 # Games management
 # ─────────────────────────────────────────────────────────────────────────────
 
-# Plan config
-STARTER_FIXED = ["crimen","dilema","reinas","conexiones"]
-STARTER_FREE_GAMES = ["oraculo","donde","carta","equilibrio","impostor","local"]
-PRO_GAMES = ["crimen","dilema","reinas","conexiones","oraculo","donde","carta","equilibrio","impostor","local"]
-PRO_ONLY_GAMES = []  # Todos los juegos disponibles desde starter_free
-ALL_GAMES = ["crimen","dilema","reinas","conexiones","oraculo","donde","carta","equilibrio","impostor","local"]
+# ─────────────────────────────────────────────────────────────────────────────
+# Plan config — fuente única de verdad
+# Para añadir un juego nuevo: añadirlo a ALL_GAMES y a los planes que corresponda.
+# El resto de la lógica (admin, API, front) se actualiza solo.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Slugs de todos los juegos del catálogo, en orden de posición
+ALL_GAMES = [
+    "crimen", "dilema", "reinas", "conexiones",
+    "oraculo", "donde", "carta", "equilibrio", "impostor", "local",
+]
+
+# Starter: 4 fijos siempre activos + 1 elegible a elegir entre STARTER_FREE_GAMES
+STARTER_FIXED      = ["crimen", "dilema", "reinas", "conexiones"]
+STARTER_FREE_GAMES = ["oraculo", "donde", "carta", "equilibrio", "impostor", "local"]
+STARTER_MAX_FREE   = 1  # juegos libres simultáneos permitidos
+
+# Pro: hasta PRO_MAX_GAMES a elegir libremente del catálogo completo
+PRO_MAX_GAMES = 10  # cuando el catálogo crezca más de 10, Pro sigue limitado aquí
+
+# Premium: acceso a todo ALL_GAMES sin límite
+
+# Gift (interno): acceso a todo, sin coste — no visible en la web pública
+
+PLAN_CFG = {
+    "starter": {
+        "name":  "Plan Starter",
+        "price": "6,95€/mes",
+        "desc":  "4 juegos fijos + 1 libre a elegir",
+        "stats": "basic",
+    },
+    "pro": {
+        "name":  "Plan Pro",
+        "price": "9,95€/mes",
+        "desc":  f"Hasta {PRO_MAX_GAMES} juegos a elegir",
+        "stats": "basic",
+    },
+    "premium": {
+        "name":  "Plan Premium",
+        "price": "14,95€/mes",
+        "desc":  "Todos los juegos del catálogo",
+        "stats": "advanced",
+    },
+    "gift": {
+        "name":  "Plan Gift",
+        "price": "Gratuito",
+        "desc":  "Todos los juegos (interno)",
+        "stats": "advanced",
+    },
+    "total": {
+        "name":  "Plan Total",
+        "price": "—",
+        "desc":  "Todos los juegos",
+        "stats": "advanced",
+    },
+}
 
 
 @app.route("/api/bar-games/<bar_slug>")
@@ -1508,14 +1558,18 @@ def get_bar_games(bar_slug):
         slug = g["slug"]
         is_active = slug in active_slugs
 
-        if plan in ("gift", "total"):
+        if plan in ("gift", "total", "premium"):
+            # Acceso ilimitado a todo el catálogo
             is_fixed = False
             available = True
             selectable = True
         elif plan == "pro":
+            # Hasta PRO_MAX_GAMES juegos a elegir del catálogo completo
             is_fixed = False
             available = True
-            selectable = True
+            active_count = len(active_slugs)
+            # Puede seleccionar si no ha llegado al límite, o si ya está activo
+            selectable = is_active or active_count < PRO_MAX_GAMES
         else:  # starter
             is_fixed = slug in STARTER_FIXED
             available = is_fixed or slug in STARTER_FREE_GAMES
@@ -1569,11 +1623,25 @@ def save_bar_games():
             db.close()
             return jsonify({"error": "Este juego requiere un plan superior"}), 400
 
+    elif plan == "pro" and active:
+        # Pro: máximo PRO_MAX_GAMES activos simultáneos
+        current_active = db.execute(
+            "SELECT COUNT(*) FROM bar_games WHERE bar_id = ? AND active = 1",
+            (bar["id"],)
+        ).fetchone()[0]
+        already_active = db.execute(
+            "SELECT active FROM bar_games WHERE bar_id = ? AND game_slug = ?",
+            (bar["id"], game_slug)
+        ).fetchone()
+        is_already_active = already_active and already_active["active"]
+        if not is_already_active and current_active >= PRO_MAX_GAMES:
+            db.close()
+            return jsonify({"error": f"El plan Pro permite un máximo de {PRO_MAX_GAMES} juegos activos"}), 400
+
     sql = "INSERT INTO bar_games (bar_id, game_slug, active) VALUES (?, ?, ?) ON CONFLICT(bar_id, game_slug) DO UPDATE SET active = excluded.active"
     db.execute(sql, (bar["id"], game_slug, 1 if active else 0))
 
-    # Starter: comportamiento de selección única — activar un juego libre
-    # desactiva automáticamente cualquier otro juego libre (y limpia datos antiguos)
+    # Starter: selección única para juego libre
     if plan == "starter" and active and game_slug not in STARTER_FIXED:
         placeholders = ",".join("?" * len(STARTER_FIXED))
         db.execute(
