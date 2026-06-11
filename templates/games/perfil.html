@@ -31,10 +31,7 @@
   border-radius: var(--radius-md);
   padding: 16px; margin-bottom: 20px;
 }
-.perfil-card-header {
-  display: flex; align-items: baseline; gap: 8px;
-  margin-bottom: 12px;
-}
+/* perfil-card-header eliminado — layout en párrafos */
 .perfil-nombre {
   font-size: 18px; font-weight: 800; color: var(--text);
 }
@@ -163,10 +160,8 @@
 
   <!-- Tarjeta -->
   <div class="perfil-card">
-    <div class="perfil-card-header">
-      <span class="perfil-nombre" id="p-nombre"></span>
-      <span class="perfil-meta" id="p-meta"></span>
-    </div>
+    <div class="perfil-nombre" id="p-nombre" style="margin-bottom:2px;"></div>
+    <div class="perfil-meta" id="p-meta" style="margin-bottom:12px;"></div>
     <ul class="perfil-datos" id="p-datos"></ul>
   </div>
 
