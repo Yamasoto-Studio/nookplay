@@ -135,19 +135,46 @@
       </div>
       {% for i in range(3) %}
       {% set p = products[i] if i < products|length else None %}
-      <div class="product-item">
-        <h4>Producto {{ i + 1 }}</h4>
-        <div class="field">
-          <label>Nombre</label>
-          <input type="text" name="product_title_{{ i }}" value="{{ p.title if p else '' }}" placeholder="Ej: Café de finca etíope">
+      <div class="product-item" id="product-item-{{ i }}">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+          <h4 style="margin:0;">Producto {{ i + 1 }}</h4>
+          <label class="toggle" title="Activar/desactivar este producto">
+            <input type="checkbox" name="product_active_{{ i }}" id="product_active_{{ i }}"
+              {% if p and p.title %}checked{% endif %}
+              onchange="toggleProductFields({{ i }})">
+            <span class="toggle-slider"></span>
+          </label>
         </div>
-        <div class="field">
-          <label>Descripción</label>
-          <input type="text" name="product_desc_{{ i }}" value="{{ p.description if p else '' }}" placeholder="Una frase breve">
-        </div>
-        <div class="field">
-          <label>Precio</label>
-          <input type="text" name="product_price_{{ i }}" value="{{ p.price if p else '' }}" placeholder="2,50 €">
+        <div id="product-fields-{{ i }}" style="{% if not p or not p.title %}display:none;{% endif %}">
+          <div class="field">
+            <label>Nombre</label>
+            <input type="text" name="product_title_{{ i }}" value="{{ p.title if p else '' }}" placeholder="Ej: Café de finca etíope">
+          </div>
+          <div class="field">
+            <label>Descripción</label>
+            <input type="text" name="product_desc_{{ i }}" value="{{ p.description if p else '' }}" placeholder="Una frase breve">
+          </div>
+          <div class="field">
+            <label>Precio</label>
+            <input type="text" name="product_price_{{ i }}" value="{{ p.price if p else '' }}" placeholder="2,50 €">
+          </div>
+          <div class="field">
+            <label>Imagen del producto</label>
+            {% set img_path = '/static/clientes/' + bar.slug + '/product_' + i|string + '.webp' %}
+            <div id="product-img-wrap-{{ i }}" style="margin-bottom:8px;">
+              {% if p and p.image_path %}
+              <div style="display:flex; align-items:center; gap:10px;">
+                <img src="{{ p.image_path }}" style="width:64px; height:64px; object-fit:cover; border-radius:8px; border:1px solid #E5DDD5;" id="product-preview-{{ i }}">
+                <button type="button" onclick="deleteProductImage({{ i }})" style="font-size:12px; color:#C0392B; background:none; border:none; cursor:pointer; padding:0;">Eliminar imagen</button>
+              </div>
+              {% else %}
+              <img src="" style="display:none; width:64px; height:64px; object-fit:cover; border-radius:8px; border:1px solid #E5DDD5;" id="product-preview-{{ i }}">
+              {% endif %}
+            </div>
+            <input type="file" accept="image/*" style="font-size:13px;"
+              onchange="uploadProductImage(this, {{ i }})">
+            <div class="field-hint">Máx. 600px · se convierte a WebP automáticamente</div>
+          </div>
         </div>
       </div>
       {% endfor %}
@@ -581,6 +608,66 @@ async function searchAddress() {
   }
 }
 
+function toggleProductFields(i) {
+  const active = document.getElementById(`product_active_${i}`).checked;
+  const fields = document.getElementById(`product-fields-${i}`);
+  fields.style.display = active ? 'block' : 'none';
+  if (!active) {
+    // Limpiar campos al desactivar
+    const form = document.getElementById('admin-form');
+    if (form[`product_title_${i}`]) form[`product_title_${i}`].value = '';
+    if (form[`product_desc_${i}`]) form[`product_desc_${i}`].value = '';
+    if (form[`product_price_${i}`]) form[`product_price_${i}`].value = '';
+  }
+}
+
+async function uploadProductImage(input, position) {
+  if (!input.files || !input.files[0]) return;
+  const bar_slug = '{{ bar.slug }}';
+  const formData = new FormData();
+  formData.append('image', input.files[0]);
+  formData.append('bar_slug', bar_slug);
+  formData.append('position', position);
+
+  input.disabled = true;
+  const hint = input.nextElementSibling;
+  const origHint = hint ? hint.textContent : '';
+  if (hint) hint.textContent = 'Subiendo y optimizando...';
+
+  try {
+    const res = await fetch('/admin/api/upload-product-image', { method: 'POST', body: formData });
+    const data = await res.json();
+    if (data.ok) {
+      const preview = document.getElementById(`product-preview-${position}`);
+      if (preview) {
+        preview.src = data.path + '?t=' + Date.now();
+        preview.style.display = 'block';
+      }
+      if (hint) hint.textContent = '✅ Imagen subida correctamente';
+    } else {
+      if (hint) hint.textContent = '❌ Error: ' + data.error;
+    }
+  } catch(e) {
+    if (hint) hint.textContent = '❌ Error de conexión';
+  }
+  input.disabled = false;
+}
+
+async function deleteProductImage(position) {
+  if (!confirm('¿Eliminar la imagen de este producto?')) return;
+  const bar_slug = '{{ bar.slug }}';
+  const res = await fetch('/admin/api/delete-product-image', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ bar_slug, position })
+  });
+  const data = await res.json();
+  if (data.ok) {
+    const preview = document.getElementById(`product-preview-${position}`);
+    if (preview) { preview.src = ''; preview.style.display = 'none'; }
+  }
+}
+
 function syncColor(textInput, colorName) {
   // Sincroniza el input de texto hex con el color picker
   const val = textInput.value.trim();
@@ -613,12 +700,16 @@ async function saveChanges() {
   };
 
   for (let i = 0; i < 3; i++) {
-    data.products.push({
-      position: i + 1,
-      title: form[`product_title_${i}`].value,
-      description: form[`product_desc_${i}`].value,
-      price: form[`product_price_${i}`].value
-    });
+    const active = form[`product_active_${i}`] && form[`product_active_${i}`].checked;
+    const title = form[`product_title_${i}`] ? form[`product_title_${i}`].value.trim() : '';
+    if (active && title) {
+      data.products.push({
+        position: i,
+        title: title,
+        description: form[`product_desc_${i}`] ? form[`product_desc_${i}`].value : '',
+        price: form[`product_price_${i}`] ? form[`product_price_${i}`].value : ''
+      });
+    }
   }
 
   const res = await fetch('/admin/api/save', {

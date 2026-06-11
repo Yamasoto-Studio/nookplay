@@ -46,14 +46,17 @@
       <div class="screen" id="s-menu">
         <p class="menu-welcome" id="menu-welcome"></p>
 
+        <div id="activities-list" class="activities-grid"></div>
+
         {% if bar.promo_active and products %}
-        <div class="promo-banner" id="promo-banner">
-          <div class="promo-label">✨ Te puede interesar</div>
-          <div class="promo-products" id="promo-menu-product"></div>
+        <div class="promo-banner" id="promo-banner" style="display:none;">
+          <div class="promo-label">Hoy en {{ bar.name }}</div>
+          <div style="overflow:hidden;">
+            <div class="promo-track" id="promo-track"></div>
+          </div>
+          <div class="promo-dots" id="promo-dots"></div>
         </div>
         {% endif %}
-
-        <div id="activities-list" class="activities-grid"></div>
 
         <!-- Botón descubrir más juegos (solo visible si el bar tiene juegos inactivos) -->
         <div id="discover-more-btn" style="display:none; margin: 24px 16px 8px; text-align: center;">
@@ -86,64 +89,90 @@
 </div>
 
 <style>
-/* Promo banner */
+/* Promo banner — carrusel */
 .promo-banner {
-  background: var(--bar-bg-subtle);
-  border: 1.5px solid var(--bar-primary);
-  border-radius: 12px;
-  padding: 14px 16px;
-  margin-bottom: 20px;
+  margin: 0 0 8px;
+  overflow: hidden;
 }
 .promo-label {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 1px;
   text-transform: uppercase;
   color: var(--bar-accent-dark);
   opacity: 0.5;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
-.promo-products {
+.promo-track {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  transition: transform 0.5s ease;
 }
 .promo-item {
+  flex: 0 0 100%;
   display: flex;
-  align-items: center;
   gap: 12px;
+  align-items: center;
+  background: var(--bar-bg-subtle);
+  border: 1px solid var(--bar-primary);
+  border-radius: 12px;
+  padding: 12px;
 }
 .promo-img {
-  width: 48px;
-  height: 48px;
+  width: 60px;
+  height: 60px;
   border-radius: 8px;
   object-fit: cover;
   flex-shrink: 0;
+  background: var(--bar-bg);
 }
-.promo-info {
-  flex: 1;
+.promo-img-placeholder {
+  width: 60px;
+  height: 60px;
+  border-radius: 8px;
+  background: var(--bar-primary);
+  opacity: 0.15;
+  flex-shrink: 0;
 }
+.promo-info { flex: 1; min-width: 0; }
 .promo-title {
-  font-weight: 600;
+  font-weight: 700;
   font-size: 14px;
   color: var(--bar-accent-dark);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .promo-desc {
   font-size: 12px;
   color: var(--bar-accent-dark);
   opacity: 0.6;
   margin-top: 2px;
+  line-height: 1.4;
 }
 .promo-price {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   color: var(--bar-primary-text);
   background: var(--bar-primary);
   display: inline-block;
-  padding: 2px 8px;
+  padding: 3px 10px;
   border-radius: 20px;
-  margin-top: 4px;
+  margin-top: 5px;
 }
+.promo-dots {
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+  margin-top: 8px;
+}
+.promo-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--bar-primary);
+  opacity: 0.25;
+  transition: opacity 0.2s;
+}
+.promo-dot.active { opacity: 1; }
 </style>
 
 <script>
@@ -190,18 +219,36 @@ function getRandomProduct(exclude_idx = -1) {
   return available[Math.floor(Math.random() * available.length)];
 }
 
-function renderPromoItem(product, container_id) {
-  const el = document.getElementById(container_id);
-  if (!el || !product) return;
-  el.innerHTML = `
+function initPromoCarousel() {
+  const track = document.getElementById('promo-track');
+  const dotsEl = document.getElementById('promo-dots');
+  if (!track || !PRODUCTS || PRODUCTS.length === 0) return;
+
+  track.innerHTML = PRODUCTS.map(p => `
     <div class="promo-item">
-      ${product.image_path ? `<img src="${product.image_path}" alt="${product.title}" class="promo-img" onerror="this.style.display='none'">` : ''}
+      ${p.image_path
+        ? `<img src="${p.image_path}" alt="${p.title}" class="promo-img" onerror="this.style.display='none'">`
+        : '<div class="promo-img-placeholder"></div>'}
       <div class="promo-info">
-        <div class="promo-title">${product.title}</div>
-        ${product.description ? `<div class="promo-desc">${product.description}</div>` : ''}
-        ${product.price ? `<div class="promo-price">${product.price}</div>` : ''}
+        <div class="promo-title">${p.title}</div>
+        ${p.description ? `<div class="promo-desc">${p.description}</div>` : ''}
+        ${p.price ? `<div class="promo-price">${p.price}</div>` : ''}
       </div>
-    </div>`;
+    </div>`).join('');
+
+  if (PRODUCTS.length > 1) {
+    dotsEl.innerHTML = PRODUCTS.map((_, i) =>
+      `<div class="promo-dot ${i === 0 ? 'active' : ''}" id="pdot-${i}"></div>`
+    ).join('');
+
+    let cur = 0;
+    setInterval(() => {
+      document.getElementById(`pdot-${cur}`)?.classList.remove('active');
+      cur = (cur + 1) % PRODUCTS.length;
+      track.style.transform = `translateX(-${cur * 100}%)`;
+      document.getElementById(`pdot-${cur}`)?.classList.add('active');
+    }, 4000);
+  }
 }
 
 let menuPromoIdx = -1;
@@ -289,6 +336,19 @@ async function showMenu() {
   const discoverBtn = document.getElementById('discover-more-btn');
   if (discoverBtn) {
     discoverBtn.style.display = hasHidden ? 'block' : 'none';
+  }
+
+  // Insertar banner de productos entre la 2ª y 3ª fila del grid
+  const promoBanner = document.getElementById('promo-banner');
+  if (promoBanner && PRODUCTS && PRODUCTS.length > 0) {
+    const cards = list.querySelectorAll('.activity-card-grid');
+    if (cards.length >= 2) {
+      cards[1].insertAdjacentElement('afterend', promoBanner);
+    } else {
+      list.appendChild(promoBanner);
+    }
+    promoBanner.style.display = 'block';
+    initPromoCarousel();
   }
 
   showScreen('s-menu');

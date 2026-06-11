@@ -632,9 +632,14 @@ def admin_save():
     db.execute("DELETE FROM bar_products WHERE bar_id = ?", (bar['id'],))
     for p in data.get('products', []):
         if p.get('title'):
+            # Recuperar image_path existente si no se envía nueva
+            import os as _os
+            pos = p.get('position', 0)
+            img_path = f"/static/clientes/{bar_slug}/product_{pos}.webp"
+            image_path = img_path if _os.path.exists(img_path.lstrip('/')) else ''
             db.execute(
-                "INSERT INTO bar_products (bar_id, position, title, description, price) VALUES (?,?,?,?,?)",
-                (bar['id'], p['position'], p['title'], p.get('description',''), p.get('price',''))
+                "INSERT INTO bar_products (bar_id, position, title, description, price, image_path, active) VALUES (?,?,?,?,?,?,1)",
+                (bar['id'], pos, p['title'], p.get('description',''), p.get('price',''), image_path)
             )
     db.commit()
     db.close()
@@ -1896,6 +1901,56 @@ def admin_upload_logo():
     _os.makedirs(folder, exist_ok=True)
     file.save(f'{folder}/logo_header.png')
     return jsonify({'ok': True})
+
+
+@app.route('/admin/api/upload-product-image', methods=['POST'])
+@admin_required
+def admin_upload_product_image():
+    bar_slug = request.form.get('bar_slug', '').strip()
+    position = request.form.get('position', '0').strip()
+    if session.get('admin_role') != 'superadmin' and session.get('admin_bar_slug') != bar_slug:
+        return jsonify({'ok': False, 'error': 'No autorizado'}), 403
+    if 'image' not in request.files:
+        return jsonify({'ok': False, 'error': 'No file'})
+    file = request.files['image']
+    if file.filename == '':
+        return jsonify({'ok': False, 'error': 'Empty filename'})
+    try:
+        from PIL import Image as _Image
+        import io as _io
+        import os as _os
+        folder = f'static/clientes/{bar_slug}'
+        _os.makedirs(folder, exist_ok=True)
+        img = _Image.open(file.stream).convert('RGB')
+        # Redimensionar a máximo 600px manteniendo ratio
+        max_size = 600
+        if img.width > max_size or img.height > max_size:
+            ratio = min(max_size / img.width, max_size / img.height)
+            new_size = (int(img.width * ratio), int(img.height * ratio))
+            img = img.resize(new_size, _Image.LANCZOS)
+        out_path = f'{folder}/product_{position}.webp'
+        img.save(out_path, 'WEBP', quality=82, method=6)
+        return jsonify({'ok': True, 'path': f'/{out_path}'})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)})
+
+
+@app.route('/admin/api/delete-product-image', methods=['POST'])
+@admin_required
+def admin_delete_product_image():
+    data = request.get_json()
+    bar_slug = data.get('bar_slug', '').strip()
+    position = data.get('position', '0')
+    if session.get('admin_role') != 'superadmin' and session.get('admin_bar_slug') != bar_slug:
+        return jsonify({'ok': False, 'error': 'No autorizado'}), 403
+    import os as _os
+    path = f'static/clientes/{bar_slug}/product_{position}.webp'
+    try:
+        if _os.path.exists(path):
+            _os.remove(path)
+        return jsonify({'ok': True})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)})
 
 
 @app.route('/admin/api/delete-bar', methods=['POST'])
