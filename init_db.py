@@ -176,7 +176,10 @@ if not bar:
     db.commit()
     print('Bar Yellow creado.')
 else:
-    print('Bar Yellow ya existe — no se modifica.')
+    # Actualizar coordenadas si no las tiene (BD anterior al campo)
+    db.execute("UPDATE bars SET latitude = 41.3175, longitude = 2.0067 WHERE slug = 'yellow' AND (latitude IS NULL OR latitude = 0)")
+    db.commit()
+    print('Bar Yellow ya existe — coordenadas verificadas.')
 
 # ── Productos de Yellow (solo si no existen) ────────────────────────────────
 
