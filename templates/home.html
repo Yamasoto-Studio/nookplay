@@ -75,6 +75,11 @@
     margin: 0 auto 40px;
     position: relative;
     overflow: hidden;
+    animation: heroFloat 7s ease-in-out infinite;
+  }
+  @keyframes heroFloat {
+    0%, 100% { transform: translateY(0px); box-shadow: 0 12px 32px rgba(0,0,0,0.10); }
+    50%       { transform: translateY(-10px); box-shadow: 0 24px 48px rgba(0,0,0,0.14); }
   }
   .hero-carousel img {
     position: absolute;
