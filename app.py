@@ -348,6 +348,42 @@ def games_catalog():
     return render_template('games.html')
 
 
+@app.route('/admin/api/pregen-now', methods=['POST'])
+@admin_required
+def admin_pregen_now():
+    """Superadmin: fuerza la pre-generación de juegos ahora mismo (diagnóstico/test)."""
+    if session.get('admin_role') != 'superadmin':
+        return jsonify({'ok': False, 'error': 'No autorizado'}), 403
+    try:
+        pregen_daily_games()
+        return jsonify({'ok': True, 'msg': 'Pre-generación completada. Revisa los logs.'})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)})
+
+
+@app.route('/admin/api/scheduler-status')
+@admin_required
+def admin_scheduler_status():
+    """Superadmin: devuelve el estado del scheduler y cuántos juegos hay pre-generados hoy."""
+    if session.get('admin_role') != 'superadmin':
+        return jsonify({'ok': False, 'error': 'No autorizado'}), 403
+    today = str(date.today())
+    db = get_db()
+    rows = db.execute(
+        "SELECT bar_id, game_type, game_date FROM generated_games WHERE game_date = ? ORDER BY bar_id, game_type",
+        (today,)
+    ).fetchall()
+    bars = db.execute("SELECT id, slug FROM bars WHERE active = 1").fetchall()
+    db.close()
+    return jsonify({
+        'ok': True,
+        'today': today,
+        'bars_active': len(bars),
+        'pregenerated_today': len(rows),
+        'detail': [{'bar_id': r['bar_id'], 'game_type': r['game_type']} for r in rows]
+    })
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Scheduled tasks
 # ─────────────────────────────────────────────────────────────────────────────
@@ -392,7 +428,7 @@ def pregen_daily_games():
     db = get_db()
     bars = db.execute("SELECT * FROM bars WHERE active = 1").fetchall()
     for bar in bars:
-        for game_type in ['crimen', 'impostor', 'dilema', 'conexiones', 'oraculo']:
+        for game_type in ['crimen', 'impostor', 'dilema', 'conexiones', 'oraculo', 'donde', 'local']:
             existing = db.execute(
                 "SELECT id FROM generated_games WHERE bar_id = ? AND game_type = ? AND game_date = ?",
                 (bar['id'], game_type, today)
@@ -422,6 +458,21 @@ def pregen_daily_games():
                         if existing_oraculo:
                             continue
                         game_data = generate_oraculo(bar['slug'])
+                    elif game_type == 'donde':
+                        # Dónde es único para todos los bares — solo generar una vez
+                        existing_donde = db.execute(
+                            "SELECT id FROM generated_games WHERE game_type = 'donde' AND game_date = ?",
+                            (today,)
+                        ).fetchone()
+                        if existing_donde:
+                            continue
+                        game_data = generate_donde(bar['slug'])
+                    elif game_type == 'local':
+                        city = bar['city'] or ''
+                        province = bar['province'] or city
+                        if not city:
+                            continue  # Sin ciudad no se puede generar Conexión Local
+                        game_data = generate_conexion_local(bar['name'], city, province, bar['slug'])
                     
                     import json as _json
                     db.execute(
@@ -1787,6 +1838,21 @@ def admin_create_bar():
             "INSERT INTO admin_users (email, password_hash, role, bar_slug) VALUES (?,?,?,?)",
             (email, hash_password(password), 'bar_admin', slug)
         )
+
+        # Inicializar bar_games según el plan — el bar nace con sus juegos ya activos
+        if plan in ('gift', 'total', 'premium'):
+            active_slugs = ALL_GAMES
+        elif plan == 'pro':
+            active_slugs = ALL_GAMES  # Pro empieza con todos disponibles; el admin los filtra
+        else:  # starter
+            active_slugs = STARTER_FIXED  # Los 4 fijos; el libre lo elige el propietario
+
+        for game_slug in active_slugs:
+            db.execute(
+                "INSERT OR IGNORE INTO bar_games (bar_id, game_slug, active) VALUES (?,?,1)",
+                (bar_id, game_slug)
+            )
+
         db.commit()
         db.close()
         import os as _os

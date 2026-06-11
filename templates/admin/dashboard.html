@@ -95,6 +95,20 @@
     </div>
   </div>
 
+  <!-- Herramientas de sistema -->
+  <div style="margin-bottom:24px; padding:16px; background:#FFF8F5; border:1px solid #F0D5C8; border-radius:12px;">
+    <div style="font-size:12px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#A8410E; margin-bottom:12px;">Sistema</div>
+    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+      <button onclick="checkScheduler()" style="background:transparent; border:1.5px solid #C4622D; color:#C4622D; padding:8px 14px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit;">
+        📊 Estado pre-generación
+      </button>
+      <button onclick="forcePregen()" style="background:#C4622D; color:#fff; border:none; padding:8px 14px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit;">
+        ⚡ Forzar pre-generación ahora
+      </button>
+      <span id="sys-msg" style="font-size:13px; color:#6B6059;"></span>
+    </div>
+  </div>
+
   <!-- Lista de bares -->
   <div class="sa-section-title">
     <span>Locales</span>
@@ -277,6 +291,30 @@ async function createBar() {
   } else {
     errEl.textContent = data.error || 'Error al crear el local.';
   }
+}
+
+async function checkScheduler() {
+  const msg = document.getElementById('sys-msg');
+  msg.textContent = 'Consultando...';
+  try {
+    const res = await fetch('/admin/api/scheduler-status');
+    const data = await res.json();
+    if (data.ok) {
+      msg.textContent = `Hoy: ${data.pregenerated_today} juegos pre-generados para ${data.bars_active} local(es).`;
+    } else {
+      msg.textContent = 'Error: ' + data.error;
+    }
+  } catch(e) { msg.textContent = 'Error de conexión.'; }
+}
+
+async function forcePregen() {
+  const msg = document.getElementById('sys-msg');
+  msg.textContent = 'Generando... (puede tardar unos segundos)';
+  try {
+    const res = await fetch('/admin/api/pregen-now', { method: 'POST' });
+    const data = await res.json();
+    msg.textContent = data.ok ? '✅ Completado. Comprueba el estado.' : '❌ ' + data.error;
+  } catch(e) { msg.textContent = 'Error de conexión.'; }
 }
 </script>
 
