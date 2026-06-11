@@ -50,9 +50,21 @@
 
         {% if bar.promo_active and products %}
         <div class="promo-banner" id="promo-banner" style="display:none;">
-          <div class="promo-label">Hoy en {{ bar.name }}</div>
-          <div style="overflow:hidden;">
-            <div class="promo-track" id="promo-track"></div>
+          <div style="overflow:hidden; border-radius:12px; border: 1px solid var(--bar-primary);">
+            <div style="
+              background: var(--bar-primary);
+              padding: 6px 12px;
+              display: flex; align-items: center; gap: 6px;
+            ">
+              <span style="
+                font-size: 10px; font-weight: 700;
+                letter-spacing: 1px; text-transform: uppercase;
+                color: var(--bar-primary-text); opacity: 0.85;
+              ">Hoy en {{ bar.name }}</span>
+            </div>
+            <div style="overflow:hidden;">
+              <div class="promo-track" id="promo-track"></div>
+            </div>
           </div>
           <div class="promo-dots" id="promo-dots"></div>
         </div>
@@ -113,8 +125,6 @@
   gap: 12px;
   align-items: center;
   background: var(--bar-bg-subtle);
-  border: 1px solid var(--bar-primary);
-  border-radius: 12px;
   padding: 12px;
 }
 .promo-img {
