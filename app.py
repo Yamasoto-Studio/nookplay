@@ -1087,8 +1087,8 @@ def veredicto_stats(bar_slug):
         db.close()
         return jsonify({'total': 0, 'culpables': 0, 'inocentes': 0})
     plays = db.execute(
-        "SELECT choice, elapsed FROM plays WHERE bar_id = ? AND game_type = 'veredicto' AND play_date = ?",
-        (bar['id'], today)
+        "SELECT choice, elapsed FROM plays WHERE bar_slug = ? AND game_type = 'veredicto' AND played_on = ?",
+        (bar_slug, today)
     ).fetchall()
     db.close()
     total = len(plays)
