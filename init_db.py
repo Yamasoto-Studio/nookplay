@@ -251,16 +251,16 @@ db.commit()
 # ── Seed catálogo de juegos ─────────────────────────────────────────────────
 
 GAMES_CATALOG = [
-    ('crimen',      'El Crimen del Día',      'Resuelve el misterio',      '/static/games/crimen.png',      'starter', 1),
-    ('dilema',      'El Dilema',              '¿Tú qué harías?',           '/static/games/dilema.png',      'starter', 2),
-    ('reinas',      'Las Reinas',             'Puzzle de coronas',         '/static/games/reinas.png',      'starter', 3),
-    ('conexiones',  'Las Conexiones',         '8 palabras, 2 grupos',      '/static/games/conexiones.png',  'starter', 4),
-    ('oraculo',     'El Oráculo',             'Horóscopo sin filtros',     '/static/games/oraculo.png',     'starter_free', 5),
-    ('donde',       '¿Dónde en el mundo?',    'Adivina el lugar',          '/static/games/donde.png',       'starter_free', 6),
-    ('carta',       'La Carta',               'Sudoku con emojis',         '/static/games/carta.png',       'starter_free', 7),
-    ('equilibrio',  'Equilibrio',             'Soles y lunas',             '/static/games/equilibrio.png',  'starter_free', 8),
-    ('impostor',    'El Impostor',            '¿Cuál dato es mentira?',    '/static/games/impostor.png',    'starter_free', 9),
-    ('local',       'Conexión Local',         'Trivia de tu ciudad',       '/static/games/local.png',       'starter_free', 10),
+    ('crimen',      'El Crimen del Día',      'Resuelve el misterio',      '/static/games/crimen.webp',      'starter', 1),
+    ('dilema',      'El Dilema',              '¿Tú qué harías?',           '/static/games/dilema.webp',      'starter', 2),
+    ('reinas',      'Las Reinas',             'Puzzle de coronas',         '/static/games/reinas.webp',      'starter', 3),
+    ('conexiones',  'Las Conexiones',         '8 palabras, 2 grupos',      '/static/games/conexiones.webp',  'starter', 4),
+    ('oraculo',     'El Oráculo',             'Horóscopo sin filtros',     '/static/games/oraculo.webp',     'starter_free', 5),
+    ('donde',       '¿Dónde en el mundo?',    'Adivina el lugar',          '/static/games/donde.webp',       'starter_free', 6),
+    ('carta',       'La Carta',               'Sudoku con emojis',         '/static/games/carta.webp',       'starter_free', 7),
+    ('equilibrio',  'Equilibrio',             'Soles y lunas',             '/static/games/equilibrio.webp',  'starter_free', 8),
+    ('impostor',    'El Impostor',            '¿Cuál dato es mentira?',    '/static/games/impostor.webp',    'starter_free', 9),
+    ('local',       'Conexión Local',         'Trivia de tu ciudad',       '/static/games/local.webp',       'starter_free', 10),
 ]
 
 for game in GAMES_CATALOG:

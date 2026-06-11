@@ -182,6 +182,13 @@ def migrate_db():
         except:
             pass  # Columna ya existe, ignorar
 
+    # Migrar iconos PNG → WebP en la tabla games
+    try:
+        db.execute("UPDATE games SET icon = REPLACE(icon, '.png', '.webp') WHERE icon LIKE '%.png'")
+        db.commit()
+    except:
+        pass
+
     # Crear tablas nuevas si no existen
     db.executescript('''
         CREATE TABLE IF NOT EXISTS bar_products (
