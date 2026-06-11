@@ -348,41 +348,6 @@ def games_catalog():
     return render_template('games.html')
 
 
-@app.route('/admin/api/pregen-now', methods=['POST'])
-@admin_required
-def admin_pregen_now():
-    """Superadmin: fuerza la pre-generación de juegos ahora mismo (diagnóstico/test)."""
-    if session.get('admin_role') != 'superadmin':
-        return jsonify({'ok': False, 'error': 'No autorizado'}), 403
-    try:
-        pregen_daily_games()
-        return jsonify({'ok': True, 'msg': 'Pre-generación completada. Revisa los logs.'})
-    except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)})
-
-
-@app.route('/admin/api/scheduler-status')
-@admin_required
-def admin_scheduler_status():
-    """Superadmin: devuelve el estado del scheduler y cuántos juegos hay pre-generados hoy."""
-    if session.get('admin_role') != 'superadmin':
-        return jsonify({'ok': False, 'error': 'No autorizado'}), 403
-    today = str(date.today())
-    db = get_db()
-    rows = db.execute(
-        "SELECT bar_id, game_type, game_date FROM generated_games WHERE game_date = ? ORDER BY bar_id, game_type",
-        (today,)
-    ).fetchall()
-    bars = db.execute("SELECT id, slug FROM bars WHERE active = 1").fetchall()
-    db.close()
-    return jsonify({
-        'ok': True,
-        'today': today,
-        'bars_active': len(bars),
-        'pregenerated_today': len(rows),
-        'detail': [{'bar_id': r['bar_id'], 'game_type': r['game_type']} for r in rows]
-    })
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Scheduled tasks
@@ -512,6 +477,42 @@ def admin_required(f):
 
 def hash_password(password):
     return _hashlib.sha256(password.encode()).hexdigest()
+
+
+@app.route('/admin/api/pregen-now', methods=['POST'])
+@admin_required
+def admin_pregen_now():
+    """Superadmin: fuerza la pre-generación de juegos ahora mismo (diagnóstico/test)."""
+    if session.get('admin_role') != 'superadmin':
+        return jsonify({'ok': False, 'error': 'No autorizado'}), 403
+    try:
+        pregen_daily_games()
+        return jsonify({'ok': True, 'msg': 'Pre-generación completada. Revisa los logs.'})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)})
+
+
+@app.route('/admin/api/scheduler-status')
+@admin_required
+def admin_scheduler_status():
+    """Superadmin: devuelve el estado del scheduler y cuántos juegos hay pre-generados hoy."""
+    if session.get('admin_role') != 'superadmin':
+        return jsonify({'ok': False, 'error': 'No autorizado'}), 403
+    today = str(date.today())
+    db = get_db()
+    rows = db.execute(
+        "SELECT bar_id, game_type, game_date FROM generated_games WHERE game_date = ? ORDER BY bar_id, game_type",
+        (today,)
+    ).fetchall()
+    bars = db.execute("SELECT id, slug FROM bars WHERE active = 1").fetchall()
+    db.close()
+    return jsonify({
+        'ok': True,
+        'today': today,
+        'bars_active': len(bars),
+        'pregenerated_today': len(rows),
+        'detail': [{'bar_id': r['bar_id'], 'game_type': r['game_type']} for r in rows]
+    })
 
 @app.route('/admin')
 def admin_index():
