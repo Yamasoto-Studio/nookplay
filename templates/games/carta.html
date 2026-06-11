@@ -285,7 +285,7 @@ function checkBoard() {
   if (correct) {
     clearInterval(timerInterval);
     const elapsed = getElapsed();
-    mostrarResultado(elapsed);
+    nookCelebrate('¡Carta completa!', () => mostrarResultado(elapsed));
   } else {
     errores++;
     st.textContent = '❌ Hay algún error. Sigue buscando.';
@@ -330,8 +330,7 @@ function doShare() {
   const items = gameData.categoria.items.join('');
   const errorStr = errores === 0 ? 'sin errores' : `${errores} ${errores===1?'error':'errores'}`;
   const txt = `${items}\n¡He resuelto La Carta en ${BAR_NAME}!\n\nTiempo: ${elapsed} · ${errorStr}\n\n¿Puedes tú? → nookplay.app`;
-  if (navigator.share) navigator.share({ text: txt, url: 'https://nookplay.app' });
-  else navigator.clipboard.writeText(txt).then(() => alert('¡Copiado!'));
+  nookShareWithImage(txt, 'carta');
 }
 
 function showScreen(id) {

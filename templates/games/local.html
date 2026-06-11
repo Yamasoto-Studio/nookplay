@@ -259,8 +259,7 @@ function mostrarBonus() {
 
 function doShare() {
   const txt = `📍 ${gameData.ciudad} Connection en ${BAR_NAME}\n\n${gameData.emoji_titulo} ${gameData.titulo}\n\n"${gameData.contenido.substring(0,100)}..."\n\n¿Lo sabías? → nookplay.app`;
-  if (navigator.share) navigator.share({ text: txt, url: 'https://nookplay.app' });
-  else navigator.clipboard.writeText(txt).then(() => alert('¡Copiado!'));
+  nookShareWithImage(txt, 'local');
 }
 
 function showScreen(id) {

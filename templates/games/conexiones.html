@@ -372,8 +372,7 @@ function doShare() {
     ? `Resuelto con ${intentosUsados} ${intentosUsados === 1 ? 'fallo' : 'fallos'}`
     : 'Sin resolver hoy';
   const txt = `🔗 Las Conexiones de hoy en ${BAR_NAME}\n\n${intentosStr}\n\n¿Puedes tú? → nookplay.app`;
-  if (navigator.share) navigator.share({ text: txt, url: 'https://nookplay.app' });
-  else navigator.clipboard.writeText(txt).then(() => alert('¡Copiado!'));
+  nookShareWithImage(txt, 'conexiones');
 }
 
 function showScreen(id) {

@@ -173,6 +173,7 @@ function doShare() {
   const culpableName = currentGame.sospechosos[currentGame.culpable].nombre;
   const pct = document.getElementById('donut-pct')?.textContent;
   shareGame({
+    gameSlug: 'crimen',
     correct,
     barName: BAR_NAME,
     gameTitle: 'El Crimen del Día',

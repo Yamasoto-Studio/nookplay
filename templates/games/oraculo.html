@@ -258,8 +258,7 @@ function doShare() {
   const signo = SIGNOS.find(s => s.nombre === signoElegido);
   const data = gameData.signos[signoElegido];
   const txt = `${signo.emoji} Mi horóscopo de hoy en ${BAR_NAME}\n\n*${signoElegido}*\n"${data.prediccion}"\n\n¿Y el tuyo? → nookplay.app`;
-  if (navigator.share) navigator.share({ text: txt, url: 'https://nookplay.app' });
-  else navigator.clipboard.writeText(txt).then(() => alert('¡Copiado!'));
+  nookShareWithImage(txt, 'oraculo');
 }
 
 function showScreen(id) {

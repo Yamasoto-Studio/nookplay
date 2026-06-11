@@ -327,8 +327,7 @@ function doShare() {
   const pctI = document.getElementById('r-pct-inocente').textContent;
   const myLabel = myVote === 'culpable' ? 'Culpable ⚖️' : 'Inocente 🕊️';
   const txt = `⚖️ El Veredicto de hoy en ${BAR_NAME}\n\n"${gameData.titulo}"\n\nMi voto: ${myLabel}\n\nResultado: Culpable ${pctC} · Inocente ${pctI}\n\n¿Y tú? → nookplay.app`;
-  if (navigator.share) navigator.share({ text: txt, url: 'https://nookplay.app' });
-  else navigator.clipboard.writeText(txt).then(() => alert('¡Copiado!'));
+  nookShareWithImage(txt, 'veredicto');
 }
 
 function showScreen(id) {

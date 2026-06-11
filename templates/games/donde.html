@@ -285,8 +285,7 @@ function doShare() {
   const txt = correcto
     ? `🌍 He adivinado el lugar en ${BAR_NAME}\n\n📍 ${gameData.lugar} — con solo ${pistasReveladas} ${pistasReveladas === 1 ? 'pista' : 'pistas'}\n\n¿Puedes tú? → nookplay.app`
     : `🌍 No he adivinado el lugar en ${BAR_NAME}\n\nEra 📍 ${gameData.lugar}\n\n¿Lo sabías tú? → nookplay.app`;
-  if (navigator.share) navigator.share({ text: txt, url: 'https://nookplay.app' });
-  else navigator.clipboard.writeText(txt).then(() => alert('¡Copiado!'));
+  nookShareWithImage(txt, 'donde');
 }
 
 function showScreen(id) {

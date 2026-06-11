@@ -313,7 +313,7 @@ function renderBoard() {
 
   if (queens === n && conflicts.size === 0) {
     solved = true;
-    setTimeout(() => mostrarResultado(), 400);
+    setTimeout(() => nookCelebrate('¡Resuelto!', () => mostrarResultado()), 350);
   }
 }
 
@@ -414,8 +414,7 @@ function doShare() {
   const elapsed = document.getElementById('r-time').textContent;
   const hintStr = hintsUsed === 0 ? 'sin pistas' : `${hintsUsed} ${hintsUsed===1?'pista':'pistas'}`;
   const txt = `👑 He resuelto Las Reinas en ${BAR_NAME}\n\nTiempo: ${elapsed} · ${hintStr}\n\n¿Puedes tú? → nookplay.app`;
-  if (navigator.share) navigator.share({ text: txt, url: 'https://nookplay.app' });
-  else navigator.clipboard.writeText(txt).then(()=>alert('¡Copiado!'));
+  nookShareWithImage(txt, 'reinas');
 }
 
 function openHelp() {

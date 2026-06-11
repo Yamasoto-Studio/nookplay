@@ -378,7 +378,7 @@ function renderBoard() {
 
   if (checkWin()) {
     solved = true;
-    setTimeout(() => mostrarResultado(), 400);
+    setTimeout(() => nookCelebrate('¡Equilibrio perfecto!', () => mostrarResultado()), 350);
   }
 }
 
@@ -478,8 +478,7 @@ function doShare() {
   const elapsed = document.getElementById('r-time').textContent;
   const hintStr = hintsUsed === 0 ? 'sin pistas' : `${hintsUsed} ${hintsUsed===1?'pista':'pistas'}`;
   const txt = `☀️🌙 He resuelto Equilibrio en ${BAR_NAME}\n\nTiempo: ${elapsed} · ${hintStr}\n\n¿Puedes tú? → nookplay.app`;
-  if (navigator.share) navigator.share({ text: txt, url: 'https://nookplay.app' });
-  else navigator.clipboard.writeText(txt).then(()=>alert('¡Copiado!'));
+  nookShareWithImage(txt, 'equilibrio');
 }
 
 function openHelp() { document.getElementById('help-modal').classList.add('open'); }

@@ -146,6 +146,7 @@ function doShare() {
   const correct = selected === gameData.falsa;
   const pct = document.getElementById('donut-pct')?.textContent;
   shareGame({
+    gameSlug: 'impostor',
     correct,
     barName: BAR_NAME,
     gameTitle: 'El Impostor',

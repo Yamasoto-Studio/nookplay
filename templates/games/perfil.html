@@ -169,7 +169,7 @@
 
   <div class="perfil-opciones" id="p-opciones"></div>
 
-  <button class="btn-primary" id="btn-confirmar" onclick="confirmar()" style="display:none; width:100%; margin-top:4px;">Este es mi veredicto</button>
+  <button class="btn-primary" id="btn-confirmar" onclick="confirmar()" style="display:none; width:100%; margin-top:4px;">Esta es mi respuesta</button>
   <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
 </div>
 
@@ -342,8 +342,7 @@ function doShare() {
   const correct = myChoice === (gameData.correcta - 1);
   const emoji = correct ? '✓' : '✗';
   const txt = `🧠 El Perfil de hoy en ${BAR_NAME}\n\n${gameData.nombre}, ${gameData.edad} años\n"${gameData.pregunta}"\n\nMi respuesta: ${emoji} ${gameData.opciones[myChoice]}\n\n¿Y tú? → nookplay.app`;
-  if (navigator.share) navigator.share({ text: txt, url: 'https://nookplay.app' });
-  else navigator.clipboard.writeText(txt).then(() => alert('¡Copiado!'));
+  nookShareWithImage(txt, 'perfil');
 }
 
 function showScreen(id) {

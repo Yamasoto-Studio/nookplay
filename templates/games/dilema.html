@@ -91,6 +91,7 @@
     <button class="dilema-btn" id="btn-a" onclick="votar('a')"></button>
     <button class="dilema-btn" id="btn-b" onclick="votar('b')"></button>
   </div>
+  <button class="btn-primary" id="btn-confirmar" onclick="confirmar()" style="display:none; width:100%; margin-top:12px;">Esta es mi elección</button>
   <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
 </div>
 
@@ -164,9 +165,21 @@ function renderGame(g) {
   showScreen('s-game');
 }
 
-async function votar(opcion) {
-  if (myVote) return;
+function votar(opcion) {
+  // Solo marcar — se puede cambiar antes de confirmar
   myVote = opcion;
+  document.getElementById('btn-a').classList.toggle('selected-a', opcion === 'a');
+  document.getElementById('btn-b').classList.toggle('selected-b', opcion === 'b');
+  if (opcion === 'a') document.getElementById('btn-b').classList.remove('selected-b');
+  else document.getElementById('btn-a').classList.remove('selected-a');
+  document.getElementById('btn-confirmar').style.display = 'block';
+}
+
+async function confirmar() {
+  if (!myVote) return;
+  const btn = document.getElementById('btn-confirmar');
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
 
   const elapsed = startTime ? Math.round((Date.now() - startTime) / 1000) : 0;
 
@@ -177,12 +190,11 @@ async function votar(opcion) {
       code: CODE, bar_slug: BAR_SLUG,
       correct: true, // En dilema siempre es "correcto" — no hay respuesta mala
       game_type: 'dilema',
-      choice: opcion === 'a' ? 0 : 1,
+      choice: myVote === 'a' ? 0 : 1,
       elapsed
     })
   });
 
-  // Get stats
   const sr = await fetch(`/api/dilema-stats/${BAR_SLUG}`);
   const stats = await sr.json();
 
@@ -241,8 +253,7 @@ function doShare() {
   const pctB = document.getElementById('r-pct-b').textContent;
   const myChoice = myVote === 'a' ? gameData.opcion_a : gameData.opcion_b;
   const txt = `🤔 El Dilema de hoy en ${BAR_NAME}\n\n"${gameData.situacion}"\n\nYo: ${myChoice}\n\nResultado: ${gameData.opcion_a} ${pctA} · ${gameData.opcion_b} ${pctB}\n\n¿Y tú? → nookplay.app`;
-  if (navigator.share) navigator.share({ text: txt, url: 'https://nookplay.app' });
-  else navigator.clipboard.writeText(txt).then(() => alert('¡Copiado!'));
+  nookShareWithImage(txt, 'dilema');
 }
 
 function showScreen(id) {
