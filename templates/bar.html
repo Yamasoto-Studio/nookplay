@@ -338,16 +338,18 @@ async function showMenu() {
     discoverBtn.style.display = hasHidden ? 'block' : 'none';
   }
 
-  // Insertar banner de productos entre la 2ª y 3ª fila del grid
+  // Insertar banner de productos entre la 2ª y 3ª tarjeta del grid
+  // grid-column span 2 para que ocupe el ancho completo
   const promoBanner = document.getElementById('promo-banner');
   if (promoBanner && PRODUCTS && PRODUCTS.length > 0) {
+    promoBanner.style.gridColumn = '1 / -1';
+    promoBanner.style.display = 'block';
     const cards = list.querySelectorAll('.activity-card-grid');
     if (cards.length >= 2) {
       cards[1].insertAdjacentElement('afterend', promoBanner);
     } else {
       list.appendChild(promoBanner);
     }
-    promoBanner.style.display = 'block';
     initPromoCarousel();
   }
 
