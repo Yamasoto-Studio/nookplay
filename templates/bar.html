@@ -37,7 +37,7 @@
         </div>
         <button class="btn-primary" onclick="validateCode()">Entrar</button>
         <p class="code-hint">
-          🧾 El código está impreso en tu ticket de compra.<br>
+          🧾 Encontrarás el código en tu ticket<br>o pídelo al personal del local.<br>
           <small>Cambia cada semana. Solo válido si has consumido hoy.</small>
         </p>
       </div>
@@ -278,7 +278,7 @@ async function validateCode() {
   const code = document.getElementById('code-input').value.trim().toUpperCase();
   const errorEl = document.getElementById('code-error');
   errorEl.textContent = '';
-  if (!code) { errorEl.textContent = 'Introduce el código de tu ticket.'; return; }
+  if (!code) { errorEl.textContent = 'Introduce el código del local.'; return; }
 
   const btn = document.querySelector('#s-code .btn-primary');
   btn.textContent = 'Comprobando...';

@@ -1,5 +1,6 @@
 {% extends "base.html" %}
-{% block title %}Nookplay — El pasatiempo diario, en tu local{% endblock %}
+{% block title %}Nookplay — El pasatiempo diario, en tu mesa{% endblock %}
+{% block a11y %}{% endblock %}
 {% block content %}
 <!-- Leaflet — solo en la landing -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
@@ -600,9 +601,8 @@
 <!-- CTA -->
 <section class="cta-section">
   <h2>Dale a tu local algo que recordar.</h2>
-  <p>Gratis. Sin complicaciones. Sin datos de tus clientes.<br>Solo un momento de diversión que les hace volver.</p>
-  <button class="btn-whatsapp" onclick="openContactModal()">✉️ Contacta con nosotros
-  </a>
+  <p>Desde 6,95€/mes. Sin permanencia. Sin datos de tus clientes.<br>Solo un momento de diversión que les hace volver.</p>
+  <button class="btn-whatsapp" onclick="openContactModal()">✉️ Contacta con nosotros</button>
 </section>
 
 <!-- FOOTER -->

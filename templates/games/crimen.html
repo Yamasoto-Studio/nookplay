@@ -43,7 +43,7 @@
 
 <!-- JUEGO -->
 <div class="screen" id="s-game">
-  <span class="game-tag" style="display:block; text-align:center; width:fit-content; margin:0 auto 12px;">Caso del día</span>
+  <span class="game-tag" style="display:block; text-align:center; width:fit-content; margin:0 auto 12px;">El Crimen del Día</span>
   <h2 class="headline" id="g-titular" style="text-align:center; margin-bottom:8px;"></h2>
   <p class="location">📍 <span id="g-lugar"></span></p>
   <hr class="divider">
@@ -69,9 +69,9 @@
   <p class="body-text" id="r-explicacion"></p>
   {% include "components/stats.html" %}
   <div id="result-promo" style="display:none;"></div>
-  <button class="btn-share" onclick="doShare()">📤 Compartir resultado</button>
+  <button class="btn-share" onclick="doShare()">📤 Compartir</button>
   <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
-  <div class="tomorrow">Mañana hay un caso nuevo aquí.<br>Vuelve a tomar un café.</div>
+  <div class="tomorrow">Mañana hay un caso nuevo aquí.<br>{{ bar.tomorrow_message or 'Vuelve a tomar un café.' }}</div>
 </div>
 
 <script>

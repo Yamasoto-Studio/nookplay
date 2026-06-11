@@ -76,6 +76,7 @@
 </head>
 <body>
   {% block content %}{% endblock %}
+{% block a11y %}
 <div class="a11y-toggle" role="group" aria-label="Tamaño del texto">
   <button class="a11y-btn" id="txt-normal" onclick="setTextSize('normal')" aria-label="Texto normal">A</button>
   <span class="a11y-sep">|</span>
@@ -83,6 +84,7 @@
   <span class="a11y-sep">|</span>
   <button class="a11y-btn" id="txt-xl" onclick="setTextSize('text-xl')" aria-label="Texto muy grande" style="font-size:20px;">A</button>
 </div>
+{% endblock %}
 
 <script>
 function setTextSize(size) {

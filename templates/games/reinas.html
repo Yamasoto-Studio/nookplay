@@ -128,9 +128,9 @@
   <div class="reinas-result-time" id="r-time"></div>
   <div style="text-align:center;font-size:14px;color:var(--text-secondary);margin-bottom:20px;">tiempo</div>
   {% include "components/stats.html" %}
-  <button class="btn-share" onclick="doShare()">📤 Compartir resultado</button>
+  <button class="btn-share" onclick="doShare()">📤 Compartir</button>
   <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
-  <div class="tomorrow">Mañana, un nuevo tablero te espera.<br>Vuelve a tomar un café.</div>
+  <div class="tomorrow">Mañana, un nuevo tablero te espera.<br>{{ bar.tomorrow_message or 'Vuelve a tomar un café.' }}</div>
 </div>
 
 <!-- MODAL NORMAS -->

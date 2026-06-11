@@ -12,6 +12,7 @@ import string
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'nookplay-secret-2026')
+app.config['MAX_CONTENT_LENGTH'] = 8 * 1024 * 1024  # 8 MB máx. por subida
 
 # --------------------------------------------------------------------------
 # Database
@@ -171,6 +172,7 @@ def migrate_db():
         "ALTER TABLE bars ADD COLUMN color_bg_subtle TEXT DEFAULT '#F0EBE3'",
         "ALTER TABLE bars ADD COLUMN color_accent_dark TEXT DEFAULT '#1A1A1A'",
         "ALTER TABLE bars ADD COLUMN welcome_message TEXT DEFAULT ''",
+        "ALTER TABLE bars ADD COLUMN tomorrow_message TEXT DEFAULT ''",
         "ALTER TABLE bars ADD COLUMN updated_at TEXT DEFAULT (datetime('now'))",
         # Nuevas columnas en plays
         "ALTER TABLE plays ADD COLUMN game_type TEXT DEFAULT 'crimen'",
@@ -620,8 +622,8 @@ def admin_save():
         db.execute("UPDATE bars SET plan=? WHERE slug=?", (data['plan'], bar_slug))
 
     db.execute(
-        "UPDATE bars SET welcome_message=?, promo_active=?, description=?, owner_name=?, staff_names=?, color_primary=?, color_primary_text=?, color_bg=?, color_bg_subtle=?, address=?, city=?, province=?, zip_code=?, country=?, latitude=?, longitude=? WHERE slug=?",
-        (data.get('welcome_message',''), data.get('promo_active',0),
+        "UPDATE bars SET welcome_message=?, tomorrow_message=?, promo_active=?, description=?, owner_name=?, staff_names=?, color_primary=?, color_primary_text=?, color_bg=?, color_bg_subtle=?, address=?, city=?, province=?, zip_code=?, country=?, latitude=?, longitude=? WHERE slug=?",
+        (data.get('welcome_message',''), data.get('tomorrow_message',''), data.get('promo_active',0),
          data.get('description',''), data.get('owner_name',''),
          data.get('staff_names',''), data.get('color_primary','#C4622D'),
          data.get('color_primary_text','#FFFFFF'), data.get('color_bg','#F7F2EB'),
