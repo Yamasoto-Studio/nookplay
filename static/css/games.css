@@ -15,14 +15,20 @@
 }
 
 /* ── Back button ── */
+/* ── Back to menu / in-game back button — unified ── */
 .btn-back-game {
-  display: inline-flex; align-items: center; gap: 4px;
-  font-size: 14px; min-height: 44px; color: var(--text-secondary);
-  background: transparent; border: none;
-  cursor: pointer; padding: 0; margin-bottom: 16px;
+  display: flex; align-items: center; justify-content: center;
+  width: 100%; padding: 11px;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  font-size: 13px; font-weight: 500;
+  cursor: pointer; margin-top: 8px; margin-bottom: 0;
   font-family: inherit; text-decoration: none;
+  transition: background 0.15s, color 0.15s;
 }
-.btn-back-game:hover { color: var(--text); }
+.btn-back-game:hover { background: var(--bar-bg-subtle); color: var(--text); }
 
 /* ── Result states ── */
 .result-big { font-size: 30px; font-weight: 700; margin-bottom: 6px; }
@@ -51,15 +57,19 @@
 }
 .btn-share:hover { background: var(--bar-bg-subtle); }
 
-/* ── Back to menu button ── */
+/* ── Back to menu button (result screens) — same style as btn-back-game ── */
 .btn-menu {
-  width: 100%; padding: 10px;
-  background: transparent; color: var(--text-muted);
-  border: 1px solid var(--border); border-radius: var(--radius-md);
-  font-size: 13px; font-weight: 400; cursor: pointer;
-  margin-top: 8px; font-family: inherit;
+  width: 100%; padding: 11px;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  font-size: 13px; font-weight: 500;
+  cursor: pointer; margin-top: 8px;
+  font-family: inherit;
+  transition: background 0.15s, color 0.15s;
 }
-.btn-menu:hover { color: var(--text-secondary); border-color: var(--border-strong); }
+.btn-menu:hover { background: var(--bar-bg-subtle); color: var(--text); }
 
 /* ── Tomorrow note ── */
 .tomorrow {
