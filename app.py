@@ -1087,14 +1087,15 @@ def veredicto_stats(bar_slug):
         db.close()
         return jsonify({'total': 0, 'culpables': 0, 'inocentes': 0})
     plays = db.execute(
-        "SELECT choice FROM plays WHERE bar_id = ? AND game_type = 'veredicto' AND play_date = ?",
+        "SELECT choice, elapsed FROM plays WHERE bar_id = ? AND game_type = 'veredicto' AND play_date = ?",
         (bar['id'], today)
     ).fetchall()
     db.close()
     total = len(plays)
     culpables = sum(1 for p in plays if p['choice'] == 1)
     inocentes = total - culpables
-    avg_elapsed = 0
+    elapsed_vals = [p['elapsed'] for p in plays if p['elapsed'] and p['elapsed'] > 0]
+    avg_elapsed = round(sum(elapsed_vals) / len(elapsed_vals)) if elapsed_vals else 0
     return jsonify({'total': total, 'culpables': culpables, 'inocentes': inocentes, 'avg_elapsed': avg_elapsed})
 
 

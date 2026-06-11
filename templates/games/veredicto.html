@@ -134,6 +134,7 @@
       <span>Inocente</span>
     </button>
   </div>
+  <button class="btn-primary" id="btn-confirmar" onclick="confirmar()" style="display:none; width:100%; margin-top:4px;">Este es mi veredicto</button>
   <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
 </div>
 
@@ -218,15 +219,28 @@ function renderGame(g) {
   showScreen('s-game');
 }
 
-async function votar(voto) {
-  if (myVote) return;
+function votar(voto) {
+  // Solo marcar la selección — no confirmar todavía
   myVote = voto;
 
-  const elapsed = startTime ? Math.round((Date.now() - startTime) / 1000) : 0;
+  const btnC = document.getElementById('btn-culpable');
+  const btnI = document.getElementById('btn-inocente');
+  btnC.classList.remove('selected-culpable');
+  btnI.classList.remove('selected-inocente');
 
-  // Highlight botón seleccionado
-  document.getElementById('btn-culpable').classList.add(voto === 'culpable' ? 'selected-culpable' : '');
-  document.getElementById('btn-inocente').classList.add(voto === 'inocente' ? 'selected-inocente' : '');
+  if (voto === 'culpable') btnC.classList.add('selected-culpable');
+  else btnI.classList.add('selected-inocente');
+
+  document.getElementById('btn-confirmar').style.display = 'block';
+}
+
+async function confirmar() {
+  if (!myVote) return;
+  const btn = document.getElementById('btn-confirmar');
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+
+  const elapsed = startTime ? Math.round((Date.now() - startTime) / 1000) : 0;
 
   await fetch('/api/play', {
     method: 'POST',
@@ -235,7 +249,7 @@ async function votar(voto) {
       code: CODE, bar_slug: BAR_SLUG,
       correct: true,
       game_type: 'veredicto',
-      choice: voto === 'culpable' ? 1 : 0,
+      choice: myVote === 'culpable' ? 1 : 0,
       elapsed
     })
   });
@@ -254,7 +268,14 @@ function showResult(stats) {
 
   // Banner veredicto popular
   const banner = document.getElementById('r-banner');
-  if (pctCulpable >= 50) {
+  const myLabel = myVote === 'culpable' ? '⚖️ Has votado <strong>CULPABLE</strong>' : '🕊️ Has votado <strong>INOCENTE</strong>';
+  const myClass = myVote === 'culpable' ? 'culpable' : 'inocente';
+
+  if (total < 3) {
+    // Con pocos votos mostrar solo el propio, sin spoilear tendencia
+    banner.className = `v-veredicto-banner ${myClass}`;
+    banner.innerHTML = `${myLabel}<div class="v-banner-sub">Sé el primero en ver cómo vota la mesa</div>`;
+  } else if (pctCulpable >= 50) {
     banner.className = 'v-veredicto-banner culpable';
     banner.innerHTML = `⚖️ La mesa lo declara <strong>CULPABLE</strong><div class="v-banner-sub">${pctCulpable}% del jurado así lo cree</div>`;
   } else {
