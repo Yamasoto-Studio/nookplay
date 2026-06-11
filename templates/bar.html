@@ -303,18 +303,9 @@ async function showMenu() {
   }
 }
 
-function startActivity(id) {
-  const slug = id;
-  if (slug === 'crimen') window.location = `/${BAR_SLUG}/crimen?code=${validatedCode}`;
-  if (slug === 'impostor') window.location = `/${BAR_SLUG}/impostor?code=${validatedCode}`;
-  if (slug === 'dilema') window.location = `/${BAR_SLUG}/dilema?code=${validatedCode}`;
-  if (slug === 'conexiones') window.location = `/${BAR_SLUG}/conexiones?code=${validatedCode}`;
-  if (slug === 'oraculo') window.location = `/${BAR_SLUG}/oraculo?code=${validatedCode}`;
-  if (slug === 'donde') window.location = `/${BAR_SLUG}/donde?code=${validatedCode}`;
-  if (slug === 'carta') window.location = `/${BAR_SLUG}/carta?code=${validatedCode}`;
-  if (slug === 'reinas') window.location = `/${BAR_SLUG}/reinas?code=${validatedCode}`;
-  if (slug === 'local') window.location = `/${BAR_SLUG}/local?code=${validatedCode}`;
-  if (slug === 'equilibrio') window.location = `/${BAR_SLUG}/equilibrio?code=${validatedCode}`;
+function startActivity(slug) {
+  // Ruta genérica — funciona con cualquier juego presente y futuro
+  window.location = `/${BAR_SLUG}/${slug}?code=${validatedCode}`;
 }
 
 function showScreen(id) {
