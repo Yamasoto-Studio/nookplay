@@ -344,7 +344,10 @@ def home():
 
 @app.route('/juegos')
 def games_catalog():
-    return render_template('games.html')
+    db = get_db()
+    games = db.execute("SELECT slug, name, description, icon, plan_min FROM games WHERE active = 1 ORDER BY position").fetchall()
+    db.close()
+    return render_template('games.html', games=[dict(g) for g in games])
 
 
 

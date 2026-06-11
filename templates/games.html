@@ -256,97 +256,20 @@
   <p class="section-sub">Según el plan, el propietario activa los juegos que mejor encajan con su clientela. Todos se renuevan cada mañana.</p>
 
   <div class="games-grid">
-
+    {% for g in games %}
     <div class="game-card">
-      <img src="/static/games/crimen.png" alt="El Crimen del Día" class="game-card-img">
+      <img src="{{ g.icon }}" alt="{{ g.name }}" class="game-card-img">
       <div class="game-card-body">
-        <div class="game-card-name">El Crimen del Día</div>
-        <div class="game-card-desc">Un caso diferente cada día. Tres pistas, un culpable. ¿Quién lo hizo?</div>
-        <span class="game-card-badge badge-starter">Incluido en Starter</span>
+        <div class="game-card-name">{{ g.name }}</div>
+        <div class="game-card-desc">{{ g.description }}</div>
+        {% if g.plan_min == 'starter' %}
+          <span class="game-card-badge badge-starter">Incluido en Starter</span>
+        {% else %}
+          <span class="game-card-badge badge-free">Elegible en Starter</span>
+        {% endif %}
       </div>
     </div>
-
-    <div class="game-card">
-      <img src="/static/games/dilema.png" alt="El Dilema" class="game-card-img">
-      <div class="game-card-body">
-        <div class="game-card-name">El Dilema</div>
-        <div class="game-card-desc">Una situación cotidiana, dos opciones. ¿Coincides con los demás?</div>
-        <span class="game-card-badge badge-starter">Incluido en Starter</span>
-      </div>
-    </div>
-
-    <div class="game-card">
-      <img src="/static/games/reinas.png" alt="Las Reinas" class="game-card-img">
-      <div class="game-card-body">
-        <div class="game-card-name">Las Reinas</div>
-        <div class="game-card-desc">Puzzle de lógica: coloca las reinas sin que se ataquen entre sí.</div>
-        <span class="game-card-badge badge-starter">Incluido en Starter</span>
-      </div>
-    </div>
-
-    <div class="game-card">
-      <img src="/static/games/conexiones.png" alt="Las Conexiones" class="game-card-img">
-      <div class="game-card-body">
-        <div class="game-card-name">Las Conexiones</div>
-        <div class="game-card-desc">8 palabras, 2 grupos ocultos. Encuentra el hilo conductor.</div>
-        <span class="game-card-badge badge-starter">Incluido en Starter</span>
-      </div>
-    </div>
-
-    <div class="game-card">
-      <img src="/static/games/oraculo.png" alt="El Oráculo" class="game-card-img">
-      <div class="game-card-body">
-        <div class="game-card-name">El Oráculo</div>
-        <div class="game-card-desc">Horóscopo irreverente con referencias cruzadas entre signos. Sin filtros.</div>
-        <span class="game-card-badge badge-free">Elegible en Starter</span>
-      </div>
-    </div>
-
-    <div class="game-card">
-      <img src="/static/games/donde.png" alt="¿Dónde en el mundo?" class="game-card-img">
-      <div class="game-card-body">
-        <div class="game-card-name">¿Dónde en el mundo?</div>
-        <div class="game-card-desc">Pistas con emojis, cuatro opciones. Cuantas menos pistas necesites, más mérito.</div>
-        <span class="game-card-badge badge-free">Elegible en Starter</span>
-      </div>
-    </div>
-
-    <div class="game-card">
-      <img src="/static/games/carta.png" alt="La Carta" class="game-card-img">
-      <div class="game-card-body">
-        <div class="game-card-name">La Carta</div>
-        <div class="game-card-desc">Sudoku 4×4 con emojis de comida. Categorías que rotan cada día.</div>
-        <span class="game-card-badge badge-free">Elegible en Starter</span>
-      </div>
-    </div>
-
-    <div class="game-card">
-      <img src="/static/games/equilibrio.png" alt="Equilibrio" class="game-card-img">
-      <div class="game-card-body">
-        <div class="game-card-name">Equilibrio</div>
-        <div class="game-card-desc">Soles y lunas en equilibrio. Puzzle tipo Tango con pistas de igualdad y diferencia.</div>
-        <span class="game-card-badge badge-free">Elegible en Starter</span>
-      </div>
-    </div>
-
-    <div class="game-card">
-      <img src="/static/games/impostor.png" alt="El Impostor" class="game-card-img">
-      <div class="game-card-body">
-        <div class="game-card-name">El Impostor</div>
-        <div class="game-card-desc">Cuatro afirmaciones, una es mentira. ¿La encuentras?</div>
-        <span class="game-card-badge badge-free">Elegible en Starter</span>
-      </div>
-    </div>
-
-    <div class="game-card">
-      <img src="/static/games/local.png" alt="Conexión Local" class="game-card-img">
-      <div class="game-card-body">
-        <div class="game-card-name">Conexión Local</div>
-        <div class="game-card-desc">Trivia, anécdotas y leyendas de la ciudad del local. Contenido hiperlocal generado por IA.</div>
-        <span class="game-card-badge badge-free">Elegible en Starter</span>
-      </div>
-    </div>
-
+    {% endfor %}
   </div>
 </section>
 
