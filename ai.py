@@ -822,3 +822,76 @@ def generate_equilibrio(bar_slug):
     seed = get_day_seed(bar_slug)
     idx = seed % len(EQUILIBRIO_PUZZLES)
     return EQUILIBRIO_PUZZLES[idx]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# El Veredicto generator
+# ─────────────────────────────────────────────────────────────────────────────
+
+CATEGORIAS_VEREDICTO = [
+    "relaciones y convivencia",
+    "trabajo y jefes",
+    "dinero entre amigos",
+    "familia y obligaciones",
+    "tecnología y privacidad",
+    "transporte y civismo",
+    "vecinos y comunidad",
+    "pareja y celos",
+    "educación y crianza",
+    "salud y hábitos",
+    "amistad y lealtad",
+    "consumo y medio ambiente",
+]
+
+def generate_veredicto(bar_name, bar_slug):
+    today = str(date.today())
+    api_key = os.environ.get('ANTHROPIC_API_KEY')
+    seed = get_day_seed(bar_slug)
+    categoria = CATEGORIAS_VEREDICTO[(seed + 11) % len(CATEGORIAS_VEREDICTO)]
+
+    prompt = """Eres el moderador de un juicio popular en un bar. Presentas casos reales o muy verosímiles donde alguien hizo algo que puede juzgarse. La mesa debate y vota: ¿culpable o inocente?
+
+FECHA: """ + today + """
+CATEGORÍA: """ + categoria + """
+
+Crea el caso del día con estas reglas:
+1. El caso debe ser cotidiano y reconocible — algo que le puede pasar a cualquiera
+2. Debe haber argumentos sólidos para ambos lados — no hay respuesta obvia
+3. Tono de crónica informal, como si lo contara alguien en el bar
+4. Nada de política, religión ni crímenes graves — solo dilemas morales cotidianos
+5. El caso en 3-4 frases máximo, con nombre ficticio y situación concreta
+6. La "sentencia popular" debe ser un dato o reflexión sorprendente sobre este tipo de situación
+7. Los argumentos de defensa y acusación deben ser concisos y contundentes (1 frase cada uno)
+
+Devuelve SOLO un objeto JSON válido, sin markdown:
+{
+  "titulo": "Título corto y con gancho del caso (ej: 'El que canceló la boda por WhatsApp')",
+  "caso": "Descripción del caso en 3-4 frases. Nombre ficticio, situación concreta, tono de bar.",
+  "argumento_culpable": "El mejor argumento para declararlo culpable. 1 frase directa.",
+  "argumento_inocente": "El mejor argumento para absolverlo. 1 frase directa.",
+  "sentencia_popular": "Dato, estadística o reflexión sorprendente sobre este tipo de situación. 1-2 frases.",
+  "pct_culpable_estimado": "Porcentaje estimado que lo declararía culpable. Solo el número, ej: 62"
+}"""
+
+    response = requests.post(
+        'https://api.anthropic.com/v1/messages',
+        headers={
+            'x-api-key': api_key,
+            'anthropic-version': '2023-06-01',
+            'content-type': 'application/json'
+        },
+        json={
+            'model': 'claude-sonnet-4-6',
+            'max_tokens': 800,
+            'messages': [{'role': 'user', 'content': prompt}]
+        },
+        timeout=60
+    )
+
+    data = response.json()
+    if 'content' not in data:
+        raise Exception(f"API error: {data.get('error', data)}")
+
+    text = data['content'][0]['text'].strip()
+    text = text.replace('```json', '').replace('```', '').strip()
+    return json.loads(text)

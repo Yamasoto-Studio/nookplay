@@ -276,6 +276,16 @@ for game in GAMES_CATALOG:
         )
 
 db.commit()
+# Añadir veredicto si no existe
+veredicto_exists = db.execute("SELECT id FROM games WHERE slug = 'veredicto'").fetchone()
+if not veredicto_exists:
+    db.execute(
+        "INSERT INTO games (slug, name, description, icon, plan_min, position) VALUES (?,?,?,?,?,?)",
+        ('veredicto', 'El Veredicto', 'Culpable o inocente', '/static/games/veredicto.webp', 'starter_free', 11)
+    )
+    db.commit()
+    print('Juego El Veredicto añadido.')
+
 print('Catálogo de juegos listo.')
 
 # ── Asignar juegos por defecto a Yellow (plan gift = todos activos) ─────────

@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 from datetime import date, datetime, timedelta
 import sqlite3
-from ai import generate_game, generate_impostor, generate_dilema, generate_conexiones, generate_oraculo, generate_donde, generate_carta, generate_reinas, generate_conexion_local, generate_equilibrio, build_bar_context, get_day_seed
+from ai import generate_game, generate_impostor, generate_dilema, generate_conexiones, generate_oraculo, generate_donde, generate_carta, generate_reinas, generate_conexion_local, generate_equilibrio, generate_veredicto, build_bar_context, get_day_seed
 import os
 import smtplib
 from email.mime.text import MIMEText
@@ -392,7 +392,7 @@ def pregen_daily_games():
     db = get_db()
     bars = db.execute("SELECT * FROM bars WHERE active = 1").fetchall()
     for bar in bars:
-        for game_type in ['crimen', 'impostor', 'dilema', 'conexiones', 'oraculo', 'donde', 'local']:
+        for game_type in ['crimen', 'impostor', 'dilema', 'conexiones', 'oraculo', 'donde', 'local', 'veredicto']:
             existing = db.execute(
                 "SELECT id FROM generated_games WHERE bar_id = ? AND game_type = ? AND game_date = ?",
                 (bar['id'], game_type, today)
@@ -437,6 +437,8 @@ def pregen_daily_games():
                         if not city:
                             continue  # Sin ciudad no se puede generar Conexión Local
                         game_data = generate_conexion_local(bar['name'], city, province, bar['slug'])
+                    elif game_type == 'veredicto':
+                        game_data = generate_veredicto(bar['name'], bar['slug'])
                     
                     import json as _json
                     db.execute(
@@ -1014,6 +1016,88 @@ def dilema_api():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/<bar_slug>/veredicto')
+def veredicto_page(bar_slug):
+    db = get_db()
+    bar = db.execute("SELECT * FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
+    if not bar:
+        db.close()
+        return render_template('404.html'), 404
+    products = db.execute("SELECT * FROM bar_products WHERE bar_id = ? AND active = 1 ORDER BY position", (bar['id'],)).fetchall()
+    db.close()
+    return render_template('games/veredicto.html', bar=bar, products=products)
+
+
+@app.route('/api/veredicto', methods=['POST'])
+def veredicto_api():
+    data = request.get_json()
+    code = data.get('code', '').strip().upper()
+    bar_slug = data.get('bar_slug', '').strip()
+    today = str(date.today())
+
+    db = get_db()
+    bar = db.execute("SELECT * FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
+    if not bar:
+        db.close()
+        return jsonify({'error': 'Invalid code'}), 403
+
+    valid_code = db.execute(
+        "SELECT code FROM access_codes WHERE bar_id = ? AND valid_from <= ? AND valid_until >= ?",
+        (bar['id'], today, today)
+    ).fetchone()
+    if not valid_code or valid_code['code'] != code:
+        db.close()
+        return jsonify({'error': 'Invalid code'}), 403
+
+    bar_name = bar['name']
+    bar_id = bar['id']
+
+    cache_key = f"{bar_slug}_veredicto_{today}"
+    if cache_key in _game_cache:
+        db.close()
+        return jsonify(_game_cache[cache_key])
+
+    pregenerated = db.execute(
+        "SELECT content FROM generated_games WHERE bar_id = ? AND game_type = 'veredicto' AND game_date = ?",
+        (bar_id, today)
+    ).fetchone()
+    if pregenerated:
+        import json as _json
+        game_data = _json.loads(pregenerated['content'])
+        _game_cache[cache_key] = game_data
+        db.close()
+        return jsonify(game_data)
+
+    db.close()
+
+    try:
+        game_data = generate_veredicto(bar_name, bar_slug)
+        _game_cache[cache_key] = game_data
+        return jsonify(game_data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/veredicto-stats/<bar_slug>')
+def veredicto_stats(bar_slug):
+    today = str(date.today())
+    db = get_db()
+    bar = db.execute("SELECT * FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
+    if not bar:
+        db.close()
+        return jsonify({'total': 0, 'culpables': 0, 'inocentes': 0})
+    plays = db.execute(
+        "SELECT choice FROM plays WHERE bar_id = ? AND game_type = 'veredicto' AND play_date = ?",
+        (bar['id'], today)
+    ).fetchall()
+    db.close()
+    total = len(plays)
+    culpables = sum(1 for p in plays if p['choice'] == 1)
+    inocentes = total - culpables
+    avg_elapsed = 0
+    return jsonify({'total': total, 'culpables': culpables, 'inocentes': inocentes, 'avg_elapsed': avg_elapsed})
+
+
 @app.route('/api/dilema-stats/<bar_slug>')
 def dilema_stats(bar_slug):
     today = str(date.today())
@@ -1523,16 +1607,16 @@ Mensaje:
 # Slugs de todos los juegos del catálogo, en orden de posición
 ALL_GAMES = [
     "crimen", "dilema", "reinas", "conexiones",
-    "oraculo", "donde", "carta", "equilibrio", "impostor", "local",
+    "oraculo", "donde", "carta", "equilibrio", "impostor", "local", "veredicto",
 ]
 
 # Starter: 4 fijos siempre activos + 1 elegible a elegir entre STARTER_FREE_GAMES
 STARTER_FIXED      = ["crimen", "dilema", "reinas", "conexiones"]
-STARTER_FREE_GAMES = ["oraculo", "donde", "carta", "equilibrio", "impostor", "local"]
+STARTER_FREE_GAMES = ["oraculo", "donde", "carta", "equilibrio", "impostor", "local", "veredicto"]
 STARTER_MAX_FREE   = 1  # juegos libres simultáneos permitidos
 
 # Pro: hasta PRO_MAX_GAMES a elegir libremente del catálogo completo
-PRO_MAX_GAMES = 10  # cuando el catálogo crezca más de 10, Pro sigue limitado aquí
+PRO_MAX_GAMES = 11  # cuando el catálogo crezca más, Pro sigue limitado aquí
 
 # Premium: acceso a todo ALL_GAMES sin límite
 
