@@ -343,6 +343,10 @@ def rotate_weekly_codes():
 def home():
     return render_template('home.html')
 
+@app.route('/juegos')
+def games_catalog():
+    return render_template('games.html')
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Scheduled tasks

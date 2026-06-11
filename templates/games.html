@@ -1,0 +1,496 @@
+{% extends "base.html" %}
+{% block title %}Los juegos de Nookplay — Entretenimiento diario para tu local{% endblock %}
+{% block content %}
+
+<style>
+  body {
+    display: block !important;
+    align-items: unset !important;
+    justify-content: unset !important;
+    padding: 0 !important;
+    min-height: unset !important;
+    background: #F7F2EB !important;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --brand: #C4622D;
+    --brand-dark: #A8410E;
+    --brand-light: #F0E0D4;
+    --brand-cream: #FDF0E8;
+    --bg: #F7F2EB;
+    --dark: #1A1A1A;
+    --text-sec: #6B6059;
+    --text-muted: #A89B91;
+    --border: #E5DDD5;
+    --white: #FFFFFF;
+  }
+  body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; color: var(--dark); }
+
+  /* NAV */
+  .nav {
+    position: sticky; top: 0; z-index: 100;
+    background: var(--brand);
+    padding: 0 40px; height: 64px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .nav img { height: auto; width: 120px; filter: brightness(0) invert(1); }
+  .nav-back {
+    color: rgba(255,255,255,0.85); font-size: 13px; font-weight: 500;
+    text-decoration: none; display: flex; align-items: center; gap: 6px;
+  }
+  .nav-back:hover { color: white; }
+  .nav-cta {
+    background: var(--bg); color: var(--brand);
+    border: none; padding: 8px 20px; border-radius: 8px;
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    text-decoration: none; font-family: inherit; white-space: nowrap;
+  }
+
+  /* HERO */
+  .hero {
+    background: var(--brand);
+    padding: 56px 40px 64px;
+    text-align: center;
+    color: white;
+  }
+  .hero-eyebrow {
+    font-size: 12px; font-weight: 600; letter-spacing: 1.5px;
+    text-transform: uppercase; opacity: 0.75; margin-bottom: 14px;
+  }
+  .hero h1 {
+    font-size: clamp(28px, 5vw, 44px); font-weight: 800;
+    line-height: 1.15; margin-bottom: 16px;
+  }
+  .hero p {
+    font-size: 16px; line-height: 1.6; opacity: 0.85;
+    max-width: 520px; margin: 0 auto 28px;
+  }
+  .hero-cta {
+    display: inline-block; background: white; color: var(--brand);
+    padding: 13px 28px; border-radius: 10px; font-size: 14px;
+    font-weight: 700; text-decoration: none; cursor: pointer;
+    border: none; font-family: inherit;
+  }
+  .hero-cta:hover { background: var(--bg); }
+
+  /* GAMES GRID */
+  .section { max-width: 960px; margin: 0 auto; padding: 60px 24px; }
+  .section-label {
+    font-size: 12px; font-weight: 700; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--brand);
+    margin-bottom: 8px;
+  }
+  .section-title {
+    font-size: clamp(22px, 3vw, 30px); font-weight: 800;
+    color: var(--dark); margin-bottom: 6px; line-height: 1.2;
+  }
+  .section-sub {
+    font-size: 15px; color: var(--text-sec); margin-bottom: 36px;
+    line-height: 1.6; max-width: 560px;
+  }
+
+  .games-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
+  }
+  .game-card {
+    background: white; border-radius: 16px;
+    border: 1px solid var(--border);
+    padding: 20px; display: flex; align-items: flex-start; gap: 16px;
+    transition: box-shadow 0.15s;
+  }
+  .game-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.07); }
+  .game-card-img {
+    width: 56px; height: 56px; border-radius: 12px;
+    object-fit: cover; flex-shrink: 0;
+  }
+  .game-card-body { flex: 1; min-width: 0; }
+  .game-card-name {
+    font-size: 15px; font-weight: 700; color: var(--dark);
+    margin-bottom: 4px;
+  }
+  .game-card-desc {
+    font-size: 13px; color: var(--text-sec); line-height: 1.5;
+    margin-bottom: 8px;
+  }
+  .game-card-badge {
+    display: inline-block; font-size: 11px; font-weight: 600;
+    padding: 2px 9px; border-radius: 20px;
+  }
+  .badge-starter { background: #FFF3E0; color: #C4622D; }
+  .badge-free    { background: #F0E0D4; color: #7A3A18; }
+
+  /* PLANS */
+  .plans-section {
+    background: white;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 60px 24px;
+  }
+  .plans-inner { max-width: 960px; margin: 0 auto; }
+  .plans-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px; margin-top: 36px;
+  }
+  .plan-card {
+    border: 1.5px solid var(--border); border-radius: 16px;
+    padding: 24px 20px; background: var(--bg);
+    position: relative;
+  }
+  .plan-card.featured {
+    border-color: var(--brand); background: var(--brand-cream);
+  }
+  .plan-badge {
+    position: absolute; top: -11px; left: 50%; transform: translateX(-50%);
+    background: var(--brand); color: white; font-size: 11px;
+    font-weight: 700; padding: 3px 12px; border-radius: 20px;
+    white-space: nowrap; letter-spacing: 0.5px;
+  }
+  .plan-name { font-size: 16px; font-weight: 800; color: var(--dark); margin-bottom: 4px; }
+  .plan-price {
+    font-size: 26px; font-weight: 800; color: var(--brand);
+    margin-bottom: 2px; line-height: 1;
+  }
+  .plan-price span { font-size: 13px; font-weight: 500; color: var(--text-sec); }
+  .plan-desc { font-size: 12px; color: var(--text-sec); margin-bottom: 16px; line-height: 1.5; }
+  .plan-features { list-style: none; }
+  .plan-features li {
+    font-size: 13px; color: var(--text-sec); padding: 4px 0;
+    display: flex; align-items: flex-start; gap: 7px; line-height: 1.4;
+  }
+  .plan-features li::before { content: '✓'; color: var(--brand); font-weight: 700; flex-shrink: 0; }
+
+  /* CTA FINAL */
+  .cta-section {
+    max-width: 960px; margin: 0 auto;
+    padding: 60px 24px; text-align: center;
+  }
+  .cta-section h2 {
+    font-size: clamp(22px, 3vw, 30px); font-weight: 800;
+    margin-bottom: 12px; color: var(--dark);
+  }
+  .cta-section p {
+    font-size: 15px; color: var(--text-sec); margin-bottom: 28px; line-height: 1.6;
+  }
+  .cta-btn {
+    display: inline-block; background: var(--brand); color: white;
+    padding: 14px 32px; border-radius: 10px; font-size: 15px;
+    font-weight: 700; text-decoration: none; cursor: pointer;
+    border: none; font-family: inherit;
+  }
+  .cta-btn:hover { background: var(--brand-dark); }
+
+  /* FOOTER */
+  .footer {
+    background: var(--brand); padding: 24px 40px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .footer img { height: auto; width: 100px; filter: brightness(0) invert(1); }
+  .footer-by {
+    font-size: 12px; color: rgba(255,255,255,0.6); text-decoration: none;
+  }
+  .footer-by:hover { color: white; }
+
+  /* Contact modal (igual que home) */
+  .contact-modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5); z-index: 1000;
+    align-items: center; justify-content: center; padding: 20px;
+  }
+  .contact-modal-overlay.open { display: flex; }
+  .contact-modal {
+    background: white; border-radius: 20px; padding: 28px;
+    width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto;
+  }
+  .contact-field { margin-bottom: 14px; }
+  .contact-field label { font-size: 12px; font-weight: 600; color: var(--dark); display: block; margin-bottom: 5px; }
+  .contact-field input,
+  .contact-field textarea {
+    width: 100%; padding: 10px 12px; border: 1.5px solid var(--border);
+    border-radius: 8px; font-size: 14px; font-family: inherit;
+    outline: none; background: var(--bg); color: var(--dark);
+  }
+  .contact-field input:focus,
+  .contact-field textarea:focus { border-color: var(--brand); }
+  .contact-field textarea { height: 90px; resize: vertical; }
+  .contact-submit {
+    width: 100%; padding: 13px; background: var(--brand); color: white;
+    border: none; border-radius: 10px; font-size: 15px; font-weight: 700;
+    cursor: pointer; font-family: inherit; margin-top: 4px;
+  }
+  .contact-submit:hover { background: var(--brand-dark); }
+
+  @media (max-width: 600px) {
+    .nav { padding: 0 20px; }
+    .hero { padding: 40px 20px 48px; }
+    .footer { padding: 20px; }
+    .games-grid { grid-template-columns: 1fr; }
+    .plans-grid { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 400px) {
+    .plans-grid { grid-template-columns: 1fr; }
+  }
+</style>
+
+<!-- NAV -->
+<nav class="nav">
+  <a href="/"><img src="/static/logo.svg" alt="Nookplay"></a>
+  <a href="/" class="nav-back">← Volver</a>
+  <button class="nav-cta" onclick="openContactModal()">¡Lo quiero para mi local!</button>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-eyebrow">Catálogo de juegos</div>
+  <h1>10 juegos.<br>Cada día, nuevos.</h1>
+  <p>La IA genera contenido fresco cada mañana. Tus clientes siempre tienen algo nuevo que jugar, sin instalar nada.</p>
+  <button class="hero-cta" onclick="openContactModal()">¡Quiero Nookplay en mi local!</button>
+</section>
+
+<!-- GAMES GRID -->
+<section class="section">
+  <div class="section-label">Los juegos</div>
+  <h2 class="section-title">Cada local elige los suyos</h2>
+  <p class="section-sub">Según el plan, el propietario activa los juegos que mejor encajan con su clientela. Todos se renuevan cada mañana.</p>
+
+  <div class="games-grid">
+
+    <div class="game-card">
+      <img src="/static/games/crimen.png" alt="El Crimen del Día" class="game-card-img">
+      <div class="game-card-body">
+        <div class="game-card-name">El Crimen del Día</div>
+        <div class="game-card-desc">Un caso diferente cada día. Tres pistas, un culpable. ¿Quién lo hizo?</div>
+        <span class="game-card-badge badge-starter">Incluido en Starter</span>
+      </div>
+    </div>
+
+    <div class="game-card">
+      <img src="/static/games/dilema.png" alt="El Dilema" class="game-card-img">
+      <div class="game-card-body">
+        <div class="game-card-name">El Dilema</div>
+        <div class="game-card-desc">Una situación cotidiana, dos opciones. ¿Coincides con los demás?</div>
+        <span class="game-card-badge badge-starter">Incluido en Starter</span>
+      </div>
+    </div>
+
+    <div class="game-card">
+      <img src="/static/games/reinas.png" alt="Las Reinas" class="game-card-img">
+      <div class="game-card-body">
+        <div class="game-card-name">Las Reinas</div>
+        <div class="game-card-desc">Puzzle de lógica: coloca las reinas sin que se ataquen entre sí.</div>
+        <span class="game-card-badge badge-starter">Incluido en Starter</span>
+      </div>
+    </div>
+
+    <div class="game-card">
+      <img src="/static/games/conexiones.png" alt="Las Conexiones" class="game-card-img">
+      <div class="game-card-body">
+        <div class="game-card-name">Las Conexiones</div>
+        <div class="game-card-desc">8 palabras, 2 grupos ocultos. Encuentra el hilo conductor.</div>
+        <span class="game-card-badge badge-starter">Incluido en Starter</span>
+      </div>
+    </div>
+
+    <div class="game-card">
+      <img src="/static/games/oraculo.png" alt="El Oráculo" class="game-card-img">
+      <div class="game-card-body">
+        <div class="game-card-name">El Oráculo</div>
+        <div class="game-card-desc">Horóscopo irreverente con referencias cruzadas entre signos. Sin filtros.</div>
+        <span class="game-card-badge badge-free">Elegible en Starter</span>
+      </div>
+    </div>
+
+    <div class="game-card">
+      <img src="/static/games/donde.png" alt="¿Dónde en el mundo?" class="game-card-img">
+      <div class="game-card-body">
+        <div class="game-card-name">¿Dónde en el mundo?</div>
+        <div class="game-card-desc">Pistas con emojis, cuatro opciones. Cuantas menos pistas necesites, más mérito.</div>
+        <span class="game-card-badge badge-free">Elegible en Starter</span>
+      </div>
+    </div>
+
+    <div class="game-card">
+      <img src="/static/games/carta.png" alt="La Carta" class="game-card-img">
+      <div class="game-card-body">
+        <div class="game-card-name">La Carta</div>
+        <div class="game-card-desc">Sudoku 4×4 con emojis de comida. Categorías que rotan cada día.</div>
+        <span class="game-card-badge badge-free">Elegible en Starter</span>
+      </div>
+    </div>
+
+    <div class="game-card">
+      <img src="/static/games/equilibrio.png" alt="Equilibrio" class="game-card-img">
+      <div class="game-card-body">
+        <div class="game-card-name">Equilibrio</div>
+        <div class="game-card-desc">Soles y lunas en equilibrio. Puzzle tipo Tango con pistas de igualdad y diferencia.</div>
+        <span class="game-card-badge badge-free">Elegible en Starter</span>
+      </div>
+    </div>
+
+    <div class="game-card">
+      <img src="/static/games/impostor.png" alt="El Impostor" class="game-card-img">
+      <div class="game-card-body">
+        <div class="game-card-name">El Impostor</div>
+        <div class="game-card-desc">Cuatro afirmaciones, una es mentira. ¿La encuentras?</div>
+        <span class="game-card-badge badge-free">Elegible en Starter</span>
+      </div>
+    </div>
+
+    <div class="game-card">
+      <img src="/static/games/local.png" alt="Conexión Local" class="game-card-img">
+      <div class="game-card-body">
+        <div class="game-card-name">Conexión Local</div>
+        <div class="game-card-desc">Trivia, anécdotas y leyendas de la ciudad del bar. Contenido hiperlocal generado por IA.</div>
+        <span class="game-card-badge badge-free">Elegible en Starter</span>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- PLANES -->
+<section class="plans-section">
+  <div class="plans-inner">
+    <div class="section-label">Los planes</div>
+    <h2 class="section-title">Elige el que mejor encaja</h2>
+    <p class="section-sub">Sin permanencia. Sin complicaciones. El local activa los juegos que quiere y puede cambiarlos cuando quiera.</p>
+
+    <div class="plans-grid">
+
+      <div class="plan-card">
+        <div class="plan-name">Starter</div>
+        <div class="plan-price">6,95€ <span>/ mes</span></div>
+        <div class="plan-desc">Para empezar. 4 juegos fijos más 1 a elegir entre los 6 disponibles.</div>
+        <ul class="plan-features">
+          <li>4 juegos fijos incluidos</li>
+          <li>1 juego libre a elegir</li>
+          <li>Panel de administración</li>
+          <li>Código semanal de acceso</li>
+          <li>Estadísticas básicas</li>
+        </ul>
+      </div>
+
+      <div class="plan-card featured">
+        <div class="plan-badge">MÁS POPULAR</div>
+        <div class="plan-name">Pro</div>
+        <div class="plan-price">9,95€ <span>/ mes</span></div>
+        <div class="plan-desc">Todos los juegos disponibles. Activa y desactiva los que quieras.</div>
+        <ul class="plan-features">
+          <li>Todos los juegos activos</li>
+          <li>Elección libre de catálogo</li>
+          <li>Panel completo</li>
+          <li>Estadísticas avanzadas</li>
+          <li>Productos promocionados</li>
+        </ul>
+      </div>
+
+      <div class="plan-card">
+        <div class="plan-name">Premium</div>
+        <div class="plan-price">14,95€ <span>/ mes</span></div>
+        <div class="plan-desc">Todo lo del plan Pro más personalización avanzada y soporte prioritario.</div>
+        <ul class="plan-features">
+          <li>Todo lo del plan Pro</li>
+          <li>Colores y logo propios</li>
+          <li>WhatsApp automático</li>
+          <li>Soporte prioritario</li>
+          <li>Próximas novedades antes</li>
+        </ul>
+      </div>
+
+      <div class="plan-card">
+        <div class="plan-name">Gift</div>
+        <div class="plan-price" style="font-size:20px; padding-top:3px;">Gratuito</div>
+        <div class="plan-desc">Para pilotos y primeros clientes. Todos los juegos sin coste.</div>
+        <ul class="plan-features">
+          <li>Todos los juegos incluidos</li>
+          <li>Sin permanencia</li>
+          <li>Panel completo</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- CTA FINAL -->
+<section class="cta-section">
+  <h2>¿Lo quieres en tu local?</h2>
+  <p>Escríbenos y en menos de 24 horas lo tienes funcionando.<br>Sin instalaciones, sin complicaciones.</p>
+  <button class="cta-btn" onclick="openContactModal()">¡Quiero Nookplay!</button>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <a href="/"><img src="/static/logo.svg" alt="Nookplay"></a>
+  <a href="https://www.yamasoto.com/" target="_blank" class="footer-by">by Yamasoto</a>
+</footer>
+
+<!-- MODAL CONTACTO -->
+<div class="contact-modal-overlay" id="contact-modal" onclick="closeContactModal(event)">
+  <div class="contact-modal">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div style="font-size:18px;font-weight:700;">¿Quieres Nookplay en tu local?</div>
+      <button onclick="closeContactModal()" style="background:transparent;border:none;font-size:22px;cursor:pointer;color:#A89B91;padding:0;">✕</button>
+    </div>
+    <div id="contact-form-wrap">
+      <p style="font-size:14px;color:#6B6059;margin-bottom:20px;line-height:1.5;">Cuéntanos un poco sobre tu local y nos ponemos en contacto contigo.</p>
+      <div class="contact-field"><label>Tu nombre *</label><input type="text" id="cf-nombre" placeholder="Nombre y apellido"></div>
+      <div class="contact-field"><label>Nombre del negocio *</label><input type="text" id="cf-negocio" placeholder="Bar, cafetería, restaurante..."></div>
+      <div class="contact-field"><label>Ubicación *</label><input type="text" id="cf-ubicacion" placeholder="Ciudad o municipio"></div>
+      <div class="contact-field"><label>Teléfono</label><input type="tel" id="cf-telefono" placeholder="+34 600 000 000"></div>
+      <div class="contact-field"><label>Email de contacto *</label><input type="email" id="cf-email" placeholder="tu@email.com"></div>
+      <div class="contact-field"><label>Mensaje</label><textarea id="cf-mensaje" placeholder="Cuéntanos lo que quieras..."></textarea></div>
+      <button class="contact-submit" id="btn-contact-submit" onclick="submitContact()">Enviar solicitud</button>
+    </div>
+    <div id="contact-success" style="display:none;text-align:center;padding:20px 0;">
+      <span style="font-size:48px;display:block;margin-bottom:12px;">☕</span>
+      <strong style="font-size:16px;">¡Recibido!</strong><br>
+      <span style="font-size:14px;color:#6B6059;line-height:1.6;">Nos pondremos en contacto contigo en breve.<br>nookplay@yamasoto.com</span>
+    </div>
+  </div>
+</div>
+
+<script>
+function openContactModal() {
+  document.getElementById('contact-modal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeContactModal(e) {
+  if (!e || e.target === document.getElementById('contact-modal')) {
+    document.getElementById('contact-modal').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+}
+async function submitContact() {
+  const nombre = document.getElementById('cf-nombre').value.trim();
+  const negocio = document.getElementById('cf-negocio').value.trim();
+  const ubicacion = document.getElementById('cf-ubicacion').value.trim();
+  const telefono = document.getElementById('cf-telefono').value.trim();
+  const email = document.getElementById('cf-email').value.trim();
+  const mensaje = document.getElementById('cf-mensaje').value.trim();
+  if (!nombre || !email) { alert('Por favor, rellena al menos tu nombre y email.'); return; }
+  const btn = document.getElementById('btn-contact-submit');
+  btn.disabled = true; btn.textContent = 'Enviando...';
+  try {
+    const res = await fetch('/api/contact', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({nombre, negocio, ubicacion, telefono, email, mensaje})
+    });
+    const data = await res.json();
+    if (data.ok) {
+      document.getElementById('contact-form-wrap').style.display = 'none';
+      document.getElementById('contact-success').style.display = 'block';
+    } else {
+      btn.disabled = false; btn.textContent = 'Enviar solicitud';
+      alert('Hubo un problema. Escríbenos a nookplay@yamasoto.com');
+    }
+  } catch(e) {
+    btn.disabled = false; btn.textContent = 'Enviar solicitud';
+    alert('Hubo un problema. Escríbenos a nookplay@yamasoto.com');
+  }
+}
+</script>
+
+{% endblock %}
