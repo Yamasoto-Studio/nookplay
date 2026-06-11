@@ -895,3 +895,77 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
     text = data['content'][0]['text'].strip()
     text = text.replace('```json', '').replace('```', '').strip()
     return json.loads(text)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# El Perfil generator
+# ─────────────────────────────────────────────────────────────────────────────
+
+PREGUNTAS_PERFIL = [
+    "¿Cuál crees que es su mayor miedo?",
+    "¿Cuál crees que es su sueño secreto?",
+    "¿Qué es lo que más valora en la vida?",
+    "¿Cuál crees que es su mayor arrepentimiento?",
+    "¿Qué es lo que más le cuesta admitir?",
+    "¿Qué haría si le tocara la lotería?",
+    "¿Cuál crees que es su mayor virtud oculta?",
+    "¿Qué es lo que nunca confesaría en una primera cita?",
+    "¿Qué le impide ser completamente feliz?",
+    "¿Cuál sería su reacción ante una crisis inesperada?",
+    "¿Qué es lo que más envidia de los demás?",
+    "¿Qué haría diferente si pudiera volver atrás?",
+]
+
+def generate_perfil(bar_slug):
+    today = str(date.today())
+    api_key = os.environ.get('ANTHROPIC_API_KEY')
+    seed = get_day_seed(bar_slug)
+    pregunta = PREGUNTAS_PERFIL[(seed + 13) % len(PREGUNTAS_PERFIL)]
+
+    prompt = """Eres el creador de un juego de psicología e intuición para bares. Generas perfiles de personas ficticias con coherencia interna: los datos del perfil contienen pistas sutiles que apuntan a la respuesta correcta, pero sin decirla explícitamente. El jugador debe leer entre líneas.
+
+FECHA: """ + today + """
+PREGUNTA DEL DÍA: """ + pregunta + """
+
+Crea el perfil con estas reglas:
+1. Persona completamente ficticia pero muy verosímil — nombre español común, edad concreta, profesión real
+2. Exactamente 4 datos de su vida cotidiana — específicos, concretos, con detalles que parezcan casuales pero no lo sean
+3. Los datos deben contener pistas sutiles hacia la respuesta correcta, sin revelarla directamente
+4. Las 4 opciones deben ser todas plausibles — ninguna absurda, pero una claramente más coherente con el perfil
+5. La explicación debe revelar qué pistas del perfil apuntaban a la respuesta, de forma que el jugador piense "claro, tenía sentido"
+6. Tono cercano, como si hablaras de alguien real que conoces
+
+Devuelve SOLO un objeto JSON válido, sin markdown:
+{
+  "nombre": "Nombre y apellido español ficticio",
+  "edad": 34,
+  "profesion": "Profesión concreta",
+  "datos": ["Dato 1 muy concreto", "Dato 2", "Dato 3", "Dato 4"],
+  "pregunta": \"""" + pregunta + """\",
+  "opciones": ["Opción A creíble", "Opción B creíble", "Opción C creíble", "Opción D creíble"],
+  "correcta": 1,
+  "explicacion": "Explicación de por qué esta respuesta tiene sentido con los datos del perfil. 2-3 frases."
+}"""
+
+    response = requests.post(
+        'https://api.anthropic.com/v1/messages',
+        headers={
+            'x-api-key': api_key,
+            'anthropic-version': '2023-06-01',
+            'content-type': 'application/json'
+        },
+        json={
+            'model': 'claude-sonnet-4-6',
+            'max_tokens': 900,
+            'messages': [{'role': 'user', 'content': prompt}]
+        },
+        timeout=60
+    )
+
+    data = response.json()
+    if 'content' not in data:
+        raise Exception(f"API error: {data.get('error', data)}")
+
+    text = data['content'][0]['text'].strip()
+    text = text.replace('```json', '').replace('```', '').strip()
+    return json.loads(text)

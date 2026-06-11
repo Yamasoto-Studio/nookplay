@@ -286,6 +286,16 @@ if not veredicto_exists:
     db.commit()
     print('Juego El Veredicto añadido.')
 
+# Añadir perfil si no existe
+perfil_exists = db.execute("SELECT id FROM games WHERE slug = 'perfil'").fetchone()
+if not perfil_exists:
+    db.execute(
+        "INSERT INTO games (slug, name, description, icon, plan_min, position) VALUES (?,?,?,?,?,?)",
+        ('perfil', 'El Perfil', '¿Sabes leer entre líneas?', '/static/games/perfil.webp', 'starter_free', 12)
+    )
+    db.commit()
+    print('Juego El Perfil añadido.')
+
 print('Catálogo de juegos listo.')
 
 # ── Asignar juegos por defecto a Yellow (plan gift = todos activos) ─────────
