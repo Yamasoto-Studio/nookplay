@@ -157,7 +157,7 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
             'content-type': 'application/json'
         },
         json={
-            'model': 'claude-sonnet-4-5',
+            'model': 'claude-sonnet-4-6',
             'max_tokens': 1200,
             'messages': [{'role': 'user', 'content': prompt}]
         },
@@ -225,7 +225,7 @@ La afirmación en la posición """ + str(falsa_idx) + """ (índice 0-3) debe ser
             'content-type': 'application/json'
         },
         json={
-            'model': 'claude-sonnet-4-5',
+            'model': 'claude-sonnet-4-6',
             'max_tokens': 1000,
             'messages': [{'role': 'user', 'content': prompt}]
         },
@@ -296,7 +296,7 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
             'content-type': 'application/json'
         },
         json={
-            'model': 'claude-sonnet-4-5',
+            'model': 'claude-sonnet-4-6',
             'max_tokens': 800,
             'messages': [{'role': 'user', 'content': prompt}]
         },
@@ -384,7 +384,7 @@ IMPORTANTE: Las palabras deben estar en MAYÚSCULAS."""
             'content-type': 'application/json'
         },
         json={
-            'model': 'claude-sonnet-4-5',
+            'model': 'claude-sonnet-4-6',
             'max_tokens': 800,
             'messages': [{'role': 'user', 'content': prompt}]
         },
@@ -491,7 +491,7 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
             'content-type': 'application/json'
         },
         json={
-            'model': 'claude-sonnet-4-5',
+            'model': 'claude-sonnet-4-6',
             'max_tokens': 2000,
             'messages': [{'role': 'user', 'content': prompt}]
         },
@@ -567,7 +567,7 @@ IMPORTANTE: El lugar correcto debe estar en la posición 0 del array opciones.""
             'content-type': 'application/json'
         },
         json={
-            'model': 'claude-sonnet-4-5',
+            'model': 'claude-sonnet-4-6',
             'max_tokens': 1000,
             'messages': [{'role': 'user', 'content': prompt}]
         },
@@ -609,34 +609,16 @@ CARTA_CATEGORIAS = [
 ]
 
 CARTA_PUZZLES = [
-    {
-        "puzzle":   [[1,0,0,2],[0,2,1,0],[2,0,0,1],[0,1,2,0]],
-        "solution": [[1,3,4,2],[4,2,1,3],[2,4,3,1],[3,1,2,4]],
-    },
-    {
-        "puzzle":   [[0,1,0,3],[3,0,2,0],[0,4,0,2],[2,0,3,0]],
-        "solution": [[4,1,2,3],[3,2,1,4],[1,4,3,2],[2,3,4,1]],
-    },
-    {
-        "puzzle":   [[2,0,1,0],[0,4,0,3],[3,0,4,0],[0,1,0,2]],
-        "solution": [[2,3,1,4],[1,4,2,3],[3,2,4,1],[4,1,3,2]],
-    },
-    {
-        "puzzle":   [[0,2,0,4],[1,0,3,0],[0,3,0,1],[4,0,2,0]],
-        "solution": [[3,2,1,4],[1,4,3,2],[2,3,4,1],[4,1,2,3]],
-    },
-    {
-        "puzzle":   [[1,0,0,4],[0,3,1,0],[0,1,4,0],[4,0,0,1]],
-        "solution": [[1,2,3,4],[4,3,1,2],[2,1,4,3],[4,2,3,1]],
-    },
-    {
-        "puzzle":   [[0,4,0,2],[3,0,4,0],[0,2,0,3],[4,0,1,0]],
-        "solution": [[1,4,3,2],[3,2,4,1],[2,1,2,3],[4,3,1,2]],
-    },
-    {
-        "puzzle":   [[3,0,2,0],[0,1,0,4],[4,0,1,0],[0,2,0,3]],
-        "solution": [[3,4,2,1],[2,1,3,4],[4,3,1,2],[1,2,4,3]],
-    },
+    {"puzzle": [[1, 0, 4, 2], [4, 0, 0, 0], [0, 0, 0, 1], [0, 1, 0, 4]], "solution": [[1, 3, 4, 2], [4, 2, 1, 3], [2, 4, 3, 1], [3, 1, 2, 4]]},
+    {"puzzle": [[4, 0, 0, 3], [0, 0, 1, 4], [1, 4, 0, 2], [0, 0, 4, 0]], "solution": [[4, 1, 2, 3], [3, 2, 1, 4], [1, 4, 3, 2], [2, 3, 4, 1]]},
+    {"puzzle": [[0, 3, 1, 4], [1, 4, 0, 0], [0, 0, 4, 0], [0, 0, 0, 2]], "solution": [[2, 3, 1, 4], [1, 4, 2, 3], [3, 2, 4, 1], [4, 1, 3, 2]]},
+    {"puzzle": [[0, 2, 0, 4], [1, 4, 3, 0], [2, 3, 0, 0], [0, 0, 2, 0]], "solution": [[3, 2, 1, 4], [1, 4, 3, 2], [2, 3, 4, 1], [4, 1, 2, 3]]},
+    {"puzzle": [[0, 4, 0, 0], [3, 2, 4, 1], [0, 0, 0, 0], [0, 3, 0, 4]], "solution": [[1, 4, 2, 3], [3, 2, 4, 1], [4, 1, 3, 2], [2, 3, 1, 4]]},
+    {"puzzle": [[0, 0, 4, 3], [4, 0, 2, 1], [1, 0, 3, 0], [0, 0, 0, 4]], "solution": [[2, 1, 4, 3], [4, 3, 2, 1], [1, 4, 3, 2], [3, 2, 1, 4]]},
+    {"puzzle": [[0, 4, 0, 1], [0, 1, 0, 0], [4, 3, 0, 2], [0, 2, 0, 0]], "solution": [[3, 4, 2, 1], [2, 1, 3, 4], [4, 3, 1, 2], [1, 2, 4, 3]]},
+    {"puzzle": [[0, 0, 0, 1], [0, 3, 4, 0], [3, 1, 0, 4], [2, 4, 0, 0]], "solution": [[4, 2, 3, 1], [1, 3, 4, 2], [3, 1, 2, 4], [2, 4, 1, 3]]},
+    {"puzzle": [[0, 2, 0, 0], [0, 4, 1, 0], [0, 3, 2, 0], [2, 0, 3, 0]], "solution": [[1, 2, 4, 3], [3, 4, 1, 2], [4, 3, 2, 1], [2, 1, 3, 4]]},
+    {"puzzle": [[0, 4, 1, 0], [3, 1, 4, 0], [1, 0, 3, 0], [4, 0, 0, 0]], "solution": [[2, 4, 1, 3], [3, 1, 4, 2], [1, 2, 3, 4], [4, 3, 2, 1]]},
 ]
 
 def generate_carta(bar_slug):
@@ -773,7 +755,7 @@ IMPORTANTE para trivia: opciones y correcta son obligatorios. Para los demás ti
             'content-type': 'application/json'
         },
         json={
-            'model': 'claude-sonnet-4-5',
+            'model': 'claude-sonnet-4-6',
             'max_tokens': 1200,
             'messages': [{'role': 'user', 'content': prompt}]
         },

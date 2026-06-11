@@ -164,12 +164,20 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-// Si el código ya está en la URL (volviendo de un juego)
+// Si el código ya está en la URL (volviendo de un juego) — ir directo al menú
 const urlParams = new URLSearchParams(window.location.search);
 const urlCode = urlParams.get('code');
 if (urlCode) {
   validatedCode = urlCode;
-  window.addEventListener('DOMContentLoaded', () => showMenu());
+  // Ocultar pantalla de código inmediatamente (antes del paint) para evitar flash
+  const codeScreen = document.getElementById('s-code');
+  if (codeScreen) codeScreen.style.display = 'none';
+  // Mostrar menú en cuanto el DOM esté listo
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => showMenu());
+  } else {
+    showMenu();
+  }
 }
 
 // Products data from server

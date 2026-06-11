@@ -224,13 +224,15 @@ function renderBoard() {
       const isFixed = gameData.puzzle[r][c] !== 0;
       const val = userBoard[r][c];
       const isSel = selected && selected[0]===r && selected[1]===c;
-      const inQuad = selected && Math.floor(selected[0]/2)===Math.floor(r/2) && Math.floor(selected[1]/2)===Math.floor(c/2);
-      const sameVal = selected && userBoard[selected[0]][selected[1]] !== 0 && val === userBoard[selected[0]][selected[1]];
+      // Highlight solo fila, columna y cuadrante de la celda seleccionada
+      const inRow  = selected && selected[0]===r && !isSel;
+      const inCol  = selected && selected[1]===c && !isSel;
+      const inQuad = selected && Math.floor(selected[0]/2)===Math.floor(r/2) && Math.floor(selected[1]/2)===Math.floor(c/2) && !isSel;
 
       cell.className = 'carta-cell' +
         (isFixed ? ' fixed' : '') +
         (isSel ? ' selected' : '') +
-        (!isSel && (inQuad || sameVal) ? ' highlight' : '') +
+        (!isSel && (inRow || inCol || inQuad) ? ' highlight' : '') +
         (!val ? ' empty' : '') +
         (c === 1 ? ' border-right' : '') +
         (r === 1 ? ' border-bottom' : '');

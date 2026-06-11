@@ -26,18 +26,18 @@
   aspect-ratio: 1; font-size: 24px;
 }
 .eq-cell:active { filter: brightness(0.85); }
-.eq-cell.fixed { cursor: default; background: var(--bar-bg-subtle); }
+.eq-cell.fixed { cursor: default; background: #F2EDE8; }
 .eq-cell.conflict { outline: 3px solid #E24B4A; outline-offset: -3px; background: #fff0f0; }
 .eq-cell.hint-placed { outline: 3px solid #FFD700; outline-offset: -3px; }
 
 /* Clue markers between cells */
 .eq-clue-h {
   position: absolute; z-index: 10;
-  width: 30px; height: 30px; border-radius: 50%;
+  width: 26px; height: 26px; border-radius: 50%;
   background: #fff;
   border: 1.5px solid var(--border);
   display: flex; align-items: center; justify-content: center;
-  font-size: 16px; font-weight: 400; color: #888;
+  font-size: 13px; font-weight: 400; color: #888;
   pointer-events: none;
   transform: translate(-50%, -50%);
 }
