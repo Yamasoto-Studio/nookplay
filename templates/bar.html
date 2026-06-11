@@ -54,6 +54,22 @@
         {% endif %}
 
         <div id="activities-list" class="activities-grid"></div>
+
+        <!-- Botón descubrir más juegos (solo visible si el bar tiene juegos inactivos) -->
+        <div id="discover-more-btn" style="display:none; margin: 24px 16px 8px; text-align: center;">
+          <a href="/juegos" style="
+            display: inline-block;
+            background: transparent;
+            border: 1.5px solid var(--bar-primary, #C4622D);
+            color: var(--bar-primary, #C4622D);
+            border-radius: 24px;
+            padding: 10px 22px;
+            font-size: 13px;
+            font-weight: 600;
+            text-decoration: none;
+            letter-spacing: 0.01em;
+          ">¿Sabías que Nookplay tiene más juegos? Descúbrelos →</a>
+        </div>
       </div>
 
       <!-- PANTALLA: JUEGO -->
@@ -245,13 +261,14 @@ async function showMenu() {
   welcomeEl.innerHTML = `${customMsg}<br><span class="menu-welcome-sub">Elige tu pasatiempo de hoy.</span>`;
 
   const list = document.getElementById('activities-list');
-  // Juegos jugables primero; los inactivos/bloqueados siempre al final
-  const sortedActivities = [...ACTIVITIES].sort((a, b) => (b.active ? 1 : 0) - (a.active ? 1 : 0));
-  list.innerHTML = sortedActivities.map(a => `
-    <div class="activity-card-grid ${a.active ? '' : 'activity-dim'}" ${a.active ? `onclick="startActivity('${a.slug}')"` : ''}>
+  // Solo mostrar los juegos activos y jugables
+  const activeGames = ACTIVITIES.filter(a => a.active);
+  const hasHidden = ACTIVITIES.length > activeGames.length;
+
+  list.innerHTML = activeGames.map(a => `
+    <div class="activity-card-grid" onclick="startActivity('${a.slug}')">
       <div class="activity-img-wrap">
         ${a.icon.startsWith('/') ? `<img src="${a.icon}" alt="${a.name}" class="activity-img">` : `<span class="activity-img-emoji">${a.icon}</span>`}
-        ${!a.available ? `<div class="activity-plan-overlay">${a.plan_required === 'pro' ? 'Plan Pro' : 'Plan Avanzado'}</div>` : ''}
       </div>
       <div class="activity-grid-info">
         <div class="activity-name">${a.name}</div>
@@ -259,6 +276,12 @@ async function showMenu() {
       </div>
     </div>
   `).join('');
+
+  // Botón de descubrimiento si hay juegos no activos en este bar
+  const discoverBtn = document.getElementById('discover-more-btn');
+  if (discoverBtn) {
+    discoverBtn.style.display = hasHidden ? 'block' : 'none';
+  }
 
   showScreen('s-menu');
 

@@ -1461,8 +1461,8 @@ Mensaje:
 
 # Plan config
 STARTER_FIXED = ["crimen","dilema","reinas","conexiones"]
-STARTER_FREE_GAMES = ["oraculo","donde","carta","equilibrio","impostor"]
-PRO_GAMES = ["crimen","dilema","reinas","conexiones","oraculo","donde","carta","equilibrio","impostor"]
+STARTER_FREE_GAMES = ["oraculo","donde","carta","equilibrio","impostor","local"]
+PRO_GAMES = ["crimen","dilema","reinas","conexiones","oraculo","donde","carta","equilibrio","impostor","local"]
 PRO_ONLY_GAMES = []  # Todos los juegos disponibles desde starter_free
 ALL_GAMES = ["crimen","dilema","reinas","conexiones","oraculo","donde","carta","equilibrio","impostor","local"]
 
