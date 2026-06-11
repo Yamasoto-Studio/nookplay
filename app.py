@@ -237,23 +237,14 @@ def migrate_db():
     ''')
 
     # Actualizar datos de Yellow con info completa
+    # Solo actualizar campos estructurales que no edita Lorena desde el panel
+    # Los campos editables (welcome_message, colores, ubicación...) NUNCA se tocan aquí
     db.execute("""
         UPDATE bars SET
             name                = 'Yellow Specialty Koffee',
             type                = 'Cafetería de especialidad',
-            city                = 'Viladecans',
-            province            = 'Barcelona',
-            country             = 'España',
-            description         = 'Cafetería moderna de café de especialidad. Local acogedor con clientela variada: familias, profesionales y amigos del barrio. Especializados en café de origen etíope, frappés artesanos y repostería propia.',
             owner_name          = 'Lorena',
-            staff_names         = 'Carla',
-            bar_vibe            = 'acogedor, moderno, especialidad, barrio',
-            welcome_message     = 'Bienvenido al Yellow. Elige tu pasatiempo de hoy.',
-            color_primary       = '#FEE25A',
-            color_primary_text  = '#000000',
-            color_bg            = '#FFFBEA',
-            color_bg_subtle     = '#FFF8D6',
-            color_accent_dark   = '#1A1A1A'
+            staff_names         = 'Carla'
         WHERE slug = 'yellow'
     """)
     db.commit()
