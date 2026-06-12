@@ -297,6 +297,15 @@ if not perfil_exists:
     db.commit()
     print('Juego El Perfil añadido.')
 
+# Añadir vestuario si no existe
+if not db.execute("SELECT id FROM games WHERE slug = 'vestuario'").fetchone():
+    db.execute(
+        "INSERT INTO games (slug, name, description, icon, plan_min, position) VALUES (?,?,?,?,?,?)",
+        ('vestuario', 'El Vestuario', 'Quiz de fútbol', '/static/games/vestuario.webp', 'starter_free', 13)
+    )
+    db.commit()
+    print('Juego El Vestuario añadido.')
+
 print('Catálogo de juegos listo.')
 
 # ── Asignar juegos por defecto a Yellow (plan gift = todos activos) ─────────

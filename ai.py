@@ -969,3 +969,89 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
     text = data['content'][0]['text'].strip()
     text = text.replace('```json', '').replace('```', '').strip()
     return json.loads(text)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# El Vestuario generator
+# ─────────────────────────────────────────────────────────────────────────────
+
+def generate_vestuario(bar_slug):
+    today = str(date.today())
+    api_key = os.environ.get('ANTHROPIC_API_KEY')
+    seed = get_day_seed(bar_slug)
+
+    prompt = """Eres el creador de un quiz de fútbol para bares. Generas curiosidades absurdas pero 100% reales sobre jugadores de fútbol. El jugador que responde debe adivinar de quién es la curiosidad entre 3 jugadores.
+
+FECHA: """ + today + """
+SEED: """ + str(seed) + """
+
+Crea exactamente 3 preguntas con estas reglas:
+
+CURIOSIDADES:
+1. Deben ser datos reales, verificables y sorprendentes — el típico "¿en serio?" del bar
+2. Mezcla épocas: algún jugador histórico, alguno reciente, alguno actual
+3. Evita los datos muy conocidos — nada de "Messi tiene X Balones de Oro"
+4. Ejemplos del tono: "anotó un gol con la oreja", "tenía miedo a las palomas", "estudió medicina antes de ser profesional", "marcó en su propio funeral simbólico"
+
+JUGADORES (3 opciones por pregunta):
+- Uno correcto: el verdadero protagonista de la curiosidad
+- Uno trampa: jugador de perfil similar (mismo país, posición o época) que hace dudar
+- Uno señuelo: jugador famoso fácilmente descartable por ser de otro perfil
+
+DIFICULTAD: mezcla — una pregunta fácil, una media, una difícil
+
+Devuelve SOLO un objeto JSON válido, sin markdown:
+{
+  "preguntas": [
+    {
+      "curiosidad": "Texto de la curiosidad sin revelar el nombre del jugador. Usa 'este jugador' o 'un jugador'.",
+      "emoji": "⚽",
+      "jugadores": ["Jugador A", "Jugador B", "Jugador C"],
+      "correcta": 0,
+      "explicacion": "Confirmación del dato con contexto adicional curioso. 1-2 frases."
+    },
+    {
+      "curiosidad": "...",
+      "emoji": "🏆",
+      "jugadores": ["Jugador A", "Jugador B", "Jugador C"],
+      "correcta": 2,
+      "explicacion": "..."
+    },
+    {
+      "curiosidad": "...",
+      "emoji": "👟",
+      "jugadores": ["Jugador A", "Jugador B", "Jugador C"],
+      "correcta": 1,
+      "explicacion": "..."
+    }
+  ],
+  "mensajes": {
+    "0": "0 de 3 — Mejor pide otra ronda y olvida el fútbol. ⚽",
+    "1": "1 de 3 — Algo sabes, pero el míster no te convoca. 😅",
+    "2": "2 de 3 — Buen partido. Te llaman del banquillo. 👏",
+    "3": "3 de 3 — Leyenda del vestuario. Nadie te discute. 🏆"
+  }
+}"""
+
+    response = requests.post(
+        'https://api.anthropic.com/v1/messages',
+        headers={
+            'x-api-key': api_key,
+            'anthropic-version': '2023-06-01',
+            'content-type': 'application/json'
+        },
+        json={
+            'model': 'claude-sonnet-4-6',
+            'max_tokens': 1200,
+            'messages': [{'role': 'user', 'content': prompt}]
+        },
+        timeout=60
+    )
+
+    data = response.json()
+    if 'content' not in data:
+        raise Exception(f"API error: {data.get('error', data)}")
+
+    text = data['content'][0]['text'].strip()
+    text = text.replace('```json', '').replace('```', '').strip()
+    return json.loads(text)

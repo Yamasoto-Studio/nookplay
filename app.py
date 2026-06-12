@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 from datetime import date, datetime, timedelta
 import sqlite3
-from ai import generate_game, generate_impostor, generate_dilema, generate_conexiones, generate_oraculo, generate_donde, generate_carta, generate_reinas, generate_conexion_local, generate_equilibrio, generate_veredicto, generate_perfil, build_bar_context, get_day_seed
+from ai import generate_game, generate_impostor, generate_dilema, generate_conexiones, generate_oraculo, generate_donde, generate_carta, generate_reinas, generate_conexion_local, generate_equilibrio, generate_veredicto, generate_perfil, generate_vestuario, build_bar_context, get_day_seed
 import os
 import smtplib
 from email.mime.text import MIMEText
@@ -397,7 +397,7 @@ def pregen_daily_games():
     db = get_db()
     bars = db.execute("SELECT * FROM bars WHERE active = 1").fetchall()
     for bar in bars:
-        for game_type in ['crimen', 'impostor', 'dilema', 'conexiones', 'oraculo', 'donde', 'local', 'veredicto', 'perfil']:
+        for game_type in ['crimen', 'impostor', 'dilema', 'conexiones', 'oraculo', 'donde', 'local', 'veredicto', 'perfil', 'vestuario']:
             existing = db.execute(
                 "SELECT id FROM generated_games WHERE bar_id = ? AND game_type = ? AND game_date = ?",
                 (bar['id'], game_type, today)
@@ -446,6 +446,8 @@ def pregen_daily_games():
                         game_data = generate_veredicto(bar['name'], bar['slug'])
                     elif game_type == 'perfil':
                         game_data = generate_perfil(bar['slug'])
+                    elif game_type == 'vestuario':
+                        game_data = generate_vestuario(bar['slug'])
                     
                     import json as _json
                     db.execute(
@@ -1188,6 +1190,82 @@ def perfil_stats(bar_slug):
     return jsonify({'total': total, 'acertaron': acertaron, 'pct_acierto': pct_acierto, 'avg_elapsed': avg_elapsed})
 
 
+@app.route('/<bar_slug>/vestuario')
+def vestuario_page(bar_slug):
+    db = get_db()
+    bar = db.execute("SELECT * FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
+    if not bar:
+        db.close()
+        return render_template('404.html'), 404
+    products = db.execute("SELECT * FROM bar_products WHERE bar_id = ? AND active = 1 ORDER BY position", (bar['id'],)).fetchall()
+    db.close()
+    return render_template('games/vestuario.html', bar=bar, products=products)
+
+
+@app.route('/api/vestuario', methods=['POST'])
+def vestuario_api():
+    data = request.get_json()
+    code = data.get('code', '').strip().upper()
+    bar_slug = data.get('bar_slug', '').strip()
+    today = str(date.today())
+
+    db = get_db()
+    bar = db.execute("SELECT * FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
+    if not bar:
+        db.close()
+        return jsonify({'error': 'Invalid code'}), 403
+
+    valid_code = db.execute(
+        "SELECT code FROM access_codes WHERE bar_id = ? AND valid_from <= ? AND valid_until >= ?",
+        (bar['id'], today, today)
+    ).fetchone()
+    if not valid_code or valid_code['code'] != code:
+        db.close()
+        return jsonify({'error': 'Invalid code'}), 403
+
+    bar_id = bar['id']
+    cache_key = f"{bar_slug}_vestuario_{today}"
+    if cache_key in _game_cache:
+        db.close()
+        return jsonify(_game_cache[cache_key])
+
+    pregenerated = db.execute(
+        "SELECT content FROM generated_games WHERE bar_id = ? AND game_type = 'vestuario' AND game_date = ?",
+        (bar_id, today)
+    ).fetchone()
+    if pregenerated:
+        import json as _json
+        game_data = _json.loads(pregenerated['content'])
+        _game_cache[cache_key] = game_data
+        db.close()
+        return jsonify(game_data)
+
+    db.close()
+
+    try:
+        game_data = generate_vestuario(bar_slug)
+        _game_cache[cache_key] = game_data
+        return jsonify(game_data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/vestuario-stats/<bar_slug>')
+def vestuario_stats(bar_slug):
+    today = str(date.today())
+    db = get_db()
+    plays = db.execute(
+        "SELECT choice, elapsed FROM plays WHERE bar_slug = ? AND game_type = 'vestuario' AND played_on = ?",
+        (bar_slug, today)
+    ).fetchall()
+    db.close()
+    total = len(plays)
+    avg_score = round(sum(p['choice'] for p in plays) / total, 1) if total > 0 else 0
+    elapsed_vals = [p['elapsed'] for p in plays if p['elapsed'] and p['elapsed'] > 0]
+    avg_elapsed = round(sum(elapsed_vals) / len(elapsed_vals)) if elapsed_vals else 0
+    return jsonify({'total': total, 'avg_score': avg_score, 'avg_elapsed': avg_elapsed})
+
+
 @app.route('/api/dilema-stats/<bar_slug>')
 def dilema_stats(bar_slug):
     today = str(date.today())
@@ -1697,12 +1775,12 @@ Mensaje:
 # Slugs de todos los juegos del catálogo, en orden de posición
 ALL_GAMES = [
     "crimen", "dilema", "reinas", "conexiones",
-    "oraculo", "donde", "carta", "equilibrio", "impostor", "local", "veredicto", "perfil", "perfil",
+    "oraculo", "donde", "carta", "equilibrio", "impostor", "local", "veredicto", "perfil", "vestuario", "vestuario", "perfil",
 ]
 
 # Starter: 4 fijos siempre activos + 1 elegible a elegir entre STARTER_FREE_GAMES
 STARTER_FIXED      = ["crimen", "dilema", "reinas", "conexiones"]
-STARTER_FREE_GAMES = ["oraculo", "donde", "carta", "equilibrio", "impostor", "local", "veredicto", "perfil"]
+STARTER_FREE_GAMES = ["oraculo", "donde", "carta", "equilibrio", "impostor", "local", "veredicto", "perfil", "vestuario"]
 STARTER_MAX_FREE   = 1  # juegos libres simultáneos permitidos
 
 # Pro: hasta PRO_MAX_GAMES a elegir libremente del catálogo completo
