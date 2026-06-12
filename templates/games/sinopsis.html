@@ -1,0 +1,297 @@
+{% extends "game_base.html" %}
+{% block title %}La Sinopsis Rara — {{ bar.name }}{% endblock %}
+{% block og_title %}¿Adivinas la película? — {{ bar.name }}{% endblock %}
+{% block og_description %}Una sinopsis absurda. Una película famosa. ¿La reconoces? Juega en {{ bar.name }} con Nookplay.{% endblock %}
+{% block og_url %}/{{ bar.slug }}/sinopsis{% endblock %}
+
+{% block game_content %}
+<style>
+/* Sinopsis */
+.sin-cinta {
+  display: flex; align-items: center; justify-content: center;
+  gap: 8px; margin-bottom: 16px;
+}
+.sin-cinta-line {
+  height: 3px; flex: 1; border-radius: 2px;
+  background: var(--border);
+}
+.sin-cinta-icon { font-size: 24px; }
+
+.sin-texto {
+  font-size: 17px; line-height: 1.75;
+  color: var(--text); font-style: italic;
+  background: var(--bar-bg-subtle);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--bar-primary);
+  border-radius: var(--radius-md);
+  padding: 18px 16px;
+  margin-bottom: 22px;
+  text-align: center;
+}
+
+/* Opciones */
+.sin-titulo {
+  font-size: 15px; font-weight: 700; color: var(--text);
+  text-align: center; margin-bottom: 14px;
+}
+.sin-opciones { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+.sin-opcion {
+  padding: 14px 16px; border-radius: var(--radius-md);
+  border: 2px solid var(--border); background: var(--bar-bg-subtle);
+  font-size: 15px; font-weight: 500; color: var(--text);
+  cursor: pointer; font-family: inherit; text-align: left;
+  display: flex; align-items: center; gap: 10px;
+  transition: all 0.15s; line-height: 1.3;
+}
+.sin-opcion .sin-letra {
+  width: 28px; height: 28px; border-radius: 6px;
+  background: var(--border); color: var(--text-secondary);
+  font-size: 12px; font-weight: 700; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.sin-opcion:hover { border-color: var(--bar-primary); }
+.sin-opcion:hover .sin-letra { background: var(--bar-primary); color: white; }
+.sin-opcion.selected { border-color: var(--bar-primary); border-width: 2.5px; background: var(--bar-bg); }
+.sin-opcion.selected .sin-letra { background: var(--bar-primary); color: white; }
+.sin-opcion.correcta { border-color: #2E7D32; border-width: 2.5px; background: #F0FFF4; cursor: default; }
+.sin-opcion.correcta .sin-letra { background: #2E7D32; color: white; }
+.sin-opcion.incorrecta { border-color: #C0392B; background: #FFF0EE; cursor: default; }
+.sin-opcion.incorrecta .sin-letra { background: #C0392B; color: white; }
+.sin-opcion.disabled { pointer-events: none; opacity: 0.55; }
+
+/* Resultado */
+.sin-resultado {
+  text-align: center; padding: 20px 16px;
+  border-radius: var(--radius-md); margin-bottom: 16px;
+  font-size: 20px; font-weight: 800;
+}
+.sin-resultado.correcto { background: #F0FFF4; color: #2E7D32; border: 2px solid #81C784; }
+.sin-resultado.incorrecto { background: #FFF0EE; color: #C0392B; border: 2px solid #F1948A; }
+.sin-resultado .sin-sub { font-size: 13px; font-weight: 500; opacity: 0.8; margin-top: 4px; }
+
+/* Ficha película */
+.sin-ficha {
+  background: var(--bar-bg-subtle); border: 1px solid var(--border);
+  border-radius: var(--radius-md); padding: 14px; margin: 12px 0;
+}
+.sin-ficha-titulo {
+  font-size: 18px; font-weight: 800; color: var(--text); margin-bottom: 4px;
+}
+.sin-ficha-meta {
+  font-size: 12px; color: var(--text-muted); margin-bottom: 10px;
+}
+.sin-dato {
+  font-size: 13px; line-height: 1.6; color: var(--text);
+  border-top: 1px solid var(--border); padding-top: 10px;
+}
+.sin-dato-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--bar-primary); margin-bottom: 4px;
+}
+</style>
+
+<!-- LOADING -->
+<div class="screen active" id="s-loading">
+  <div class="loading"><div class="loading-spinner"></div><p>Eligiendo la película del día...</p></div>
+</div>
+
+<!-- JUEGO -->
+<div class="screen" id="s-game">
+  <div class="game-tag" style="display:block; text-align:center; width:fit-content; margin:0 auto 16px;">La Sinopsis Rara</div>
+
+  <div class="sin-cinta">
+    <div class="sin-cinta-line"></div>
+    <span class="sin-cinta-icon">🎬</span>
+    <div class="sin-cinta-line"></div>
+  </div>
+
+  <div class="sin-texto" id="sin-texto"></div>
+
+  <p class="sin-titulo">¿De qué película se trata?</p>
+
+  <div class="sin-opciones" id="sin-opciones"></div>
+
+  <button class="btn-primary" id="btn-confirmar" onclick="confirmar()" style="display:none; width:100%; margin-top:4px;">Esta es mi respuesta</button>
+  <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
+</div>
+
+<!-- RESULTADO -->
+<div class="screen" id="s-result">
+  <div class="game-tag" style="display:block; text-align:center; width:fit-content; margin:0 auto 16px;">La Sinopsis Rara</div>
+
+  <div class="sin-resultado" id="r-resultado"></div>
+
+  <div class="sin-ficha">
+    <div class="sin-ficha-titulo" id="r-titulo"></div>
+    <div class="sin-ficha-meta" id="r-meta"></div>
+    <div class="sin-dato">
+      <div class="sin-dato-label">¿Lo sabías?</div>
+      <div id="r-dato"></div>
+    </div>
+  </div>
+
+  <div class="sin-opciones" id="r-opciones" style="margin-bottom:16px;"></div>
+
+  <div id="r-pct" style="display:none; text-align:center; padding:10px; background:var(--bar-bg-subtle); border-radius:var(--radius-md); border:1px solid var(--border); font-size:13px; color:var(--text-secondary); margin-bottom:12px;">
+    Hoy en este local han acertado <strong id="r-pct-num">—</strong>
+  </div>
+
+  {% include "components/stats.html" %}
+
+  <button class="btn-share" onclick="doShare()">📤 Compartir</button>
+  <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
+  <div class="tomorrow">Mañana, una nueva sinopsis imposible.<br>{{ bar.tomorrow_message or 'Vuelve a tomar un café.' }}</div>
+</div>
+
+<script>
+const BAR_SLUG = "{{ bar.slug }}";
+const BAR_NAME = "{{ bar.name }}";
+const CODE = new URLSearchParams(window.location.search).get('code') || '';
+let gameData = null;
+let myChoice = null;
+let startTime = null;
+const LETRAS = ['A', 'B', 'C', 'D'];
+
+async function init() {
+  try {
+    const res = await fetch('/api/sinopsis', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG })
+    });
+    gameData = await res.json();
+    renderGame();
+    startTime = Date.now();
+  } catch(e) {
+    document.getElementById('s-loading').innerHTML = `
+      <div class="error-msg">No se pudo cargar la película.<br>
+      <button class="btn-secondary" onclick="location.reload()">Reintentar</button></div>`;
+  }
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function renderGame() {
+  document.getElementById('sin-texto').textContent = gameData.sinopsis;
+
+  document.getElementById('sin-opciones').innerHTML = gameData.opciones.map((op, i) => `
+    <button class="sin-opcion" id="op-${i}" onclick="seleccionar(${i})">
+      <span class="sin-letra">${LETRAS[i]}</span>
+      <span>${op}</span>
+    </button>
+  `).join('');
+
+  showScreen('s-game');
+}
+
+function seleccionar(idx) {
+  myChoice = idx;
+  document.querySelectorAll('.sin-opcion').forEach((el, i) => {
+    el.classList.toggle('selected', i === idx);
+  });
+  document.getElementById('btn-confirmar').style.display = 'block';
+}
+
+async function confirmar() {
+  if (myChoice === null) return;
+  const btn = document.getElementById('btn-confirmar');
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+
+  const elapsed = startTime ? Math.round((Date.now() - startTime) / 1000) : 0;
+  const correct = myChoice === gameData.correcta;
+
+  await fetch('/api/play', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      code: CODE, bar_slug: BAR_SLUG,
+      correct, game_type: 'sinopsis',
+      choice: myChoice, elapsed
+    })
+  });
+
+  const sr = await fetch(`/api/sinopsis-stats/${BAR_SLUG}`);
+  const stats = await sr.json();
+  showResult(correct, stats);
+}
+
+function showResult(correct, stats) {
+  const pelicula = gameData.opciones[gameData.correcta];
+
+  // Banner resultado
+  const banner = document.getElementById('r-resultado');
+  if (correct) {
+    banner.className = 'sin-resultado correcto';
+    banner.innerHTML = `🎬 ¡Acertaste!<div class="sin-sub">Eres del equipo de los cinéfilos</div>`;
+  } else {
+    banner.className = 'sin-resultado incorrecto';
+    banner.innerHTML = `🎬 Era <strong>${pelicula}</strong><div class="sin-sub">Había que verla más veces...</div>`;
+  }
+
+  // Ficha
+  document.getElementById('r-titulo').textContent = pelicula;
+  document.getElementById('r-meta').textContent =
+    [gameData.año, gameData.director].filter(Boolean).join(' · ');
+  document.getElementById('r-dato').textContent = gameData.dato_extra || '';
+
+  // Opciones con colores
+  document.getElementById('r-opciones').innerHTML = gameData.opciones.map((op, i) => {
+    const isCorrecta = i === gameData.correcta;
+    const isElegida = i === myChoice;
+    let cls = 'sin-opcion disabled';
+    if (isCorrecta) cls += ' correcta';
+    else if (isElegida) cls += ' incorrecta';
+    return `<div class="${cls}">
+      <span class="sin-letra">${LETRAS[i]}</span>
+      <span>${op}</span>
+    </div>`;
+  }).join('');
+
+  // % acierto local
+  if (stats.total >= 3) {
+    const de10 = Math.round(stats.pct_acierto / 10);
+    document.getElementById('r-pct-num').textContent = `${de10} de cada 10`;
+    document.getElementById('r-pct').style.display = 'block';
+  }
+
+  // Stats block
+  if (stats.total >= 1) {
+    const statEl = document.getElementById('stats-block');
+    if (statEl) {
+      document.getElementById('stat-jugadores').textContent = stats.total;
+      document.getElementById('stat-tiempo').textContent = stats.avg_elapsed ? stats.avg_elapsed + 's' : '—';
+      document.getElementById('donut-pct').textContent = stats.pct_acierto + '%';
+      document.getElementById('donut-text').textContent = stats.pct_acierto + '%';
+      document.getElementById('donut-desc').textContent = 'Han acertado hoy';
+      const CIRCUM = 2 * Math.PI * 28;
+      const arc = document.getElementById('donut-arc');
+      if (arc) {
+        setTimeout(() => {
+          arc.style.transition = 'stroke-dashoffset 1s ease';
+          arc.setAttribute('stroke-dashoffset', (CIRCUM * (1 - stats.pct_acierto/100)).toFixed(1));
+        }, 300);
+      }
+      statEl.classList.add('visible');
+    }
+  }
+
+  showScreen('s-result');
+  window.scrollTo(0, 0);
+}
+
+function doShare() {
+  const correct = myChoice === gameData.correcta;
+  const pelicula = gameData.opciones[gameData.correcta];
+  const emoji = correct ? '✅' : '❌';
+  const txt = `🎬 La Sinopsis Rara — ${BAR_NAME}\n\n"${gameData.sinopsis.substring(0, 80)}..."\n\n${emoji} ${correct ? 'La acerté' : `Era ${pelicula}`}\n\n¿La adivinas tú? → nookplay.app`;
+  nookShareWithImage(txt, 'sinopsis');
+}
+
+init();
+</script>
+{% endblock %}

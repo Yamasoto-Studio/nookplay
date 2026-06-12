@@ -1055,3 +1055,70 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
     text = data['content'][0]['text'].strip()
     text = text.replace('```json', '').replace('```', '').strip()
     return json.loads(text)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# La Sinopsis Rara generator
+# ─────────────────────────────────────────────────────────────────────────────
+
+def generate_sinopsis(bar_slug):
+    today = str(date.today())
+    api_key = os.environ.get('ANTHROPIC_API_KEY')
+    seed = get_day_seed(bar_slug)
+
+    prompt = """Eres el creador de un juego de cine para bares. Describes películas famosas de forma absurda, literal y deliberadamente confusa — sin nombrar la película ni los personajes por su nombre real. El jugador tiene que adivinar de qué película se trata entre 4 opciones.
+
+FECHA: """ + today + """
+SEED: """ + str(seed) + """
+
+Crea el desafío del día con estas reglas:
+
+LA SINOPSIS:
+1. Escoge una película MUY conocida — que casi todo el mundo haya visto o conozca
+2. Descríbela de forma absurda, literal y sin contexto emocional — como si la explicara alguien que no entiende de cine
+3. No uses el título, nombres de personajes, actores ni lugares reconocibles
+4. La descripción debe ser graciosamente confusa pero técnicamente correcta
+5. Que provoque el "¡ostras, es verdad!" al revelar la respuesta
+6. Mezcla géneros: comedias, dramas, acción, animación, clásicos, recientes
+7. Ejemplos de tono: "Un hombre sin memoria tatuada en el cuerpo busca al asesino de su esposa" / "Una marioneta de madera miente y le crece la nariz" / "Un científico loco construye una máquina del tiempo con un coche de lujo"
+
+LAS 4 OPCIONES:
+- La correcta: la película descrita
+- Una trampa obvia: película del mismo género o director que encaja ligeramente con la sinopsis
+- Una trampa creíble: película que podría encajar con algún detalle de la descripción
+- Un señuelo: película muy conocida que no encaja pero puede confundir
+
+DIFICULTAD: media — que no sea ni trivial ni imposible
+
+Devuelve SOLO un objeto JSON válido, sin markdown:
+{
+  "sinopsis": "La descripción absurda y literal de la película. 2-3 frases máximo. Tono divertido.",
+  "opciones": ["Película A", "Película B", "Película C", "Película D"],
+  "correcta": 2,
+  "año": 1994,
+  "director": "Nombre del director",
+  "dato_extra": "Un dato curioso real sobre la película que no todo el mundo sabe. 1-2 frases."
+}"""
+
+    response = requests.post(
+        'https://api.anthropic.com/v1/messages',
+        headers={
+            'x-api-key': api_key,
+            'anthropic-version': '2023-06-01',
+            'content-type': 'application/json'
+        },
+        json={
+            'model': 'claude-sonnet-4-6',
+            'max_tokens': 800,
+            'messages': [{'role': 'user', 'content': prompt}]
+        },
+        timeout=60
+    )
+
+    data = response.json()
+    if 'content' not in data:
+        raise Exception(f"API error: {data.get('error', data)}")
+
+    text = data['content'][0]['text'].strip()
+    text = text.replace('```json', '').replace('```', '').strip()
+    return json.loads(text)
