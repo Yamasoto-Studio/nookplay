@@ -111,7 +111,7 @@
 
 <!-- JUEGO -->
 <div class="screen" id="s-game">
-  <div class="game-tag" style="display:block; text-align:center; width:fit-content; margin:0 auto 16px;">El Vestuario</div>
+  <div class="game-tag">El Vestuario</div>
 
   <div class="v-progreso" id="v-progreso">
     <div class="v-prog-dot activa" id="dot-0"></div>
@@ -133,7 +133,7 @@
 
 <!-- RESULTADO FINAL -->
 <div class="screen" id="s-result">
-  <div class="game-tag" style="display:block; text-align:center; width:fit-content; margin:0 auto 16px;">El Vestuario</div>
+  <div class="game-tag">El Vestuario</div>
 
   <div class="v-score-banner">
     <div><span class="v-score-num" id="r-score">0</span><span class="v-score-max"> / 3</span></div>
@@ -254,19 +254,23 @@ function confirmar() {
 
   document.getElementById('btn-confirmar').style.display = 'none';
 
-  // Siguiente o finalizar
+  // Botón para avanzar — siempre manual, para dar tiempo a leer la explicación
+  const btnSig = document.getElementById('btn-siguiente');
+  btnSig.style.display = 'block';
   if (preguntaActual < 2) {
-    document.getElementById('btn-siguiente').style.display = 'block';
-    document.getElementById('btn-siguiente').textContent =
-      preguntaActual === 1 ? 'Ver resultado final →' : 'Siguiente pregunta →';
+    btnSig.textContent = 'Siguiente pregunta →';
   } else {
-    setTimeout(() => finalizarQuiz(), 1200);
+    btnSig.textContent = 'Ver resultado final →';
   }
 }
 
 function siguiente() {
-  preguntaActual++;
-  renderPregunta(preguntaActual);
+  if (preguntaActual < 2) {
+    preguntaActual++;
+    renderPregunta(preguntaActual);
+  } else {
+    finalizarQuiz();
+  }
 }
 
 async function finalizarQuiz() {
