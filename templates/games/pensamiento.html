@@ -1,0 +1,174 @@
+{% extends "game_base.html" %}
+{% block title %}El Mismo Pensamiento — {{ bar.name }}{% endblock %}
+{% block og_title %}¿Piensas como los demás? — {{ bar.name }}{% endblock %}
+{% block og_description %}Una categoría, una respuesta espontánea. ¿Coincides con la mayoría? Juega en {{ bar.name }} con Nookplay.{% endblock %}
+{% block og_url %}/{{ bar.slug }}/pensamiento{% endblock %}
+
+{% block game_content %}
+<style>
+.pe-intro { font-size: 13px; color: var(--text-secondary); text-align: center; margin-bottom: 16px; line-height: 1.5; }
+.pe-categoria-wrap {
+  background: var(--bar-bg-subtle); border: 1px solid var(--border);
+  border-radius: var(--radius-md); padding: 22px 18px; margin-bottom: 18px; text-align: center;
+}
+.pe-categoria-label {
+  font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  color: var(--text-muted); margin-bottom: 8px;
+}
+.pe-categoria { font-size: 24px; font-weight: 800; color: var(--bar-primary); line-height: 1.25; }
+.pe-input {
+  width: 100%; padding: 14px 16px; font-size: 17px; text-align: center;
+  border: 2px solid var(--border); border-radius: var(--radius-md);
+  font-family: inherit; outline: none; background: var(--bar-bg-subtle);
+  color: var(--text); margin-bottom: 12px;
+}
+.pe-input:focus { border-color: var(--bar-primary); }
+.pe-pista { font-size: 12px; color: var(--text-muted); text-align: center; font-style: italic; margin-bottom: 18px; }
+
+/* Resultado */
+.pe-mi-resultado {
+  text-align: center; padding: 20px 16px; border-radius: var(--radius-md);
+  margin-bottom: 18px; background: var(--bar-bg); border: 2px solid var(--bar-primary);
+}
+.pe-mi-pct { font-size: 44px; font-weight: 900; color: var(--bar-primary); line-height: 1; }
+.pe-mi-texto { font-size: 14px; color: var(--text); margin-top: 6px; }
+.pe-mi-respuesta { font-weight: 700; }
+
+.pe-ranking-label {
+  font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  color: var(--text-muted); margin-bottom: 10px;
+}
+.pe-ranking { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.pe-rank-item {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--bar-bg-subtle); border: 1px solid var(--border);
+  border-radius: var(--radius-md); padding: 10px 12px;
+}
+.pe-rank-item.mia { border-color: var(--bar-primary); border-width: 2px; }
+.pe-rank-pos {
+  width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0;
+  background: var(--bar-primary); color: var(--bar-primary-text);
+  font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+}
+.pe-rank-texto { flex: 1; font-size: 14px; font-weight: 600; color: var(--text); text-transform: capitalize; }
+.pe-rank-bar-wrap { flex: 1.5; }
+.pe-rank-bar-track { height: 8px; background: var(--border); border-radius: 8px; overflow: hidden; }
+.pe-rank-bar-fill { height: 100%; background: var(--bar-primary); border-radius: 8px; transition: width 0.8s ease; }
+.pe-rank-pct { font-size: 12px; font-weight: 700; color: var(--text-secondary); min-width: 34px; text-align: right; }
+</style>
+
+<div class="screen active" id="s-loading">
+  <div class="loading"><div class="loading-spinner"></div><p>Buscando la categoría de hoy...</p></div>
+</div>
+
+<div class="screen" id="s-game">
+  <div class="game-tag">El Mismo Pensamiento</div>
+  <p class="pe-intro">Escribe lo primero que se te ocurra.<br>Ganas si coincides con la mayoría del local.</p>
+  <div class="pe-categoria-wrap">
+    <div class="pe-categoria-label">Dime...</div>
+    <div class="pe-categoria" id="pe-categoria"></div>
+  </div>
+  <input type="text" class="pe-input" id="pe-input" placeholder="Tu respuesta" maxlength="40" autocomplete="off" onkeydown="if(event.key==='Enter')enviar()">
+  <p class="pe-pista" id="pe-pista"></p>
+  <button class="btn-primary" id="btn-enviar" onclick="enviar()" style="width:100%;">Enviar mi respuesta</button>
+  <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
+</div>
+
+<div class="screen" id="s-result">
+  <div class="game-tag">El Mismo Pensamiento</div>
+  <div class="pe-mi-resultado">
+    <div class="pe-mi-pct" id="r-pct">—</div>
+    <div class="pe-mi-texto">de la gente también dijo<br><span class="pe-mi-respuesta" id="r-respuesta"></span></div>
+  </div>
+  <div class="pe-ranking-label">Lo más respondido hoy</div>
+  <div class="pe-ranking" id="r-ranking"></div>
+  {% include "components/stats.html" %}
+  <button class="btn-share" onclick="doShare()">📤 Compartir</button>
+  <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
+  <div class="tomorrow">Mañana, otra categoría.<br>{{ bar.tomorrow_message or 'Vuelve a tomar un café.' }}</div>
+</div>
+
+<script>
+const BAR_SLUG = "{{ bar.slug }}";
+const BAR_NAME = "{{ bar.name }}";
+const CODE = new URLSearchParams(window.location.search).get('code') || '';
+let gameData = null, startTime = null, miRespuesta = '', miPct = 0;
+
+async function init() {
+  try {
+    const res = await fetch('/api/pensamiento', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG })
+    });
+    gameData = await res.json();
+    document.getElementById('pe-categoria').textContent = gameData.categoria;
+    document.getElementById('pe-pista').textContent = gameData.pista || '';
+    showScreen('s-game');
+    setTimeout(() => document.getElementById('pe-input').focus(), 200);
+    startTime = Date.now();
+  } catch(e) {
+    document.getElementById('s-loading').innerHTML = `<div class="error-msg">No se pudo cargar el juego.<br><button class="btn-secondary" onclick="location.reload()">Reintentar</button></div>`;
+  }
+}
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+async function enviar() {
+  const val = document.getElementById('pe-input').value.trim();
+  if (!val) { document.getElementById('pe-input').focus(); return; }
+  const btn = document.getElementById('btn-enviar');
+  btn.disabled = true; btn.textContent = 'Enviando...';
+  const elapsed = startTime ? Math.round((Date.now() - startTime) / 1000) : 0;
+  try {
+    const res = await fetch('/api/pensamiento-responder', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bar_slug: BAR_SLUG, respuesta: val, elapsed })
+    });
+    const data = await res.json();
+    showResult(data, val);
+  } catch(e) {
+    btn.disabled = false; btn.textContent = 'Enviar mi respuesta';
+  }
+}
+function showResult(data, original) {
+  miRespuesta = original;
+  miPct = data.mi_pct;
+  document.getElementById('r-pct').textContent = data.mi_pct + '%';
+  document.getElementById('r-respuesta').textContent = '"' + original + '"';
+
+  document.getElementById('r-ranking').innerHTML = data.ranking.map((r, i) => `
+    <div class="pe-rank-item ${r.respuesta === data.mi_respuesta ? 'mia' : ''}">
+      <span class="pe-rank-pos">${i + 1}</span>
+      <span class="pe-rank-texto">${r.respuesta}</span>
+      <div class="pe-rank-bar-wrap"><div class="pe-rank-bar-track"><div class="pe-rank-bar-fill" style="width:0%" data-pct="${r.pct}"></div></div></div>
+      <span class="pe-rank-pct">${r.pct}%</span>
+    </div>`).join('');
+
+  setTimeout(() => {
+    document.querySelectorAll('.pe-rank-bar-fill').forEach(el => el.style.width = el.dataset.pct + '%');
+  }, 150);
+
+  if (data.total >= 1) {
+    const statEl = document.getElementById('stats-block');
+    if (statEl) {
+      document.getElementById('stat-jugadores').textContent = data.total;
+      const tEl = document.getElementById('stat-tiempo'); if (tEl) tEl.parentElement.style.display = 'none';
+      document.getElementById('donut-pct').textContent = data.mi_pct + '%';
+      document.getElementById('donut-text').textContent = data.mi_pct + '%';
+      document.getElementById('donut-desc').textContent = 'Coincide contigo';
+      const CIRCUM = 2 * Math.PI * 28, arc = document.getElementById('donut-arc');
+      if (arc) setTimeout(() => { arc.style.transition = 'stroke-dashoffset 1s ease'; arc.setAttribute('stroke-dashoffset', (CIRCUM * (1 - data.mi_pct/100)).toFixed(1)); }, 300);
+      statEl.classList.add('visible');
+    }
+  }
+  showScreen('s-result');
+  window.scrollTo(0, 0);
+}
+function doShare() {
+  const txt = `🧠 El Mismo Pensamiento — ${BAR_NAME}\n\n"${gameData.categoria}"\nYo dije: ${miRespuesta}\n\nEl ${miPct}% pensó igual que yo.\n\n¿Coincidirías? → nookplay.app`;
+  nookShareWithImage(txt, 'pensamiento');
+}
+init();
+</script>
+{% endblock %}

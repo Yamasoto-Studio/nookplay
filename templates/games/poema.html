@@ -1,0 +1,205 @@
+{% extends "game_base.html" %}
+{% block title %}El Poema — {{ bar.name }}{% endblock %}
+{% block og_title %}Tu poema personalizado — {{ bar.name }}{% endblock %}
+{% block og_description %}Un poema único hecho para ti en segundos. Juega en {{ bar.name }} con Nookplay.{% endblock %}
+{% block og_url %}/{{ bar.slug }}/poema{% endblock %}
+
+{% block game_content %}
+<style>
+.po-intro { font-size: 14px; color: var(--text-secondary); text-align: center; margin-bottom: 20px; line-height: 1.5; }
+.po-campo { margin-bottom: 18px; }
+.po-label { font-size: 13px; font-weight: 700; color: var(--text); display: block; margin-bottom: 8px; }
+.po-input {
+  width: 100%; padding: 13px 15px; font-size: 16px;
+  border: 2px solid var(--border); border-radius: var(--radius-md);
+  font-family: inherit; outline: none; background: var(--bar-bg-subtle); color: var(--text);
+}
+.po-input:focus { border-color: var(--bar-primary); }
+.po-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.po-chip {
+  padding: 9px 14px; border-radius: 20px; border: 2px solid var(--border);
+  background: var(--bar-bg-subtle); font-size: 13px; font-weight: 600; color: var(--text);
+  cursor: pointer; font-family: inherit; transition: all 0.15s;
+}
+.po-chip:hover { border-color: var(--bar-primary); }
+.po-chip.selected { border-color: var(--bar-primary); background: var(--bar-primary); color: var(--bar-primary-text); }
+
+/* Nivel con descripción */
+.po-niveles { display: flex; flex-direction: column; gap: 8px; }
+.po-nivel {
+  display: flex; align-items: center; gap: 12px; padding: 12px 14px;
+  border: 2px solid var(--border); border-radius: var(--radius-md);
+  background: var(--bar-bg-subtle); cursor: pointer; transition: all 0.15s;
+}
+.po-nivel:hover { border-color: var(--bar-primary); }
+.po-nivel.selected { border-color: var(--bar-primary); background: var(--bar-bg); }
+.po-nivel-emoji { font-size: 26px; flex-shrink: 0; }
+.po-nivel-info { flex: 1; }
+.po-nivel-nombre { font-size: 14px; font-weight: 700; color: var(--text); }
+.po-nivel-desc { font-size: 12px; color: var(--text-secondary); margin-top: 1px; }
+
+/* Resultado poema */
+.po-resultado {
+  background: var(--bar-bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 28px 22px; margin-bottom: 18px;
+  position: relative;
+}
+.po-comilla { font-size: 48px; color: var(--bar-primary); opacity: 0.25; line-height: 0.5; }
+.po-texto {
+  font-size: 18px; line-height: 1.9; color: var(--text);
+  font-style: italic; white-space: pre-line; text-align: center;
+  margin: 8px 0;
+}
+.po-firma { font-size: 12px; color: var(--text-muted); text-align: right; margin-top: 14px; }
+</style>
+
+<div class="screen active" id="s-form">
+  <div class="game-tag">El Poema</div>
+  <p class="po-intro">Responde unas preguntas y la IA escribirá<br>un poema único para ti en segundos.</p>
+
+  <div class="po-campo">
+    <label class="po-label">¿Cómo te llamas?</label>
+    <input type="text" class="po-input" id="po-nombre" placeholder="Tu nombre" maxlength="30" autocomplete="off">
+  </div>
+
+  <div class="po-campo">
+    <label class="po-label">¿Sobre qué quieres el poema?</label>
+    <div class="po-chips" id="po-sobre">
+      <button class="po-chip" data-v="mi" onclick="selChip('sobre', this)">Sobre mí</button>
+      <button class="po-chip" data-v="especial" onclick="selChip('sobre', this)">Alguien especial</button>
+      <button class="po-chip" data-v="amigo" onclick="selChip('sobre', this)">Un amigo/a</button>
+      <button class="po-chip" data-v="odio" onclick="selChip('sobre', this)">Algo que odio</button>
+      <button class="po-chip" data-v="dia" onclick="selChip('sobre', this)">Mi día</button>
+    </div>
+  </div>
+
+  <div class="po-campo" id="po-campo-objeto" style="display:none;">
+    <label class="po-label" id="po-label-objeto">¿Cómo se llama?</label>
+    <input type="text" class="po-input" id="po-objeto" placeholder="Nombre" maxlength="30" autocomplete="off">
+  </div>
+
+  <div class="po-campo">
+    <label class="po-label">Elige el tono</label>
+    <div class="po-chips" id="po-tono">
+      <button class="po-chip" data-v="romantico" onclick="selChip('tono', this)">Romántico</button>
+      <button class="po-chip" data-v="divertido" onclick="selChip('tono', this)">Divertido</button>
+      <button class="po-chip" data-v="epico" onclick="selChip('tono', this)">Épico</button>
+      <button class="po-chip" data-v="melancolico" onclick="selChip('tono', this)">Melancólico</button>
+      <button class="po-chip" data-v="absurdo" onclick="selChip('tono', this)">Absurdo</button>
+    </div>
+  </div>
+
+  <div class="po-campo">
+    <label class="po-label">Nivel</label>
+    <div class="po-niveles" id="po-nivel">
+      <div class="po-nivel" data-v="peques" onclick="selNivel(this)">
+        <span class="po-nivel-emoji">🧸</span>
+        <div class="po-nivel-info"><div class="po-nivel-nombre">Para peques</div><div class="po-nivel-desc">Tierno e inocente, apto para niños</div></div>
+      </div>
+      <div class="po-nivel selected" data-v="normal" onclick="selNivel(this)">
+        <span class="po-nivel-emoji">😊</span>
+        <div class="po-nivel-info"><div class="po-nivel-nombre">Normal</div><div class="po-nivel-desc">Apto para todos los públicos</div></div>
+      </div>
+      <div class="po-nivel" data-v="gamberro" onclick="selNivel(this)">
+        <span class="po-nivel-emoji">😏</span>
+        <div class="po-nivel-info"><div class="po-nivel-nombre">Gamberro</div><div class="po-nivel-desc">Atrevido y pícaro, para reír entre amigos</div></div>
+      </div>
+    </div>
+  </div>
+
+  <button class="btn-primary" id="btn-generar" onclick="generar()" style="width:100%;">Escribir mi poema ✨</button>
+  <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
+</div>
+
+<div class="screen" id="s-loading-poema">
+  <div class="loading"><div class="loading-spinner"></div><p>Buscando la inspiración...</p></div>
+</div>
+
+<div class="screen" id="s-result">
+  <div class="game-tag">El Poema</div>
+  <div class="po-resultado">
+    <div class="po-comilla">"</div>
+    <div class="po-texto" id="r-poema"></div>
+    <div class="po-firma" id="r-firma"></div>
+  </div>
+  <button class="btn-primary" onclick="otroPoema()" style="width:100%; margin-bottom:8px;">Crear otro poema</button>
+  <button class="btn-share" onclick="doShare()">📤 Compartir</button>
+  <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
+  <div class="tomorrow">Comparte tu poema con quien quieras.<br>{{ bar.tomorrow_message or 'Vuelve a tomar un café.' }}</div>
+</div>
+
+<script>
+const BAR_SLUG = "{{ bar.slug }}";
+const BAR_NAME = "{{ bar.name }}";
+const CODE = new URLSearchParams(window.location.search).get('code') || '';
+let sel = { sobre: null, tono: 'divertido', nivel: 'normal' };
+let poemaTexto = '';
+
+// Preseleccionar tono divertido
+document.querySelector('#po-tono .po-chip[data-v="divertido"]').classList.add('selected');
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function selChip(grupo, el) {
+  document.querySelectorAll(`#po-${grupo} .po-chip`).forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  sel[grupo] = el.dataset.v;
+  if (grupo === 'sobre') {
+    const necesitaObjeto = ['especial', 'amigo', 'odio'].includes(el.dataset.v);
+    const campo = document.getElementById('po-campo-objeto');
+    campo.style.display = necesitaObjeto ? 'block' : 'none';
+    const label = document.getElementById('po-label-objeto');
+    if (el.dataset.v === 'odio') label.textContent = '¿Qué es eso que odias?';
+    else label.textContent = '¿Cómo se llama?';
+  }
+}
+function selNivel(el) {
+  document.querySelectorAll('#po-nivel .po-nivel').forEach(n => n.classList.remove('selected'));
+  el.classList.add('selected');
+  sel.nivel = el.dataset.v;
+}
+async function generar() {
+  const nombre = document.getElementById('po-nombre').value.trim();
+  if (!nombre) { document.getElementById('po-nombre').focus(); return; }
+  if (!sel.sobre) { alert('Elige sobre qué quieres el poema.'); return; }
+  const objeto = document.getElementById('po-objeto').value.trim();
+  if (['especial', 'amigo', 'odio'].includes(sel.sobre) && !objeto) {
+    document.getElementById('po-objeto').focus(); return;
+  }
+
+  showScreen('s-loading-poema');
+  try {
+    const res = await fetch('/api/poema', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        code: CODE, bar_slug: BAR_SLUG,
+        nombre, sobre: sel.sobre, nombre_objeto: objeto,
+        tono: sel.tono, nivel: sel.nivel
+      })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    poemaTexto = data.poema;
+    document.getElementById('r-poema').textContent = data.poema;
+    document.getElementById('r-firma').textContent = `— para ${nombre}`;
+    showScreen('s-result');
+    window.scrollTo(0, 0);
+  } catch(e) {
+    showScreen('s-form');
+    alert('No se pudo crear el poema. Inténtalo de nuevo.');
+  }
+}
+function otroPoema() {
+  showScreen('s-form');
+  window.scrollTo(0, 0);
+}
+function doShare() {
+  const txt = `✍️ Mi poema de ${BAR_NAME}\n\n${poemaTexto}\n\n— Creado en nookplay.app`;
+  nookShareWithImage(txt, 'poema');
+}
+</script>
+{% endblock %}

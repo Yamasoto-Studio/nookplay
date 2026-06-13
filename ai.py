@@ -1223,3 +1223,108 @@ Devuelve SOLO un objeto JSON válido, sin markdown, donde "correcta" es el índi
         raise Exception(f"API error: {data.get('error', data)}")
     text = data['content'][0]['text'].strip().replace('```json', '').replace('```', '').strip()
     return json.loads(text)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# El Mismo Pensamiento generator (solo genera la categoría del día)
+# ─────────────────────────────────────────────────────────────────────────────
+
+CATEGORIAS_PENSAMIENTO_FALLBACK = [
+    "una fruta amarilla", "un país de Europa", "un animal de la selva",
+    "una marca de coche", "un color que no sea primario", "un postre típico español",
+    "una película de los 90", "un instrumento musical", "una profesión peligrosa",
+    "algo que encuentras en una cocina", "un superhéroe", "una ciudad con playa",
+]
+
+def generate_pensamiento(bar_slug):
+    today = str(date.today())
+    api_key = os.environ.get('ANTHROPIC_API_KEY')
+    seed = get_day_seed(bar_slug)
+
+    prompt = """Eres el creador de un juego social para bares llamado "El Mismo Pensamiento". Cada día propones una categoría sencilla y todos los jugadores escriben lo primero que se les ocurre. Ganan si coinciden con la mayoría.
+
+FECHA: """ + today + """
+SEED: """ + str(seed) + """
+
+Crea la categoría del día con estas reglas:
+1. Debe ser sencilla, universal y con respuesta espontánea — algo que cualquiera responda en 2 segundos
+2. Que tenga varias respuestas posibles pero algunas claramente más comunes (eso es lo divertido)
+3. Nada ambiguo ni que requiera conocimiento especializado
+4. Tono cercano y cotidiano
+5. Ejemplos del tipo: "una fruta amarilla", "un país de Europa", "algo que llevarías a una isla desierta"
+
+Devuelve SOLO un objeto JSON válido, sin markdown:
+{
+  "categoria": "La categoría del día (ej: 'una fruta amarilla')",
+  "instruccion": "Escribe lo primero que se te ocurra. Ganas si coincides con la mayoría.",
+  "pista": "Una frase corta y divertida sobre el reto de hoy"
+}"""
+
+    try:
+        response = requests.post(
+            'https://api.anthropic.com/v1/messages',
+            headers={'x-api-key': api_key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json'},
+            json={'model': 'claude-sonnet-4-6', 'max_tokens': 400, 'messages': [{'role': 'user', 'content': prompt}]},
+            timeout=60
+        )
+        data = response.json()
+        if 'content' not in data:
+            raise Exception("API error")
+        text = data['content'][0]['text'].strip().replace('```json', '').replace('```', '').strip()
+        return json.loads(text)
+    except Exception:
+        cat = CATEGORIAS_PENSAMIENTO_FALLBACK[seed % len(CATEGORIAS_PENSAMIENTO_FALLBACK)]
+        return {"categoria": cat, "instruccion": "Escribe lo primero que se te ocurra. Ganas si coincides con la mayoría.", "pista": "Piensa rápido, piensa como los demás."}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# El Poema generator (personalizado, bajo demanda)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def generate_poema(nombre, sobre, nombre_objeto, tono, nivel):
+    api_key = os.environ.get('ANTHROPIC_API_KEY')
+
+    nivel_instr = {
+        'peques': "Tono para NIÑOS: completamente inocente, tierno y divertido. Temática infantil (amistad, mascotas, familia, juegos). Lenguaje sencillo y alegre. NUNCA contenido romántico-adulto, referencias sexuales, alcohol, violencia ni nada inapropiado para un menor. Es OBLIGATORIO que sea 100% apto para niños.",
+        'normal': "Tono apto para todos los públicos: puede ser romántico, divertido o emotivo, pero siempre elegante y sin contenido explícito ni vulgar.",
+        'gamberro': "Tono gamberro y atrevido: humor pícaro, exagerado y desvergonzado para reírse entre amigos. Puede haber doble sentido y bromas subidas de tono, pero NUNCA contenido sexual explícito, insultos ofensivos, ni nada que humille de verdad. Gracioso, no hiriente.",
+    }.get(nivel, "Tono apto para todos los públicos.")
+
+    sobre_instr = {
+        'mi': f"un poema sobre {nombre} (la propia persona que lo pide)",
+        'especial': f"un poema dedicado a {nombre_objeto}, una persona especial para {nombre}",
+        'amigo': f"un poema sobre {nombre_objeto}, gran amigo/a de {nombre}",
+        'odio': f"un poema humorístico sobre algo que {nombre} odia: {nombre_objeto}",
+        'dia': f"un poema sobre cómo ha sido el día de {nombre}",
+    }.get(sobre, f"un poema sobre {nombre}")
+
+    tono_instr = {
+        'romantico': "estilo romántico y emotivo",
+        'divertido': "estilo divertido y desenfadado",
+        'epico': "estilo épico y grandilocuente, como una gran gesta",
+        'melancolico': "estilo melancólico y poético",
+        'absurdo': "estilo absurdo y surrealista",
+    }.get(tono, "estilo divertido")
+
+    prompt = f"""Eres un poeta de bar ingenioso. Escribe {sobre_instr}, en {tono_instr}.
+
+NIVEL DE CONTENIDO: {nivel_instr}
+
+REGLAS:
+1. El poema debe tener entre 4 y 8 versos
+2. Que rime de forma natural (no forzada)
+3. Personalizado: usa los nombres que te he dado
+4. Que tenga gracia, encanto o emoción según el tono pedido
+5. En español
+6. Devuelve SOLO el poema, sin título, sin comillas, sin explicaciones. Cada verso en su línea."""
+
+    response = requests.post(
+        'https://api.anthropic.com/v1/messages',
+        headers={'x-api-key': api_key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json'},
+        json={'model': 'claude-sonnet-4-6', 'max_tokens': 500, 'messages': [{'role': 'user', 'content': prompt}]},
+        timeout=60
+    )
+    data = response.json()
+    if 'content' not in data:
+        raise Exception(f"API error: {data.get('error', data)}")
+    return {"poema": data['content'][0]['text'].strip()}

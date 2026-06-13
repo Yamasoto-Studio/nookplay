@@ -145,6 +145,7 @@ migrations = [
     "ALTER TABLE plays ADD COLUMN game_type TEXT DEFAULT 'crimen'",
     "ALTER TABLE plays ADD COLUMN choice INTEGER DEFAULT -1",
     "ALTER TABLE plays ADD COLUMN elapsed INTEGER DEFAULT 0",
+    "ALTER TABLE plays ADD COLUMN answer_text TEXT DEFAULT ''",
     "ALTER TABLE admin_users ADD COLUMN bar_slug TEXT DEFAULT ''",
     "ALTER TABLE bars ADD COLUMN plan TEXT DEFAULT 'gift'",
     "ALTER TABLE bars ADD COLUMN plan_status TEXT DEFAULT 'active'",
@@ -319,6 +320,8 @@ if not db.execute("SELECT id FROM games WHERE slug = 'sinopsis'").fetchone():
 for slug, name, desc, pos in [
     ('muertes', 'Muertes Absurdas', 'Historias reales increíbles', 15),
     ('letra', 'La Letra Traducida', 'Adivina la canción', 16),
+    ('pensamiento', 'El Mismo Pensamiento', '¿Piensas como la mayoría?', 17),
+    ('poema', 'El Poema', 'Tu poema personalizado', 18),
 ]:
     if not db.execute("SELECT id FROM games WHERE slug = ?", (slug,)).fetchone():
         db.execute(
@@ -336,8 +339,12 @@ ORDEN_JUEGOS = {
     'conexiones': 5, 'donde': 6, 'sinopsis': 7, 'letra': 8, 'vestuario': 9,
     # Opinión / social
     'dilema': 10, 'veredicto': 11, 'perfil': 12,
+    # Opinión / social (pensamiento es muy social)
+    'pensamiento': 13,
     # Curiosidad / lectura
-    'impostor': 13, 'muertes': 14, 'oraculo': 15, 'local': 16,
+    'impostor': 14, 'muertes': 15, 'oraculo': 16, 'local': 17,
+    # Creativo / generativo
+    'poema': 18,
 }
 for slug, pos in ORDEN_JUEGOS.items():
     db.execute("UPDATE games SET position = ? WHERE slug = ?", (pos, slug))

@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 from datetime import date, datetime, timedelta
 import sqlite3
-from ai import generate_game, generate_impostor, generate_dilema, generate_conexiones, generate_oraculo, generate_donde, generate_carta, generate_reinas, generate_conexion_local, generate_equilibrio, generate_veredicto, generate_perfil, generate_vestuario, generate_sinopsis, generate_muertes, generate_letra, build_bar_context, get_day_seed
+from ai import generate_game, generate_impostor, generate_dilema, generate_conexiones, generate_oraculo, generate_donde, generate_carta, generate_reinas, generate_conexion_local, generate_equilibrio, generate_veredicto, generate_perfil, generate_vestuario, generate_sinopsis, generate_muertes, generate_letra, generate_pensamiento, generate_poema, build_bar_context, get_day_seed
 import os
 import smtplib
 from email.mime.text import MIMEText
@@ -178,6 +178,7 @@ def migrate_db():
         "ALTER TABLE plays ADD COLUMN game_type TEXT DEFAULT 'crimen'",
         "ALTER TABLE plays ADD COLUMN choice INTEGER DEFAULT -1",
         "ALTER TABLE plays ADD COLUMN elapsed INTEGER DEFAULT 0",
+        "ALTER TABLE plays ADD COLUMN answer_text TEXT DEFAULT ''",
     ]
     for sql in migrations:
         try:
@@ -397,7 +398,7 @@ def pregen_daily_games():
     db = get_db()
     bars = db.execute("SELECT * FROM bars WHERE active = 1").fetchall()
     for bar in bars:
-        for game_type in ['crimen', 'impostor', 'dilema', 'conexiones', 'oraculo', 'donde', 'local', 'veredicto', 'perfil', 'vestuario', 'sinopsis', 'muertes', 'letra']:
+        for game_type in ['crimen', 'impostor', 'dilema', 'conexiones', 'oraculo', 'donde', 'local', 'veredicto', 'perfil', 'vestuario', 'sinopsis', 'muertes', 'letra', 'pensamiento']:
             existing = db.execute(
                 "SELECT id FROM generated_games WHERE bar_id = ? AND game_type = ? AND game_date = ?",
                 (bar['id'], game_type, today)
@@ -473,6 +474,14 @@ def pregen_daily_games():
                         if existing:
                             continue
                         game_data = generate_letra(bar['slug'])
+                    elif game_type == 'pensamiento':
+                        existing = db.execute(
+                            "SELECT id FROM generated_games WHERE game_type = 'pensamiento' AND game_date = ?",
+                            (today,)
+                        ).fetchone()
+                        if existing:
+                            continue
+                        game_data = generate_pensamiento(bar['slug'])
                     
                     import json as _json
                     db.execute(
@@ -1518,6 +1527,156 @@ def letra_stats(bar_slug):
     return jsonify({'total': total, 'acertaron': acertaron, 'pct_acierto': pct_acierto, 'avg_elapsed': avg_elapsed})
 
 
+@app.route('/<bar_slug>/pensamiento')
+def pensamiento_page(bar_slug):
+    db = get_db()
+    bar = db.execute("SELECT * FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
+    if not bar:
+        db.close()
+        return render_template('404.html'), 404
+    products = db.execute("SELECT * FROM bar_products WHERE bar_id = ? AND active = 1 ORDER BY position", (bar['id'],)).fetchall()
+    db.close()
+    return render_template('games/pensamiento.html', bar=bar, products=products)
+
+
+@app.route('/api/pensamiento', methods=['POST'])
+def pensamiento_api():
+    data = request.get_json()
+    code = data.get('code', '').strip().upper()
+    bar_slug = data.get('bar_slug', '').strip()
+    today = str(date.today())
+    db = get_db()
+    bar = db.execute("SELECT * FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
+    if not bar:
+        db.close()
+        return jsonify({'error': 'Invalid code'}), 403
+    valid_code = db.execute(
+        "SELECT code FROM access_codes WHERE bar_id = ? AND valid_from <= ? AND valid_until >= ?",
+        (bar['id'], today, today)
+    ).fetchone()
+    if not valid_code or valid_code['code'] != code:
+        db.close()
+        return jsonify({'error': 'Invalid code'}), 403
+    cache_key = f"global_pensamiento_{today}"
+    if cache_key in _game_cache:
+        db.close()
+        return jsonify(_game_cache[cache_key])
+    pregenerated = db.execute(
+        "SELECT content FROM generated_games WHERE game_type = 'pensamiento' AND game_date = ?",
+        (today,)
+    ).fetchone()
+    if pregenerated:
+        import json as _json
+        game_data = _json.loads(pregenerated['content'])
+        _game_cache[cache_key] = game_data
+        db.close()
+        return jsonify(game_data)
+    db.close()
+    try:
+        game_data = generate_pensamiento(bar_slug)
+        _game_cache[cache_key] = game_data
+        return jsonify(game_data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+def _normalizar_respuesta(txt):
+    """Normaliza para agrupar respuestas similares: minúsculas, sin tildes, sin artículos."""
+    import unicodedata
+    t = txt.strip().lower()
+    t = ''.join(c for c in unicodedata.normalize('NFD', t) if unicodedata.category(c) != 'Mn')
+    for art in ['el ', 'la ', 'los ', 'las ', 'un ', 'una ', 'unos ', 'unas ']:
+        if t.startswith(art):
+            t = t[len(art):]
+    return t.strip()
+
+
+@app.route('/api/pensamiento-responder', methods=['POST'])
+def pensamiento_responder():
+    data = request.get_json()
+    bar_slug = data.get('bar_slug', '').strip()
+    respuesta = data.get('respuesta', '').strip()[:40]
+    elapsed = data.get('elapsed', 0)
+    today = str(date.today())
+    if not respuesta:
+        return jsonify({'error': 'Respuesta vacía'}), 400
+
+    db = get_db()
+    # Guardar la respuesta normalizada en la columna choice_text (se crea si no existe)
+    norm = _normalizar_respuesta(respuesta)
+    db.execute(
+        "INSERT INTO plays (bar_slug, game_type, played_on, correct, elapsed, answer_text) VALUES (?,?,?,?,?,?)",
+        (bar_slug, 'pensamiento', today, 1, elapsed, norm)
+    )
+    db.commit()
+
+    # Contar todas las respuestas de hoy y agrupar
+    rows = db.execute(
+        "SELECT answer_text FROM plays WHERE bar_slug = ? AND game_type = 'pensamiento' AND played_on = ?",
+        (bar_slug, today)
+    ).fetchall()
+    db.close()
+
+    from collections import Counter
+    conteo = Counter(r['answer_text'] for r in rows if r['answer_text'])
+    total = sum(conteo.values())
+    top = conteo.most_common(5)
+    mi_count = conteo.get(norm, 1)
+    mi_pct = round((mi_count / total) * 100) if total > 0 else 100
+
+    return jsonify({
+        'total': total,
+        'mi_respuesta': norm,
+        'mi_pct': mi_pct,
+        'mi_count': mi_count,
+        'ranking': [{'respuesta': r, 'count': c, 'pct': round((c/total)*100)} for r, c in top]
+    })
+
+
+@app.route('/<bar_slug>/poema')
+def poema_page(bar_slug):
+    db = get_db()
+    bar = db.execute("SELECT * FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
+    if not bar:
+        db.close()
+        return render_template('404.html'), 404
+    products = db.execute("SELECT * FROM bar_products WHERE bar_id = ? AND active = 1 ORDER BY position", (bar['id'],)).fetchall()
+    db.close()
+    return render_template('games/poema.html', bar=bar, products=products)
+
+
+@app.route('/api/poema', methods=['POST'])
+def poema_api():
+    data = request.get_json()
+    code = data.get('code', '').strip().upper()
+    bar_slug = data.get('bar_slug', '').strip()
+    today = str(date.today())
+    db = get_db()
+    bar = db.execute("SELECT * FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
+    if not bar:
+        db.close()
+        return jsonify({'error': 'Invalid code'}), 403
+    valid_code = db.execute(
+        "SELECT code FROM access_codes WHERE bar_id = ? AND valid_from <= ? AND valid_until >= ?",
+        (bar['id'], today, today)
+    ).fetchone()
+    db.close()
+    if not valid_code or valid_code['code'] != code:
+        return jsonify({'error': 'Invalid code'}), 403
+
+    nombre = data.get('nombre', '').strip()[:30] or 'alguien'
+    sobre = data.get('sobre', 'mi')
+    nombre_objeto = data.get('nombre_objeto', '').strip()[:30]
+    tono = data.get('tono', 'divertido')
+    nivel = data.get('nivel', 'normal')
+
+    try:
+        result = generate_poema(nombre, sobre, nombre_objeto, tono, nivel)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/dilema-stats/<bar_slug>')
 def dilema_stats(bar_slug):
     today = str(date.today())
@@ -2027,12 +2186,12 @@ Mensaje:
 # Slugs de todos los juegos del catálogo, en orden de posición
 ALL_GAMES = [
     "crimen", "dilema", "reinas", "conexiones",
-    "oraculo", "donde", "carta", "equilibrio", "impostor", "local", "veredicto", "perfil", "vestuario", "sinopsis", "muertes", "letra", "muertes", "letra", "sinopsis", "vestuario", "perfil",
+    "oraculo", "donde", "carta", "equilibrio", "impostor", "local", "veredicto", "perfil", "vestuario", "sinopsis", "muertes", "letra", "pensamiento", "poema", "muertes", "letra", "sinopsis", "vestuario", "perfil",
 ]
 
 # Starter: 4 fijos siempre activos + 1 elegible a elegir entre STARTER_FREE_GAMES
 STARTER_FIXED      = ["crimen", "dilema", "reinas", "conexiones"]
-STARTER_FREE_GAMES = ["oraculo", "donde", "carta", "equilibrio", "impostor", "local", "veredicto", "perfil", "vestuario", "sinopsis", "muertes", "letra"]
+STARTER_FREE_GAMES = ["oraculo", "donde", "carta", "equilibrio", "impostor", "local", "veredicto", "perfil", "vestuario", "sinopsis", "muertes", "letra", "pensamiento", "poema"]
 STARTER_MAX_FREE   = 1  # juegos libres simultáneos permitidos
 
 # Pro: hasta PRO_MAX_GAMES a elegir libremente del catálogo completo
