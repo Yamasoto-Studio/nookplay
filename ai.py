@@ -1123,3 +1123,103 @@ Devuelve SOLO un objeto JSON válido, sin markdown, donde "correcta" es el índi
     text = data['content'][0]['text'].strip()
     text = text.replace('```json', '').replace('```', '').strip()
     return json.loads(text)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Muertes Absurdas generator
+# ─────────────────────────────────────────────────────────────────────────────
+
+def generate_muertes(bar_slug):
+    today = str(date.today())
+    api_key = os.environ.get('ANTHROPIC_API_KEY')
+    seed = get_day_seed(bar_slug)
+
+    prompt = """Eres el narrador de un juego de curiosidades históricas para bares. Cada día presentas una muerte absurda pero REAL y documentada históricamente. El tono es irreverente pero respetuoso — morbo sano, nunca cruento ni gráfico.
+
+FECHA: """ + today + """
+SEED: """ + str(seed) + """
+
+Crea la muerte absurda del día con estas reglas:
+1. Debe ser un caso REAL y documentado históricamente (personajes históricos, casos célebres)
+2. Lo absurdo está en las circunstancias, no en el sufrimiento — evita detalles cruentos o gráficos
+3. Tono de anécdota de bar: sorprendente, con un punto de humor negro elegante
+4. Incluye el año o época y el nombre real del protagonista
+5. Nada de muertes recientes que puedan herir sensibilidades (mínimo 50 años de antigüedad)
+6. La pregunta del juego: adivinar UN dato concreto de la historia entre 3 opciones
+7. Ejemplos del tipo: Esquilo (águila que dejó caer una tortuga), Hans Steininger (su propia barba), Tycho Brahe (no quiso ir al baño en un banquete)
+
+Devuelve SOLO un objeto JSON válido, sin markdown:
+{
+  "titulo": "Título con gancho (ej: 'El hombre al que mató su propia barba')",
+  "historia": "La historia de la muerte absurda. 3-4 frases. Tono irreverente pero elegante. Incluye nombre y época.",
+  "pregunta": "Pregunta sobre un detalle concreto de la historia",
+  "opciones": ["Opción A", "Opción B", "Opción C"],
+  "correcta": 1,
+  "dato_extra": "Un dato adicional curioso real sobre el caso o la época. 1-2 frases."
+}"""
+
+    response = requests.post(
+        'https://api.anthropic.com/v1/messages',
+        headers={'x-api-key': api_key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json'},
+        json={'model': 'claude-sonnet-4-6', 'max_tokens': 900, 'messages': [{'role': 'user', 'content': prompt}]},
+        timeout=60
+    )
+    data = response.json()
+    if 'content' not in data:
+        raise Exception(f"API error: {data.get('error', data)}")
+    text = data['content'][0]['text'].strip().replace('```json', '').replace('```', '').strip()
+    return json.loads(text)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# La Letra Traducida generator
+# ─────────────────────────────────────────────────────────────────────────────
+
+def generate_letra(bar_slug):
+    today = str(date.today())
+    api_key = os.environ.get('ANTHROPIC_API_KEY')
+    seed = get_day_seed(bar_slug)
+
+    prompt = """Eres el creador de un juego musical para bares. Coges una canción MUY famosa y traduces/parafraseas su letra al español de forma ultra literal, sin contexto y deliberadamente absurda, para que el jugador adivine de qué canción se trata.
+
+FECHA: """ + today + """
+SEED: """ + str(seed) + """
+
+INSTRUCCIONES — sigue este orden exacto:
+
+PASO 1: Elige una canción MUY conocida internacionalmente (de cualquier época, varía según SEED).
+
+PASO 2: Describe su letra/estribillo de forma literal y absurda EN ESPAÑOL.
+- NO uses el título ni el nombre del artista
+- NO cites la letra textual en su idioma original (derechos de autor)
+- Parafrasea la IDEA de la letra de forma literal y descontextualizada
+- Tono gracioso: como si lo explicara un robot sin alma
+- Ejemplo: para "Call Me Maybe" → "Una chica acaba de conocer a un chico y, aunque es muy pronto y resulta algo desesperado, le da su número y le insiste en que la llame quizás"
+
+PASO 3: Crea 4 opciones donde la canción del PASO 1 es la correcta.
+- Ponla en posición aleatoria (0-3)
+- Las otras 3: del mismo género/época o que encajen con algún detalle
+- IMPORTANTE: la paráfrasis del PASO 2 debe corresponder EXACTAMENTE a la canción correcta del PASO 3
+
+PASO 4: Dato curioso real sobre la canción.
+
+Devuelve SOLO un objeto JSON válido, sin markdown, donde "correcta" es el índice (0-3) de la canción parafraseada:
+{
+  "parafrasis": "La paráfrasis literal y absurda de la letra. 2-3 frases. Sin citar letra original.",
+  "opciones": ["Canción - Artista", "Canción - Artista", "Canción - Artista", "Canción - Artista"],
+  "correcta": 2,
+  "año": 2012,
+  "dato_extra": "Dato curioso real sobre la canción correcta. 1-2 frases."
+}"""
+
+    response = requests.post(
+        'https://api.anthropic.com/v1/messages',
+        headers={'x-api-key': api_key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json'},
+        json={'model': 'claude-sonnet-4-6', 'max_tokens': 900, 'messages': [{'role': 'user', 'content': prompt}]},
+        timeout=60
+    )
+    data = response.json()
+    if 'content' not in data:
+        raise Exception(f"API error: {data.get('error', data)}")
+    text = data['content'][0]['text'].strip().replace('```json', '').replace('```', '').strip()
+    return json.loads(text)

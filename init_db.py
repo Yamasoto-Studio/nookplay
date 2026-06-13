@@ -315,6 +315,35 @@ if not db.execute("SELECT id FROM games WHERE slug = 'sinopsis'").fetchone():
     db.commit()
     print('Juego La Sinopsis Rara añadido.')
 
+# Añadir muertes y letra si no existen
+for slug, name, desc, pos in [
+    ('muertes', 'Muertes Absurdas', 'Historias reales increíbles', 15),
+    ('letra', 'La Letra Traducida', 'Adivina la canción', 16),
+]:
+    if not db.execute("SELECT id FROM games WHERE slug = ?", (slug,)).fetchone():
+        db.execute(
+            "INSERT INTO games (slug, name, description, icon, plan_min, position) VALUES (?,?,?,?,?,?)",
+            (slug, name, desc, f'/static/games/{slug}.webp', 'starter_free', pos)
+        )
+        db.commit()
+        print(f'Juego {name} añadido.')
+
+# Reordenar juegos por tipo de experiencia (orden lógico de UX)
+ORDEN_JUEGOS = {
+    # Lógica / puzzle (4 fijos starter primero)
+    'crimen': 1, 'reinas': 2, 'equilibrio': 3, 'carta': 4,
+    # Adivinanza / cultura
+    'conexiones': 5, 'donde': 6, 'sinopsis': 7, 'letra': 8, 'vestuario': 9,
+    # Opinión / social
+    'dilema': 10, 'veredicto': 11, 'perfil': 12,
+    # Curiosidad / lectura
+    'impostor': 13, 'muertes': 14, 'oraculo': 15, 'local': 16,
+}
+for slug, pos in ORDEN_JUEGOS.items():
+    db.execute("UPDATE games SET position = ? WHERE slug = ?", (pos, slug))
+db.commit()
+print('Orden de juegos actualizado.')
+
 print('Catálogo de juegos listo.')
 
 # ── Asignar juegos por defecto a Yellow (plan gift = todos activos) ─────────

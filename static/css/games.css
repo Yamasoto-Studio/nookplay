@@ -10,8 +10,9 @@
   letter-spacing: 1.5px; text-transform: uppercase;
   padding: 3px 10px; border-radius: 20px;
   background: var(--bar-primary); color: var(--bar-primary-text);
-  margin-bottom: 16px;
+  margin: 0 auto 16px;
   width: fit-content;
+  text-align: center;
 }
 
 /* ── Back button ── */
