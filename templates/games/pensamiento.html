@@ -123,12 +123,14 @@ async function enviar() {
   try {
     const res = await fetch('/api/pensamiento-responder', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ bar_slug: BAR_SLUG, respuesta: val, elapsed })
+      body: JSON.stringify({ bar_slug: BAR_SLUG, code: CODE, respuesta: val, elapsed })
     });
     const data = await res.json();
+    if (data.error) throw new Error(data.error);
     showResult(data, val);
   } catch(e) {
     btn.disabled = false; btn.textContent = 'Enviar mi respuesta';
+    alert('No se pudo enviar tu respuesta. Inténtalo de nuevo.');
   }
 }
 function showResult(data, original) {

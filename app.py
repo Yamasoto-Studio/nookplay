@@ -1595,42 +1595,44 @@ def _normalizar_respuesta(txt):
 def pensamiento_responder():
     data = request.get_json()
     bar_slug = data.get('bar_slug', '').strip()
+    code = data.get('code', '').strip().upper()
     respuesta = data.get('respuesta', '').strip()[:40]
     elapsed = data.get('elapsed', 0)
     today = str(date.today())
     if not respuesta:
         return jsonify({'error': 'Respuesta vacía'}), 400
 
-    db = get_db()
-    # Guardar la respuesta normalizada en la columna choice_text (se crea si no existe)
-    norm = _normalizar_respuesta(respuesta)
-    db.execute(
-        "INSERT INTO plays (bar_slug, game_type, played_on, correct, elapsed, answer_text) VALUES (?,?,?,?,?,?)",
-        (bar_slug, 'pensamiento', today, 1, elapsed, norm)
-    )
-    db.commit()
+    try:
+        db = get_db()
+        norm = _normalizar_respuesta(respuesta)
+        db.execute(
+            "INSERT INTO plays (code, bar_slug, game_type, played_on, correct, elapsed, answer_text) VALUES (?,?,?,?,?,?,?)",
+            (code, bar_slug, 'pensamiento', today, 1, elapsed, norm)
+        )
+        db.commit()
 
-    # Contar todas las respuestas de hoy y agrupar
-    rows = db.execute(
-        "SELECT answer_text FROM plays WHERE bar_slug = ? AND game_type = 'pensamiento' AND played_on = ?",
-        (bar_slug, today)
-    ).fetchall()
-    db.close()
+        rows = db.execute(
+            "SELECT answer_text FROM plays WHERE bar_slug = ? AND game_type = 'pensamiento' AND played_on = ?",
+            (bar_slug, today)
+        ).fetchall()
+        db.close()
 
-    from collections import Counter
-    conteo = Counter(r['answer_text'] for r in rows if r['answer_text'])
-    total = sum(conteo.values())
-    top = conteo.most_common(5)
-    mi_count = conteo.get(norm, 1)
-    mi_pct = round((mi_count / total) * 100) if total > 0 else 100
+        from collections import Counter
+        conteo = Counter(r['answer_text'] for r in rows if r['answer_text'])
+        total = sum(conteo.values())
+        top = conteo.most_common(5)
+        mi_count = conteo.get(norm, 1)
+        mi_pct = round((mi_count / total) * 100) if total > 0 else 100
 
-    return jsonify({
-        'total': total,
-        'mi_respuesta': norm,
-        'mi_pct': mi_pct,
-        'mi_count': mi_count,
-        'ranking': [{'respuesta': r, 'count': c, 'pct': round((c/total)*100)} for r, c in top]
-    })
+        return jsonify({
+            'total': total,
+            'mi_respuesta': norm,
+            'mi_pct': mi_pct,
+            'mi_count': mi_count,
+            'ranking': [{'respuesta': r, 'count': c, 'pct': round((c/total)*100)} for r, c in top]
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/<bar_slug>/poema')
