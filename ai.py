@@ -65,6 +65,18 @@ CATEGORIAS_IMPOSTOR = [
     "cine y música",
 ]
 
+def _bloque_evitar(evitar):
+    """Construye un bloque de texto para el prompt con los contenidos a no repetir."""
+    if not evitar:
+        return ""
+    lista = "\n".join(f"- {x}" for x in evitar[:30])
+    return f"""
+
+IMPORTANTE — NO REPETIR: Estos contenidos ya se han usado en los últimos días. Genera algo CLARAMENTE DISTINTO, con otro tema, enfoque y protagonistas:
+{lista}
+"""
+
+
 def get_day_seed(bar_slug):
     """Genera un seed determinístico para el contenido de hoy."""
     today = str(date.today())
@@ -258,7 +270,7 @@ CATEGORIAS_DILEMA = [
     "situación de vacaciones o viaje",
 ]
 
-def generate_dilema(bar_name, bar_slug):
+def generate_dilema(bar_name, bar_slug, evitar=None):
     today = str(date.today())
     api_key = os.environ.get('ANTHROPIC_API_KEY')
     seed = get_day_seed(bar_slug)
@@ -286,7 +298,7 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
   "dato_curioso": "Un dato real y sorprendente sobre este tipo de situación. 1-2 frases.",
   "contexto_a": "En qué porcentaje aproximado crees que la gente elegiría A? Solo el número, ej: 45",
   "contexto_b": "En qué porcentaje aproximado crees que la gente elegiría B? Solo el número, ej: 55"
-}"""
+}""" + _bloque_evitar(evitar)
 
     response = requests.post(
         'https://api.anthropic.com/v1/messages',
@@ -843,7 +855,7 @@ CATEGORIAS_VEREDICTO = [
     "consumo y medio ambiente",
 ]
 
-def generate_veredicto(bar_name, bar_slug):
+def generate_veredicto(bar_name, bar_slug, evitar=None):
     today = str(date.today())
     api_key = os.environ.get('ANTHROPIC_API_KEY')
     seed = get_day_seed(bar_slug)
@@ -871,7 +883,7 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
   "argumento_inocente": "El mejor argumento para absolverlo. 1 frase directa.",
   "sentencia_popular": "Dato, estadística o reflexión sorprendente sobre este tipo de situación. 1-2 frases.",
   "pct_culpable_estimado": "Porcentaje estimado que lo declararía culpable. Solo el número, ej: 62"
-}"""
+}""" + _bloque_evitar(evitar)
 
     response = requests.post(
         'https://api.anthropic.com/v1/messages',
@@ -916,7 +928,7 @@ PREGUNTAS_PERFIL = [
     "¿Qué haría diferente si pudiera volver atrás?",
 ]
 
-def generate_perfil(bar_slug):
+def generate_perfil(bar_slug, evitar=None):
     today = str(date.today())
     api_key = os.environ.get('ANTHROPIC_API_KEY')
     seed = get_day_seed(bar_slug)
@@ -945,7 +957,7 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
   "opciones": ["Opción A creíble", "Opción B creíble", "Opción C creíble", "Opción D creíble"],
   "correcta": 1,
   "explicacion": "Explicación de por qué esta respuesta tiene sentido con los datos del perfil. 2-3 frases."
-}"""
+}""" + _bloque_evitar(evitar)
 
     response = requests.post(
         'https://api.anthropic.com/v1/messages',
@@ -975,7 +987,7 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
 # El Vestuario generator
 # ─────────────────────────────────────────────────────────────────────────────
 
-def generate_vestuario(bar_slug):
+def generate_vestuario(bar_slug, evitar=None):
     today = str(date.today())
     api_key = os.environ.get('ANTHROPIC_API_KEY')
     seed = get_day_seed(bar_slug)
@@ -1031,7 +1043,7 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
     "2": "2 de 3 — Buen partido. Te llaman del banquillo. 👏",
     "3": "3 de 3 — Leyenda del vestuario. Nadie te discute. 🏆"
   }
-}"""
+}""" + _bloque_evitar(evitar)
 
     response = requests.post(
         'https://api.anthropic.com/v1/messages',
@@ -1061,7 +1073,7 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
 # La Sinopsis Rara generator
 # ─────────────────────────────────────────────────────────────────────────────
 
-def generate_sinopsis(bar_slug):
+def generate_sinopsis(bar_slug, evitar=None):
     today = str(date.today())
     api_key = os.environ.get('ANTHROPIC_API_KEY')
     seed = get_day_seed(bar_slug)
@@ -1099,7 +1111,7 @@ Devuelve SOLO un objeto JSON válido, sin markdown, donde "correcta" es el índi
   "año": 1994,
   "director": "Nombre del director",
   "dato_extra": "Dato curioso real sobre la película correcta. 1-2 frases."
-}"""
+}""" + _bloque_evitar(evitar)
 
     response = requests.post(
         'https://api.anthropic.com/v1/messages',
@@ -1129,7 +1141,7 @@ Devuelve SOLO un objeto JSON válido, sin markdown, donde "correcta" es el índi
 # Muertes Absurdas generator
 # ─────────────────────────────────────────────────────────────────────────────
 
-def generate_muertes(bar_slug):
+def generate_muertes(bar_slug, evitar=None):
     today = str(date.today())
     api_key = os.environ.get('ANTHROPIC_API_KEY')
     seed = get_day_seed(bar_slug)
@@ -1156,7 +1168,7 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
   "opciones": ["Opción A", "Opción B", "Opción C"],
   "correcta": 1,
   "dato_extra": "Un dato adicional curioso real sobre el caso o la época. 1-2 frases."
-}"""
+}""" + _bloque_evitar(evitar)
 
     response = requests.post(
         'https://api.anthropic.com/v1/messages',
@@ -1175,7 +1187,7 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
 # La Letra Traducida generator
 # ─────────────────────────────────────────────────────────────────────────────
 
-def generate_letra(bar_slug):
+def generate_letra(bar_slug, evitar=None):
     today = str(date.today())
     api_key = os.environ.get('ANTHROPIC_API_KEY')
     seed = get_day_seed(bar_slug)
@@ -1210,7 +1222,7 @@ Devuelve SOLO un objeto JSON válido, sin markdown, donde "correcta" es el índi
   "correcta": 2,
   "año": 2012,
   "dato_extra": "Dato curioso real sobre la canción correcta. 1-2 frases."
-}"""
+}""" + _bloque_evitar(evitar)
 
     response = requests.post(
         'https://api.anthropic.com/v1/messages',

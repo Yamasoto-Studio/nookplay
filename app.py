@@ -391,6 +391,44 @@ def generate_weekly_codes():
     db.commit()
     db.close()
 
+def get_historial_reciente(db, game_type, bar_slug=None, dias=10, campo='titulo'):
+    """Recupera contenidos recientes de un juego para evitar repeticiones.
+    Devuelve una lista de strings (el campo indicado de cada contenido)."""
+    import json as _json
+    from datetime import date, timedelta
+    hoy = str(date.today())
+    desde = str(date.today() - timedelta(days=dias))
+    if bar_slug:
+        rows = db.execute(
+            "SELECT content FROM generated_games WHERE game_type = ? AND bar_id = (SELECT id FROM bars WHERE slug = ?) AND game_date >= ? AND game_date < ? ORDER BY game_date DESC",
+            (game_type, bar_slug, desde, hoy)
+        ).fetchall()
+    else:
+        rows = db.execute(
+            "SELECT content FROM generated_games WHERE game_type = ? AND game_date >= ? AND game_date < ? ORDER BY game_date DESC",
+            (game_type, desde, hoy)
+        ).fetchall()
+    items = []
+    for r in rows:
+        try:
+            data = _json.loads(r['content'])
+            if campo == 'preguntas' and 'preguntas' in data:
+                # vestuario: extraer la curiosidad de cada pregunta
+                for p in data['preguntas']:
+                    if isinstance(p, dict) and p.get('curiosidad'):
+                        items.append(p['curiosidad'][:80])
+            elif campo == 'opciones' and 'opciones' in data:
+                # sinopsis/letra: la respuesta correcta
+                idx = data.get('correcta', 0)
+                if isinstance(data['opciones'], list) and idx < len(data['opciones']):
+                    items.append(data['opciones'][idx])
+            elif campo in data and data[campo]:
+                items.append(str(data[campo]))
+        except Exception:
+            continue
+    return items[:30]
+
+
 def pregen_daily_games():
     """Ejecuta cada día a las 6am — pre-genera los juegos del día para todos los bares."""
     today = str(date.today())
@@ -416,7 +454,8 @@ def pregen_daily_games():
                     elif game_type == 'impostor':
                         game_data = generate_impostor(bar['name'], bar['slug'])
                     elif game_type == 'dilema':
-                        game_data = generate_dilema(bar['name'], bar['slug'])
+                        ev = get_historial_reciente(db, 'dilema', bar['slug'], campo='situacion')
+                        game_data = generate_dilema(bar['name'], bar['slug'], evitar=ev)
                     elif game_type == 'conexiones':
                         game_data = generate_conexiones(bar['name'], bar['slug'])
                     elif game_type == 'oraculo':
@@ -444,11 +483,14 @@ def pregen_daily_games():
                             continue  # Sin ciudad no se puede generar Conexión Local
                         game_data = generate_conexion_local(bar['name'], city, province, bar['slug'])
                     elif game_type == 'veredicto':
-                        game_data = generate_veredicto(bar['name'], bar['slug'])
+                        ev = get_historial_reciente(db, 'veredicto', bar['slug'], campo='titulo')
+                        game_data = generate_veredicto(bar['name'], bar['slug'], evitar=ev)
                     elif game_type == 'perfil':
-                        game_data = generate_perfil(bar['slug'])
+                        ev = get_historial_reciente(db, 'perfil', bar['slug'], campo='nombre')
+                        game_data = generate_perfil(bar['slug'], evitar=ev)
                     elif game_type == 'vestuario':
-                        game_data = generate_vestuario(bar['slug'])
+                        ev = get_historial_reciente(db, 'vestuario', bar['slug'], campo='preguntas')
+                        game_data = generate_vestuario(bar['slug'], evitar=ev)
                     elif game_type == 'sinopsis':
                         # Única para todos los bares — solo generar una vez
                         existing = db.execute(
@@ -457,7 +499,8 @@ def pregen_daily_games():
                         ).fetchone()
                         if existing:
                             continue
-                        game_data = generate_sinopsis(bar['slug'])
+                        ev = get_historial_reciente(db, 'sinopsis', None, campo='opciones')
+                        game_data = generate_sinopsis(bar['slug'], evitar=ev)
                     elif game_type == 'muertes':
                         existing = db.execute(
                             "SELECT id FROM generated_games WHERE game_type = 'muertes' AND game_date = ?",
@@ -465,7 +508,8 @@ def pregen_daily_games():
                         ).fetchone()
                         if existing:
                             continue
-                        game_data = generate_muertes(bar['slug'])
+                        ev = get_historial_reciente(db, 'muertes', None, campo='titulo')
+                        game_data = generate_muertes(bar['slug'], evitar=ev)
                     elif game_type == 'letra':
                         existing = db.execute(
                             "SELECT id FROM generated_games WHERE game_type = 'letra' AND game_date = ?",
@@ -473,7 +517,8 @@ def pregen_daily_games():
                         ).fetchone()
                         if existing:
                             continue
-                        game_data = generate_letra(bar['slug'])
+                        ev = get_historial_reciente(db, 'letra', None, campo='opciones')
+                        game_data = generate_letra(bar['slug'], evitar=ev)
                     elif game_type == 'pensamiento':
                         existing = db.execute(
                             "SELECT id FROM generated_games WHERE game_type = 'pensamiento' AND game_date = ?",
