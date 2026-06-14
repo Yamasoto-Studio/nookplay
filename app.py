@@ -587,12 +587,26 @@ def hash_password(password):
 @app.route('/admin/api/pregen-now', methods=['POST'])
 @admin_required
 def admin_pregen_now():
-    """Superadmin: fuerza la pre-generación de juegos ahora mismo (diagnóstico/test)."""
+    """Superadmin: fuerza la pre-generación de juegos ahora mismo (diagnóstico/test).
+    Borra primero los contenidos de hoy para forzar una regeneración real."""
     if session.get('admin_role') != 'superadmin':
         return jsonify({'ok': False, 'error': 'No autorizado'}), 403
+    data = request.get_json(silent=True) or {}
+    solo_juego = data.get('game_type', '').strip()
+    today = str(date.today())
     try:
+        db = get_db()
+        if solo_juego:
+            db.execute("DELETE FROM generated_games WHERE game_type = ? AND game_date = ?", (solo_juego, today))
+        else:
+            db.execute("DELETE FROM generated_games WHERE game_date = ?", (today,))
+        db.commit()
+        db.close()
+        # Limpiar también la caché en memoria
+        global _game_cache
+        _game_cache = {k: v for k, v in _game_cache.items() if today not in k}
         pregen_daily_games()
-        return jsonify({'ok': True, 'msg': 'Pre-generación completada. Revisa los logs.'})
+        return jsonify({'ok': True, 'msg': 'Contenidos de hoy borrados y regenerados.'})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)})
 
