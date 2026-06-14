@@ -657,10 +657,12 @@ def admin_pregen_now():
 
                 resumen = pregen_daily_games()
 
-                # Guardar errores en BD
+                # Guardar errores y éxitos en BD para diagnóstico
                 errores = resumen['error'] if resumen else []
+                oks = resumen['ok'] if resumen else []
                 dbx2 = get_db()
                 dbx2.execute("INSERT OR REPLACE INTO app_state (key, value) VALUES ('pregen_errores', ?)", ('|||'.join(errores),))
+                dbx2.execute("INSERT OR REPLACE INTO app_state (key, value) VALUES ('pregen_ok', ?)", ('|||'.join(oks),))
                 dbx2.commit()
                 dbx2.close()
             except Exception as e:
@@ -708,6 +710,7 @@ def admin_scheduler_status():
     # Detectar si hay regeneración en curso (misma conexión, aún abierta)
     corriendo = False
     errores = []
+    generados_lista = []
     try:
         estado_row = db.execute("SELECT value FROM app_state WHERE key = 'pregen_running'").fetchone()
         if estado_row and estado_row['value']:
@@ -717,8 +720,10 @@ def admin_scheduler_status():
                 corriendo = False
         err_row = db.execute("SELECT value FROM app_state WHERE key = 'pregen_errores'").fetchone()
         errores = err_row['value'].split('|||') if (err_row and err_row['value']) else []
+        ok_row = db.execute("SELECT value FROM app_state WHERE key = 'pregen_ok'").fetchone()
+        generados_lista = ok_row['value'].split('|||') if (ok_row and ok_row['value']) else []
     except Exception:
-        pass
+        generados_lista = []
     db.close()
 
     # Total esperado: juegos por bar (excluyendo globales que solo cuentan 1 vez)
@@ -736,6 +741,7 @@ def admin_scheduler_status():
             'total': total_estimado,
             'n_error': len([e for e in errores if e]),
             'errores': [e for e in errores if e][:20],
+            'generados': [g for g in generados_lista if g][:40],
         }
     })
 

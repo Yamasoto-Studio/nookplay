@@ -308,9 +308,12 @@ async function checkScheduler() {
         if (p.n_error) t += `\n⚠️ ${p.n_error} con error`;
         msg.textContent = t;
       } else {
-        msg.textContent = `Hoy: ${data.pregenerated_today} juegos pre-generados para ${data.bars_active} local(es).`;
+        msg.textContent = `Hoy: ${data.pregenerated_today} juegos pre-generados para ${data.bars_active} local(es). (esperados ~${p ? p.total : '?'})`;
+        if (p && p.generados && p.generados.length) {
+          msg.textContent += `\n\n✅ Generados:\n` + p.generados.join(', ');
+        }
         if (p && p.n_error && p.errores && p.errores.length) {
-          msg.textContent += `\n\n⚠️ Errores en la última generación:\n` + p.errores.join('\n');
+          msg.textContent += `\n\n⚠️ Errores:\n` + p.errores.join('\n');
         }
       }
     } else {
