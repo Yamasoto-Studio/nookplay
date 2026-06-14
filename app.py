@@ -432,6 +432,7 @@ def get_historial_reciente(db, game_type, bar_slug=None, dias=10, campo='titulo'
 def pregen_daily_games():
     """Ejecuta cada día a las 6am — pre-genera los juegos del día para todos los bares."""
     today = str(date.today())
+    resumen = {'ok': [], 'error': []}
 
     db = get_db()
     bars = db.execute("SELECT * FROM bars WHERE active = 1").fetchall()
@@ -550,10 +551,13 @@ def pregen_daily_games():
                         (bar['id'], game_type, today, _json.dumps(game_data))
                     )
                     db.commit()
+                    resumen['ok'].append(f"{game_type}/{bar['slug']}")
                     print(f"[CRON] Pre-generado {game_type} para {bar['slug']}")
                 except Exception as e:
+                    resumen['error'].append(f"{game_type}/{bar['slug']}: {e}")
                     print(f"[CRON] Error generando {game_type} para {bar['slug']}: {e}")
     db.close()
+    return resumen
 
 def start_scheduler():
     scheduler = BackgroundScheduler(timezone=pytz.timezone('Europe/Madrid'))
@@ -605,8 +609,14 @@ def admin_pregen_now():
         # Limpiar también la caché en memoria
         global _game_cache
         _game_cache = {k: v for k, v in _game_cache.items() if today not in k}
-        pregen_daily_games()
-        return jsonify({'ok': True, 'msg': 'Contenidos de hoy borrados y regenerados.'})
+        resumen = pregen_daily_games()
+        n_ok = len(resumen['ok']) if resumen else 0
+        n_err = len(resumen['error']) if resumen else 0
+        return jsonify({
+            'ok': True,
+            'msg': f'Regeneración completada: {n_ok} generados, {n_err} con error.',
+            'errores': resumen['error'] if resumen else []
+        })
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)})
 

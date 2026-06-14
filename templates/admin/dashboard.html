@@ -105,7 +105,7 @@
       <button onclick="forcePregen()" style="background:#C4622D; color:#fff; border:none; padding:8px 14px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit;">
         ⚡ Forzar pre-generación ahora
       </button>
-      <span id="sys-msg" style="font-size:13px; color:#6B6059;"></span>
+      <span id="sys-msg" style="white-space:pre-line;" style="font-size:13px; color:#6B6059;"></span>
     </div>
   </div>
 
@@ -309,11 +309,23 @@ async function checkScheduler() {
 
 async function forcePregen() {
   const msg = document.getElementById('sys-msg');
-  msg.textContent = 'Generando... (puede tardar unos segundos)';
+  msg.textContent = 'Generando... (puede tardar 20-40 segundos, espera)';
   try {
-    const res = await fetch('/admin/api/pregen-now', { method: 'POST' });
+    const res = await fetch('/admin/api/pregen-now', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    });
     const data = await res.json();
-    msg.textContent = data.ok ? '✅ Completado. Comprueba el estado.' : '❌ ' + data.error;
+    if (data.ok) {
+      msg.textContent = '✅ ' + data.msg;
+      if (data.errores && data.errores.length) {
+        msg.textContent += '\n\nErrores:\n' + data.errores.join('\n');
+      }
+    } else {
+      msg.textContent = '❌ ' + (data.error || 'Error');
+    }
+    checkScheduler();
   } catch(e) { msg.textContent = 'Error de conexión.'; }
 }
 </script>
