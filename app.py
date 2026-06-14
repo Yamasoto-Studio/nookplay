@@ -9,6 +9,7 @@ from email.mime.multipart import MIMEMultipart
 import json
 import random
 import string
+import time
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'nookplay-secret-2026')
@@ -22,7 +23,9 @@ def get_db():
     import os as _os
     _os.makedirs('/data', exist_ok=True)
     _db_path = '/data/nookplay.db'
-    db = sqlite3.connect(_db_path)
+    # timeout=10 evita errores "database is locked" si hay escritura concurrente
+    # (la pre-generación corre en un hilo de fondo)
+    db = sqlite3.connect(_db_path, timeout=10)
     db.row_factory = sqlite3.Row
     return db
 
@@ -116,6 +119,11 @@ def init_db():
             content         TEXT NOT NULL,
             generated_at    TEXT DEFAULT (datetime('now')),
             UNIQUE(bar_id, game_type, game_date)
+        );
+
+        CREATE TABLE IF NOT EXISTS app_state (
+            key     TEXT PRIMARY KEY,
+            value   TEXT DEFAULT ''
         );
 
         -- Partidas jugadas
@@ -429,15 +437,34 @@ def get_historial_reciente(db, game_type, bar_slug=None, dias=10, campo='titulo'
     return items[:30]
 
 
+# Estado global de la pre-generación (para mostrar progreso en vivo)
+import threading as _threading
+_pregen_estado = {
+    'corriendo': False,
+    'total': 0,
+    'hechos': 0,
+    'actual': '',
+    'ok': [],
+    'error': [],
+    'inicio': None,
+    'fin': None,
+}
+_pregen_lock = _threading.Lock()
+
+
 def pregen_daily_games():
     """Ejecuta cada día a las 6am — pre-genera los juegos del día para todos los bares."""
     today = str(date.today())
     resumen = {'ok': [], 'error': []}
+    GAME_TYPES = ['crimen', 'impostor', 'dilema', 'conexiones', 'oraculo', 'donde', 'local', 'veredicto', 'perfil', 'vestuario', 'sinopsis', 'muertes', 'letra', 'pensamiento', 'menteagil', 'constitucion']
 
     db = get_db()
     bars = db.execute("SELECT * FROM bars WHERE active = 1").fetchall()
+    # Inicializar el contador de progreso (estimación: juegos x bares)
+    _pregen_estado['total'] = len(bars) * len(GAME_TYPES)
+    _pregen_estado['hechos'] = 0
     for bar in bars:
-        for game_type in ['crimen', 'impostor', 'dilema', 'conexiones', 'oraculo', 'donde', 'local', 'veredicto', 'perfil', 'vestuario', 'sinopsis', 'muertes', 'letra', 'pensamiento', 'menteagil', 'constitucion']:
+        for game_type in GAME_TYPES:
             existing = db.execute(
                 "SELECT id FROM generated_games WHERE bar_id = ? AND game_type = ? AND game_date = ?",
                 (bar['id'], game_type, today)
@@ -552,10 +579,15 @@ def pregen_daily_games():
                     )
                     db.commit()
                     resumen['ok'].append(f"{game_type}/{bar['slug']}")
+                    _pregen_estado['ok'].append(f"{game_type}/{bar['slug']}")
                     print(f"[CRON] Pre-generado {game_type} para {bar['slug']}")
                 except Exception as e:
                     resumen['error'].append(f"{game_type}/{bar['slug']}: {e}")
+                    _pregen_estado['error'].append(f"{game_type}/{bar['slug']}: {str(e)[:120]}")
                     print(f"[CRON] Error generando {game_type} para {bar['slug']}: {e}")
+            # Avanzar contador (tanto si se generó como si ya existía)
+            _pregen_estado['hechos'] += 1
+            _pregen_estado['actual'] = f"{game_type} · {bar['slug']}"
     db.close()
     return resumen
 
@@ -595,28 +627,62 @@ def admin_pregen_now():
     Borra primero los contenidos de hoy para forzar una regeneración real."""
     if session.get('admin_role') != 'superadmin':
         return jsonify({'ok': False, 'error': 'No autorizado'}), 403
-    data = request.get_json(silent=True) or {}
-    solo_juego = data.get('game_type', '').strip()
     today = str(date.today())
+
+    # Evitar dos ejecuciones simultáneas (consultando BD, compartida entre workers)
+    dbc = get_db()
+    running_row = dbc.execute("SELECT value FROM app_state WHERE key = 'pregen_running'").fetchone()
+    dbc.close()
+    if running_row and running_row['value']:
+        try:
+            if (time.time() - float(running_row['value'])) < 300:
+                return jsonify({'ok': True, 'msg': 'Ya hay una regeneración en curso.', 'corriendo': True})
+        except Exception:
+            pass
+
+    def _run():
+        with _pregen_lock:
+            try:
+                # Marcar inicio en BD (compartido entre workers)
+                dbx = get_db()
+                dbx.execute("INSERT OR REPLACE INTO app_state (key, value) VALUES ('pregen_running', ?)", (str(time.time()),))
+                dbx.execute("INSERT OR REPLACE INTO app_state (key, value) VALUES ('pregen_errores', '')", ())
+                dbx.execute("DELETE FROM generated_games WHERE game_date = ?", (today,))
+                dbx.commit()
+                dbx.close()
+                global _game_cache
+                _game_cache = {k: v for k, v in _game_cache.items() if today not in k}
+
+                resumen = pregen_daily_games()
+
+                # Guardar errores en BD
+                errores = resumen['error'] if resumen else []
+                dbx2 = get_db()
+                dbx2.execute("INSERT OR REPLACE INTO app_state (key, value) VALUES ('pregen_errores', ?)", ('|||'.join(errores),))
+                dbx2.commit()
+                dbx2.close()
+            except Exception as e:
+                try:
+                    dbx3 = get_db()
+                    dbx3.execute("INSERT OR REPLACE INTO app_state (key, value) VALUES ('pregen_errores', ?)", (f"FATAL: {str(e)[:200]}",))
+                    dbx3.commit()
+                    dbx3.close()
+                except Exception:
+                    pass
+            finally:
+                # Marcar fin (borrar la marca de running)
+                try:
+                    dbf = get_db()
+                    dbf.execute("INSERT OR REPLACE INTO app_state (key, value) VALUES ('pregen_running', '')", ())
+                    dbf.commit()
+                    dbf.close()
+                except Exception:
+                    pass
+
+    t = _threading.Thread(target=_run, daemon=True)
+    t.start()
     try:
-        db = get_db()
-        if solo_juego:
-            db.execute("DELETE FROM generated_games WHERE game_type = ? AND game_date = ?", (solo_juego, today))
-        else:
-            db.execute("DELETE FROM generated_games WHERE game_date = ?", (today,))
-        db.commit()
-        db.close()
-        # Limpiar también la caché en memoria
-        global _game_cache
-        _game_cache = {k: v for k, v in _game_cache.items() if today not in k}
-        resumen = pregen_daily_games()
-        n_ok = len(resumen['ok']) if resumen else 0
-        n_err = len(resumen['error']) if resumen else 0
-        return jsonify({
-            'ok': True,
-            'msg': f'Regeneración completada: {n_ok} generados, {n_err} con error.',
-            'errores': resumen['error'] if resumen else []
-        })
+        return jsonify({'ok': True, 'msg': 'Regeneración iniciada en segundo plano.', 'corriendo': True})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)})
 
@@ -635,12 +701,35 @@ def admin_scheduler_status():
     ).fetchall()
     bars = db.execute("SELECT id, slug FROM bars WHERE active = 1").fetchall()
     db.close()
+    # Detectar si hay regeneración en curso: marca en tabla app_state
+    estado_row = db.execute("SELECT value FROM app_state WHERE key = 'pregen_running'").fetchone()
+    corriendo = False
+    if estado_row and estado_row['value']:
+        try:
+            # value = "timestamp_inicio". Si hace <5 min, lo consideramos activo
+            corriendo = (time.time() - float(estado_row['value'])) < 300
+        except Exception:
+            corriendo = False
+    err_row = db.execute("SELECT value FROM app_state WHERE key = 'pregen_errores'").fetchone()
+    errores = err_row['value'].split('|||') if (err_row and err_row['value']) else []
+    db.close()
+
+    # Total esperado: juegos por bar (excluyendo globales que solo cuentan 1 vez)
+    n_bars = len(bars)
+    total_estimado = n_bars * 8 + 8  # 8 por-bar + 8 globales aprox
+
     return jsonify({
         'ok': True,
         'today': today,
-        'bars_active': len(bars),
+        'bars_active': n_bars,
         'pregenerated_today': len(rows),
-        'detail': [{'bar_id': r['bar_id'], 'game_type': r['game_type']} for r in rows]
+        'progreso': {
+            'corriendo': corriendo,
+            'hechos': len(rows),
+            'total': total_estimado,
+            'n_error': len([e for e in errores if e]),
+            'errores': [e for e in errores if e][:20],
+        }
     })
 
 @app.route('/admin')

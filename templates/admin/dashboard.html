@@ -293,23 +293,49 @@ async function createBar() {
   }
 }
 
+let _pollInterval = null;
+
 async function checkScheduler() {
   const msg = document.getElementById('sys-msg');
-  msg.textContent = 'Consultando...';
   try {
     const res = await fetch('/admin/api/scheduler-status');
     const data = await res.json();
     if (data.ok) {
-      msg.textContent = `Hoy: ${data.pregenerated_today} juegos pre-generados para ${data.bars_active} local(es).`;
+      const p = data.progreso;
+      if (p && p.corriendo) {
+        let t = `⏳ Generando... ${p.hechos}/${p.total}`;
+        if (p.actual) t += `\nÚltimo: ${p.actual}`;
+        if (p.n_error) t += `\n⚠️ ${p.n_error} con error`;
+        msg.textContent = t;
+      } else {
+        msg.textContent = `Hoy: ${data.pregenerated_today} juegos pre-generados para ${data.bars_active} local(es).`;
+        if (p && p.n_error && p.errores && p.errores.length) {
+          msg.textContent += `\n\n⚠️ Errores en la última generación:\n` + p.errores.join('\n');
+        }
+      }
     } else {
       msg.textContent = 'Error: ' + data.error;
     }
   } catch(e) { msg.textContent = 'Error de conexión.'; }
 }
 
+function startPolling() {
+  if (_pollInterval) clearInterval(_pollInterval);
+  _pollInterval = setInterval(async () => {
+    await checkScheduler();
+    // Parar el polling cuando termine
+    const res = await fetch('/admin/api/scheduler-status');
+    const data = await res.json();
+    if (data.ok && data.progreso && !data.progreso.corriendo) {
+      clearInterval(_pollInterval);
+      _pollInterval = null;
+    }
+  }, 2000);
+}
+
 async function forcePregen() {
   const msg = document.getElementById('sys-msg');
-  msg.textContent = 'Generando... (puede tardar 20-40 segundos, espera)';
+  msg.textContent = '⏳ Iniciando regeneración...';
   try {
     const res = await fetch('/admin/api/pregen-now', {
       method: 'POST',
@@ -318,14 +344,11 @@ async function forcePregen() {
     });
     const data = await res.json();
     if (data.ok) {
-      msg.textContent = '✅ ' + data.msg;
-      if (data.errores && data.errores.length) {
-        msg.textContent += '\n\nErrores:\n' + data.errores.join('\n');
-      }
+      msg.textContent = '⏳ ' + data.msg + ' Mostrando progreso...';
+      startPolling();
     } else {
       msg.textContent = '❌ ' + (data.error || 'Error');
     }
-    checkScheduler();
   } catch(e) { msg.textContent = 'Error de conexión.'; }
 }
 </script>

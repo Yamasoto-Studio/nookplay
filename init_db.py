@@ -91,6 +91,11 @@ db.executescript('''
         generated_at    TEXT DEFAULT (datetime(\'now\'))
     );
 
+    CREATE TABLE IF NOT EXISTS app_state (
+        key     TEXT PRIMARY KEY,
+        value   TEXT DEFAULT ''
+    );
+
     CREATE TABLE IF NOT EXISTS plays (
         id          INTEGER PRIMARY KEY AUTOINCREMENT,
         code        TEXT NOT NULL,
