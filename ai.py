@@ -1328,3 +1328,102 @@ REGLAS:
     if 'content' not in data:
         raise Exception(f"API error: {data.get('error', data)}")
     return {"poema": data['content'][0]['text'].strip()}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Mente Ágil generator (psicotécnico, 3 preguntas)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def generate_menteagil(bar_slug):
+    today = str(date.today())
+    api_key = os.environ.get('ANTHROPIC_API_KEY')
+    seed = get_day_seed(bar_slug)
+
+    prompt = """Eres el creador de un test psicotécnico para bares, del estilo de las pruebas de acceso y oposiciones. Generas 3 ejercicios de lógica con dificultad progresiva.
+
+FECHA: """ + today + """
+SEED: """ + str(seed) + """
+
+Crea 3 preguntas psicotécnicas con estas reglas:
+1. Variedad de tipos: series numéricas, series de letras, analogías, lógica, matrices simples
+2. Dificultad progresiva: la 1 fácil, la 2 media, la 3 difícil
+3. Cada una con 4 opciones donde solo una es correcta
+4. Deben ser resolubles mentalmente, sin papel (es un bar)
+5. La explicación debe enseñar el razonamiento de forma clara y breve
+6. Ejemplos de tipos: "2, 4, 8, 16, ?" / "Médico es a hospital como profesor es a ?" / "Si todos los X son Y..."
+
+Devuelve SOLO un objeto JSON válido, sin markdown:
+{
+  "preguntas": [
+    {
+      "tipo": "Serie numérica",
+      "enunciado": "El ejercicio. Claro y conciso.",
+      "opciones": ["A", "B", "C", "D"],
+      "correcta": 0,
+      "explicacion": "El razonamiento para llegar a la solución. 1-2 frases."
+    },
+    { "tipo": "Analogía", "enunciado": "...", "opciones": ["A","B","C","D"], "correcta": 2, "explicacion": "..." },
+    { "tipo": "Lógica", "enunciado": "...", "opciones": ["A","B","C","D"], "correcta": 1, "explicacion": "..." }
+  ],
+  "mensajes": {
+    "0": "0 de 3 — Hoy la mente está de resaca. 😴",
+    "1": "1 de 3 — Algo despiertas. Sigue entrenando. 🧠",
+    "2": "2 de 3 — Buen nivel. Casi opositor. 💪",
+    "3": "3 de 3 — Mente prodigiosa. Te fichan. 🏆"
+  }
+}"""
+
+    response = requests.post(
+        'https://api.anthropic.com/v1/messages',
+        headers={'x-api-key': api_key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json'},
+        json={'model': 'claude-sonnet-4-6', 'max_tokens': 1100, 'messages': [{'role': 'user', 'content': prompt}]},
+        timeout=60
+    )
+    data = response.json()
+    if 'content' not in data:
+        raise Exception(f"API error: {data.get('error', data)}")
+    text = data['content'][0]['text'].strip().replace('```json', '').replace('```', '').strip()
+    return json.loads(text)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ¿Tú la has leído? generator (Constitución — verdad o trampa)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def generate_constitucion(bar_slug):
+    today = str(date.today())
+    api_key = os.environ.get('ANTHROPIC_API_KEY')
+    seed = get_day_seed(bar_slug)
+
+    prompt = """Eres el creador de un juego sobre la Constitución Española de 1978 para bares. Presentas una afirmación sobre la Constitución y el jugador debe decir si es VERDADERA (real) o FALSA (inventada pero plausible). Tono divertido, de complicidad con quien estudia oposiciones o quien presume de saber.
+
+FECHA: """ + today + """
+SEED: """ + str(seed) + """
+
+Crea la afirmación del día con estas reglas:
+1. Si es VERDADERA: un dato real y verificable de la Constitución Española de 1978 (artículos, derechos, estructura, datos históricos)
+2. Si es FALSA: algo inventado pero MUY plausible — que haga dudar a cualquiera
+3. Alterna entre verdaderas y falsas según el SEED (no siempre el mismo tipo)
+4. Rigor absoluto: si dices que es verdad, debe serlo de verdad
+5. La explicación debe aclarar el dato real con tono didáctico pero ameno
+6. Incluye el número de artículo cuando sea relevante
+
+Devuelve SOLO un objeto JSON válido, sin markdown:
+{
+  "afirmacion": "La afirmación sobre la Constitución que el jugador debe juzgar.",
+  "es_verdadera": true,
+  "explicacion": "La aclaración del dato real, con tono ameno. 2-3 frases.",
+  "dato_extra": "Una curiosidad adicional real sobre la Constitución. 1 frase."
+}"""
+
+    response = requests.post(
+        'https://api.anthropic.com/v1/messages',
+        headers={'x-api-key': api_key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json'},
+        json={'model': 'claude-sonnet-4-6', 'max_tokens': 700, 'messages': [{'role': 'user', 'content': prompt}]},
+        timeout=60
+    )
+    data = response.json()
+    if 'content' not in data:
+        raise Exception(f"API error: {data.get('error', data)}")
+    text = data['content'][0]['text'].strip().replace('```json', '').replace('```', '').strip()
+    return json.loads(text)

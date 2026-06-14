@@ -322,6 +322,8 @@ for slug, name, desc, pos in [
     ('letra', 'La Letra Traducida', 'Adivina la canción', 16),
     ('pensamiento', 'El Mismo Pensamiento', '¿Piensas como la mayoría?', 17),
     ('poema', 'El Poema', 'Tu poema personalizado', 18),
+    ('menteagil', 'Mente Ágil', 'Test psicotécnico', 19),
+    ('constitucion', '¿Tú la has leído?', 'Test sobre la Constitución', 20),
 ]:
     if not db.execute("SELECT id FROM games WHERE slug = ?", (slug,)).fetchone():
         db.execute(
@@ -343,8 +345,10 @@ ORDEN_JUEGOS = {
     'pensamiento': 13,
     # Curiosidad / lectura
     'impostor': 14, 'muertes': 15, 'oraculo': 16, 'local': 17,
+    # Reto mental / conocimiento
+    'menteagil': 18, 'constitucion': 19,
     # Creativo / generativo
-    'poema': 18,
+    'poema': 20,
 }
 for slug, pos in ORDEN_JUEGOS.items():
     db.execute("UPDATE games SET position = ? WHERE slug = ?", (pos, slug))
