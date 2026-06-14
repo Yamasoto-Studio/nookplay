@@ -631,6 +631,8 @@ def admin_pregen_now():
 
     # Evitar dos ejecuciones simultáneas (consultando BD, compartida entre workers)
     dbc = get_db()
+    dbc.execute("CREATE TABLE IF NOT EXISTS app_state (key TEXT PRIMARY KEY, value TEXT DEFAULT '')")
+    dbc.commit()
     running_row = dbc.execute("SELECT value FROM app_state WHERE key = 'pregen_running'").fetchone()
     dbc.close()
     if running_row and running_row['value']:
@@ -695,23 +697,28 @@ def admin_scheduler_status():
         return jsonify({'ok': False, 'error': 'No autorizado'}), 403
     today = str(date.today())
     db = get_db()
+    # Asegurar que la tabla app_state existe (por si la migración no corrió aún)
+    db.execute("CREATE TABLE IF NOT EXISTS app_state (key TEXT PRIMARY KEY, value TEXT DEFAULT '')")
     rows = db.execute(
         "SELECT bar_id, game_type, game_date FROM generated_games WHERE game_date = ? ORDER BY bar_id, game_type",
         (today,)
     ).fetchall()
     bars = db.execute("SELECT id, slug FROM bars WHERE active = 1").fetchall()
-    db.close()
-    # Detectar si hay regeneración en curso: marca en tabla app_state
-    estado_row = db.execute("SELECT value FROM app_state WHERE key = 'pregen_running'").fetchone()
+
+    # Detectar si hay regeneración en curso (misma conexión, aún abierta)
     corriendo = False
-    if estado_row and estado_row['value']:
-        try:
-            # value = "timestamp_inicio". Si hace <5 min, lo consideramos activo
-            corriendo = (time.time() - float(estado_row['value'])) < 300
-        except Exception:
-            corriendo = False
-    err_row = db.execute("SELECT value FROM app_state WHERE key = 'pregen_errores'").fetchone()
-    errores = err_row['value'].split('|||') if (err_row and err_row['value']) else []
+    errores = []
+    try:
+        estado_row = db.execute("SELECT value FROM app_state WHERE key = 'pregen_running'").fetchone()
+        if estado_row and estado_row['value']:
+            try:
+                corriendo = (time.time() - float(estado_row['value'])) < 300
+            except Exception:
+                corriendo = False
+        err_row = db.execute("SELECT value FROM app_state WHERE key = 'pregen_errores'").fetchone()
+        errores = err_row['value'].split('|||') if (err_row and err_row['value']) else []
+    except Exception:
+        pass
     db.close()
 
     # Total esperado: juegos por bar (excluyendo globales que solo cuentan 1 vez)
