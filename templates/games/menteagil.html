@@ -202,7 +202,7 @@ function renderPregunta(idx) {
   }
 
   // Jugadores
-  const LETRAS = ['A', 'B', 'C'];
+  const LETRAS = ['A', 'B', 'C', 'D'];
   document.getElementById('ma-jugadores').innerHTML = p.opciones.map((j, i) => `
     <button class="ma-jugador" id="jug-${i}" onclick="seleccionar(${i})">
       <span class="ma-idx">${LETRAS[i]}</span>
