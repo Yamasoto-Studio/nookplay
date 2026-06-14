@@ -1345,12 +1345,15 @@ FECHA: """ + today + """
 SEED: """ + str(seed) + """
 
 Crea 3 preguntas psicotécnicas con estas reglas:
-1. Variedad de tipos: series numéricas, series de letras, analogías, lógica, matrices simples
-2. Dificultad progresiva: la 1 fácil, la 2 media, la 3 difícil
-3. Cada una con 4 opciones donde solo una es correcta
-4. Deben ser resolubles mentalmente, sin papel (es un bar)
+1. Variedad de tipos: series numéricas, series de letras, analogías, lógica deductiva, matrices, dominó/numéricas con varias operaciones
+2. NIVEL DE DIFICULTAD — IMPORTANTE, sé exigente como en una oposición real:
+   - Pregunta 1 (media): no trivial. Requiere identificar un patrón con 2 operaciones combinadas. NO uses progresiones obvias como "2,4,8,16". Ejemplo de este nivel: "3, 5, 9, 17, 33, ?" (x2-1) o "Si A=1, C=9, E=25... ¿cuánto vale G?" (posición al cuadrado).
+   - Pregunta 2 (difícil): combina dos reglas o requiere razonamiento abstracto. Ejemplo: series alternas (dos series intercaladas), analogías con doble relación, silogismos con negaciones.
+   - Pregunta 3 (muy difícil): nivel oposición exigente. Patrones no evidentes, varios pasos lógicos, o relaciones que requieren descartar opciones. Que haga pensar de verdad incluso a alguien hábil.
+3. Cada una con 4 opciones donde solo una es correcta, y los distractores deben ser plausibles (resultados de errores comunes de razonamiento)
+4. Resolubles mentalmente pero NO obvias — el reto es que piques, no que aciertes a la primera
 5. La explicación debe enseñar el razonamiento de forma clara y breve
-6. Ejemplos de tipos: "2, 4, 8, 16, ?" / "Médico es a hospital como profesor es a ?" / "Si todos los X son Y..."
+6. Rigor absoluto: verifica que la respuesta correcta es realmente correcta y única
 
 Devuelve SOLO un objeto JSON válido, sin markdown:
 {
