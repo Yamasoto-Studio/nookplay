@@ -705,6 +705,341 @@ def generate_reinas(bar_slug):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# El Orden — ordena 5 elementos por un criterio (tipo Timeline, más ágil)
+# Sin IA — banco de rondas curadas que rotan por día. 0 tokens.
+#
+# Cada ronda:
+#   "pregunta": enunciado mostrado al jugador
+#   "criterio": de qué va el orden (cronología, tamaño, etc.)
+#   "arriba" / "abajo": etiquetas de los extremos de la lista
+#   "items": lista de {"texto", "valor" (num para ordenar ASC = arriba), "dato" (lo que se revela)}
+#
+# El orden correcto = items ordenados por "valor" ascendente (menor arriba).
+# generate_orden() devuelve también un "barajado" determinista que nunca coincide
+# con el orden correcto, para que el front lo muestre desordenado de salida.
+# ─────────────────────────────────────────────────────────────────────────────
+
+ORDEN_RONDAS = [
+    # ── CRONOLOGÍA (eventos / inventos) ─────────────────────────────────────
+    {
+        "pregunta": "Ordena estos inventos del más antiguo al más reciente",
+        "criterio": "Año de invención",
+        "arriba": "Más antiguo", "abajo": "Más reciente",
+        "items": [
+            {"texto": "La imprenta de Gutenberg", "valor": 1440, "dato": "≈1440"},
+            {"texto": "El teléfono", "valor": 1876, "dato": "1876"},
+            {"texto": "El avión de los Wright", "valor": 1903, "dato": "1903"},
+            {"texto": "La televisión", "valor": 1927, "dato": "1927"},
+            {"texto": "Internet (ARPANET)", "valor": 1969, "dato": "1969"},
+        ],
+    },
+    {
+        "pregunta": "Ordena estos hitos espaciales del primero al último",
+        "criterio": "Año del acontecimiento",
+        "arriba": "Primero", "abajo": "Último",
+        "items": [
+            {"texto": "Sputnik, primer satélite", "valor": 1957, "dato": "1957"},
+            {"texto": "Yuri Gagarin en el espacio", "valor": 1961, "dato": "1961"},
+            {"texto": "Llegada a la Luna (Apolo 11)", "valor": 1969, "dato": "1969"},
+            {"texto": "Estación Espacial Internacional", "valor": 1998, "dato": "1998"},
+            {"texto": "Aterrizaje del rover Perseverance", "valor": 2021, "dato": "2021"},
+        ],
+    },
+    {
+        "pregunta": "Ordena estos acontecimientos históricos del más antiguo al más reciente",
+        "criterio": "Año",
+        "arriba": "Más antiguo", "abajo": "Más reciente",
+        "items": [
+            {"texto": "Caída del Imperio Romano de Occidente", "valor": 476, "dato": "476 d.C."},
+            {"texto": "Descubrimiento de América", "valor": 1492, "dato": "1492"},
+            {"texto": "Revolución Francesa", "valor": 1789, "dato": "1789"},
+            {"texto": "Primera Guerra Mundial", "valor": 1914, "dato": "1914"},
+            {"texto": "Caída del Muro de Berlín", "valor": 1989, "dato": "1989"},
+        ],
+    },
+    {
+        "pregunta": "Ordena estas apps según cuándo se lanzaron",
+        "criterio": "Año de lanzamiento",
+        "arriba": "Más antigua", "abajo": "Más reciente",
+        "items": [
+            {"texto": "YouTube", "valor": 2005, "dato": "2005"},
+            {"texto": "WhatsApp", "valor": 2009, "dato": "2009"},
+            {"texto": "Instagram", "valor": 2010, "dato": "2010"},
+            {"texto": "TikTok (internacional)", "valor": 2017, "dato": "2017"},
+            {"texto": "ChatGPT", "valor": 2022, "dato": "2022"},
+        ],
+    },
+    {
+        "pregunta": "Ordena estas civilizaciones por antigüedad de su apogeo",
+        "criterio": "Época",
+        "arriba": "Más antigua", "abajo": "Más reciente",
+        "items": [
+            {"texto": "Antiguo Egipto (pirámides)", "valor": -2560, "dato": "≈2560 a.C."},
+            {"texto": "Grecia clásica", "valor": -450, "dato": "≈450 a.C."},
+            {"texto": "Imperio Romano", "valor": 100, "dato": "siglo I-II"},
+            {"texto": "Imperio Maya clásico", "valor": 600, "dato": "≈600 d.C."},
+            {"texto": "Imperio Azteca", "valor": 1450, "dato": "≈1450"},
+        ],
+    },
+
+    # ── TAMAÑO / SUPERFICIE ─────────────────────────────────────────────────
+    {
+        "pregunta": "Ordena estos países del más pequeño al más grande",
+        "criterio": "Superficie",
+        "arriba": "Más pequeño", "abajo": "Más grande",
+        "items": [
+            {"texto": "Portugal", "valor": 92212, "dato": "92.000 km²"},
+            {"texto": "España", "valor": 505990, "dato": "506.000 km²"},
+            {"texto": "Francia", "valor": 551695, "dato": "552.000 km²"},
+            {"texto": "México", "valor": 1964375, "dato": "1,96 M km²"},
+            {"texto": "Rusia", "valor": 17098242, "dato": "17,1 M km²"},
+        ],
+    },
+    {
+        "pregunta": "Ordena estos animales del más pequeño al más grande",
+        "criterio": "Tamaño / longitud",
+        "arriba": "Más pequeño", "abajo": "Más grande",
+        "items": [
+            {"texto": "Abeja", "valor": 1.5, "dato": "≈1,5 cm"},
+            {"texto": "Gato doméstico", "valor": 46, "dato": "≈46 cm"},
+            {"texto": "Ser humano", "valor": 170, "dato": "≈1,7 m"},
+            {"texto": "Jirafa", "valor": 500, "dato": "≈5 m"},
+            {"texto": "Ballena azul", "valor": 2500, "dato": "≈25 m"},
+        ],
+    },
+    {
+        "pregunta": "Ordena estos planetas del más pequeño al más grande",
+        "criterio": "Diámetro",
+        "arriba": "Más pequeño", "abajo": "Más grande",
+        "items": [
+            {"texto": "Mercurio", "valor": 4879, "dato": "4.879 km"},
+            {"texto": "Marte", "valor": 6779, "dato": "6.779 km"},
+            {"texto": "La Tierra", "valor": 12742, "dato": "12.742 km"},
+            {"texto": "Saturno", "valor": 116460, "dato": "116.460 km"},
+            {"texto": "Júpiter", "valor": 139820, "dato": "139.820 km"},
+        ],
+    },
+
+    # ── ALTURA ──────────────────────────────────────────────────────────────
+    {
+        "pregunta": "Ordena estos edificios y monumentos del más bajo al más alto",
+        "criterio": "Altura",
+        "arriba": "Más bajo", "abajo": "Más alto",
+        "items": [
+            {"texto": "Estatua de la Libertad", "valor": 93, "dato": "93 m"},
+            {"texto": "Big Ben", "valor": 96, "dato": "96 m"},
+            {"texto": "Torre Eiffel", "valor": 330, "dato": "330 m"},
+            {"texto": "Empire State Building", "valor": 443, "dato": "443 m"},
+            {"texto": "Burj Khalifa (Dubái)", "valor": 828, "dato": "828 m"},
+        ],
+    },
+    {
+        "pregunta": "Ordena estas montañas de la más baja a la más alta",
+        "criterio": "Altitud",
+        "arriba": "Más baja", "abajo": "Más alta",
+        "items": [
+            {"texto": "Teide (España)", "valor": 3715, "dato": "3.715 m"},
+            {"texto": "Mont Blanc (Alpes)", "valor": 4808, "dato": "4.808 m"},
+            {"texto": "Kilimanjaro (África)", "valor": 5895, "dato": "5.895 m"},
+            {"texto": "Aconcagua (América)", "valor": 6961, "dato": "6.961 m"},
+            {"texto": "Everest (Himalaya)", "valor": 8849, "dato": "8.849 m"},
+        ],
+    },
+
+    # ── POBLACIÓN ───────────────────────────────────────────────────────────
+    {
+        "pregunta": "Ordena estas ciudades por población (de menos a más habitantes)",
+        "criterio": "Población del área metropolitana",
+        "arriba": "Menos gente", "abajo": "Más gente",
+        "items": [
+            {"texto": "Barcelona", "valor": 5600000, "dato": "≈5,6 M"},
+            {"texto": "Madrid", "valor": 6700000, "dato": "≈6,7 M"},
+            {"texto": "Londres", "valor": 9500000, "dato": "≈9,5 M"},
+            {"texto": "Ciudad de México", "valor": 22000000, "dato": "≈22 M"},
+            {"texto": "Tokio", "valor": 37000000, "dato": "≈37 M"},
+        ],
+    },
+    {
+        "pregunta": "Ordena estos países por población (de menos a más)",
+        "criterio": "Habitantes",
+        "arriba": "Menos gente", "abajo": "Más gente",
+        "items": [
+            {"texto": "Portugal", "valor": 10300000, "dato": "≈10,3 M"},
+            {"texto": "España", "valor": 48000000, "dato": "≈48 M"},
+            {"texto": "México", "valor": 129000000, "dato": "≈129 M"},
+            {"texto": "Estados Unidos", "valor": 335000000, "dato": "≈335 M"},
+            {"texto": "India", "valor": 1430000000, "dato": "≈1.430 M"},
+        ],
+    },
+
+    # ── VELOCIDAD ───────────────────────────────────────────────────────────
+    {
+        "pregunta": "Ordena por velocidad: del más lento al más rápido",
+        "criterio": "Velocidad punta",
+        "arriba": "Más lento", "abajo": "Más rápido",
+        "items": [
+            {"texto": "Usain Bolt corriendo", "valor": 37, "dato": "≈37 km/h"},
+            {"texto": "Galgo", "valor": 70, "dato": "≈70 km/h"},
+            {"texto": "Guepardo", "valor": 110, "dato": "≈110 km/h"},
+            {"texto": "AVE (tren español)", "valor": 310, "dato": "≈310 km/h"},
+            {"texto": "Avión comercial", "valor": 900, "dato": "≈900 km/h"},
+        ],
+    },
+
+    # ── DISTANCIA ───────────────────────────────────────────────────────────
+    {
+        "pregunta": "Ordena estos planetas por distancia al Sol (del más cercano al más lejano)",
+        "criterio": "Distancia media al Sol",
+        "arriba": "Más cerca", "abajo": "Más lejos",
+        "items": [
+            {"texto": "Mercurio", "valor": 58, "dato": "58 M km"},
+            {"texto": "Venus", "valor": 108, "dato": "108 M km"},
+            {"texto": "La Tierra", "valor": 150, "dato": "150 M km"},
+            {"texto": "Marte", "valor": 228, "dato": "228 M km"},
+            {"texto": "Júpiter", "valor": 778, "dato": "778 M km"},
+        ],
+    },
+
+    # ── PRECIO / VALOR ──────────────────────────────────────────────────────
+    {
+        "pregunta": "Ordena por valor: ¿qué fue más caro?",
+        "criterio": "Precio aproximado",
+        "arriba": "Más barato", "abajo": "Más caro",
+        "items": [
+            {"texto": "Un iPhone de gama alta", "valor": 1500, "dato": "≈1.500 €"},
+            {"texto": "Un coche utilitario nuevo", "valor": 22000, "dato": "≈22.000 €"},
+            {"texto": "Un piso medio en España", "valor": 200000, "dato": "≈200.000 €"},
+            {"texto": "Un Ferrari deportivo", "valor": 300000, "dato": "≈300.000 €"},
+            {"texto": "Un anuncio en la Super Bowl (30s)", "valor": 6500000, "dato": "≈6,5 M €"},
+        ],
+    },
+
+    # ── DURACIÓN ────────────────────────────────────────────────────────────
+    {
+        "pregunta": "Ordena por duración: de lo más corto a lo más largo",
+        "criterio": "Duración media",
+        "arriba": "Más corto", "abajo": "Más largo",
+        "items": [
+            {"texto": "Una canción pop", "valor": 3.5, "dato": "≈3,5 min"},
+            {"texto": "Un episodio de sitcom", "valor": 22, "dato": "≈22 min"},
+            {"texto": "Un partido de fútbol", "valor": 105, "dato": "≈105 min"},
+            {"texto": "Una película media", "valor": 120, "dato": "≈120 min"},
+            {"texto": "Un vuelo Madrid–Nueva York", "valor": 480, "dato": "≈8 h"},
+        ],
+    },
+
+    # ── PESO ────────────────────────────────────────────────────────────────
+    {
+        "pregunta": "Ordena estos animales del más ligero al más pesado",
+        "criterio": "Peso medio",
+        "arriba": "Más ligero", "abajo": "Más pesado",
+        "items": [
+            {"texto": "Gato doméstico", "valor": 4, "dato": "≈4 kg"},
+            {"texto": "Persona adulta", "valor": 70, "dato": "≈70 kg"},
+            {"texto": "Caballo", "valor": 500, "dato": "≈500 kg"},
+            {"texto": "Elefante africano", "valor": 6000, "dato": "≈6.000 kg"},
+            {"texto": "Ballena azul", "valor": 150000, "dato": "≈150.000 kg"},
+        ],
+    },
+
+    # ── TEMPERATURA ─────────────────────────────────────────────────────────
+    {
+        "pregunta": "Ordena de menor a mayor temperatura",
+        "criterio": "Temperatura aproximada",
+        "arriba": "Más frío", "abajo": "Más caliente",
+        "items": [
+            {"texto": "Un congelador doméstico", "valor": -18, "dato": "≈-18 ºC"},
+            {"texto": "Un día de primavera", "valor": 20, "dato": "≈20 ºC"},
+            {"texto": "El cuerpo humano", "valor": 37, "dato": "37 ºC"},
+            {"texto": "Agua hirviendo", "valor": 100, "dato": "100 ºC"},
+            {"texto": "La lava de un volcán", "valor": 1100, "dato": "≈1.100 ºC"},
+        ],
+    },
+
+    # ── CRONOLOGÍA CULTURA / ESPAÑA ─────────────────────────────────────────
+    {
+        "pregunta": "Ordena estos hitos de España del más antiguo al más reciente",
+        "criterio": "Año",
+        "arriba": "Más antiguo", "abajo": "Más reciente",
+        "items": [
+            {"texto": "Constitución española", "valor": 1978, "dato": "1978"},
+            {"texto": "España entra en la UE (CEE)", "valor": 1986, "dato": "1986"},
+            {"texto": "Juegos Olímpicos de Barcelona", "valor": 1992, "dato": "1992"},
+            {"texto": "Llega el euro a España", "valor": 2002, "dato": "2002"},
+            {"texto": "España gana el Mundial de fútbol", "valor": 2010, "dato": "2010"},
+        ],
+    },
+    {
+        "pregunta": "Ordena a estos pintores por orden de nacimiento",
+        "criterio": "Año de nacimiento",
+        "arriba": "Nació antes", "abajo": "Nació después",
+        "items": [
+            {"texto": "Velázquez", "valor": 1599, "dato": "1599"},
+            {"texto": "Goya", "valor": 1746, "dato": "1746"},
+            {"texto": "Picasso", "valor": 1881, "dato": "1881"},
+            {"texto": "Dalí", "valor": 1904, "dato": "1904"},
+            {"texto": "Frida Kahlo", "valor": 1907, "dato": "1907"},
+        ],
+    },
+
+    # ── CRONOLOGÍA CINE ─────────────────────────────────────────────────────
+    {
+        "pregunta": "Ordena estas películas por orden de estreno",
+        "criterio": "Año de estreno",
+        "arriba": "Más antigua", "abajo": "Más reciente",
+        "items": [
+            {"texto": "El Padrino", "valor": 1972, "dato": "1972"},
+            {"texto": "Star Wars (Episodio IV)", "valor": 1977, "dato": "1977"},
+            {"texto": "Titanic", "valor": 1997, "dato": "1997"},
+            {"texto": "El Señor de los Anillos (1ª)", "valor": 2001, "dato": "2001"},
+            {"texto": "Avatar", "valor": 2009, "dato": "2009"},
+        ],
+    },
+
+    # ── CANTIDAD ────────────────────────────────────────────────────────────
+    {
+        "pregunta": "Ordena estas cosas por cantidad de patas",
+        "criterio": "Número de patas",
+        "arriba": "Menos patas", "abajo": "Más patas",
+        "items": [
+            {"texto": "Una persona", "valor": 2, "dato": "2"},
+            {"texto": "Un perro", "valor": 4, "dato": "4"},
+            {"texto": "Un insecto", "valor": 6, "dato": "6"},
+            {"texto": "Una araña", "valor": 8, "dato": "8"},
+            {"texto": "Un ciempiés común", "valor": 30, "dato": "≈30"},
+        ],
+    },
+]
+
+
+def generate_orden(bar_slug):
+    seed = get_day_seed(bar_slug)
+    idx = seed % len(ORDEN_RONDAS)
+    ronda = ORDEN_RONDAS[idx]
+    n = len(ronda["items"])
+    # Orden correcto: índices de items ordenados por "valor" ascendente (menor arriba)
+    orden_correcto = sorted(range(n), key=lambda i: ronda["items"][i]["valor"])
+    # Barajado inicial determinista que NO coincida con el orden correcto
+    rot = (seed % (n - 1)) + 1
+    barajado = list(range(n))
+    barajado = barajado[rot:] + barajado[:rot]
+    s2 = (seed // 7) % n
+    s3 = (seed // 13) % n
+    barajado[s2], barajado[s3] = barajado[s3], barajado[s2]
+    if barajado == orden_correcto:
+        barajado = barajado[::-1]
+    return {
+        "pregunta": ronda["pregunta"],
+        "criterio": ronda["criterio"],
+        "arriba": ronda["arriba"],
+        "abajo": ronda["abajo"],
+        "items": ronda["items"],
+        "orden_correcto": orden_correcto,
+        "barajado": barajado,
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Conexión Local — juego hiperlocal generado por IA
 # ─────────────────────────────────────────────────────────────────────────────
 
