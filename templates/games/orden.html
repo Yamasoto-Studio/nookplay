@@ -34,17 +34,13 @@
   border: 2px solid var(--border); background: var(--bar-bg-card);
   font-size: 15px; font-weight: 600; color: var(--text);
   cursor: grab; user-select: none; position: relative;
-  transition: border-color 0.15s, transform 0.06s, box-shadow 0.15s;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 .or-item:active { cursor: grabbing; }
 .or-item.dragging {
-  opacity: 0.92; border-color: var(--bar-primary);
-  box-shadow: 0 6px 20px rgba(0,0,0,0.16); transform: scale(1.02);
-  z-index: 50;
-}
-.or-item.placeholder {
-  background: var(--bar-bg-subtle); border-style: dashed;
-  border-color: var(--bar-primary); color: transparent;
+  border-color: var(--bar-primary);
+  box-shadow: 0 8px 22px rgba(0,0,0,0.18);
+  cursor: grabbing; z-index: 50;
 }
 .or-pos {
   width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
@@ -172,53 +168,48 @@ function renderLista() {
     const it = gameData.items[itemIdx];
     const el = document.createElement('div');
     el.className = 'or-item';
-    el.dataset.pos = pos;
+    el.dataset.id = itemIdx;               // id estable del item (no cambia nunca)
     el.innerHTML = `
       <div class="or-pos">${pos + 1}</div>
       <div class="or-texto">${it.texto}</div>
       <div class="or-grip" aria-hidden="true"><span></span><span></span><span></span></div>`;
-    attachDrag(el);
+    el.addEventListener('pointerdown', onPointerDown);
     lista.appendChild(el);
   });
 }
 
-/* ── Drag & drop unificado (ratón + táctil) ───────────────────────────── */
-let drag = null;
-
-function attachDrag(el) {
-  el.addEventListener('pointerdown', onPointerDown);
+function sincronizarOrden() {
+  // Reconstruye `order` desde el DOM usando data-id (siempre válido, nunca undefined)
+  const lista = document.getElementById('or-lista');
+  order = [...lista.children].map(n => parseInt(n.dataset.id, 10));
 }
 
+function actualizarNumeros() {
+  const lista = document.getElementById('or-lista');
+  [...lista.children].forEach((n, i) => {
+    const p = n.querySelector('.or-pos');
+    if (p) p.textContent = i + 1;
+  });
+}
+
+/* ── Drag & drop unificado (ratón + táctil), robusto ──────────────────── */
+let drag = null;
+
 function onPointerDown(e) {
-  if (done) return;
+  if (done || drag) return;
+  if (e.button !== undefined && e.button !== 0) return;   // solo botón izquierdo
   const el = e.currentTarget;
   const lista = document.getElementById('or-lista');
-  const rect = el.getBoundingClientRect();
 
   drag = {
     el,
-    startY: e.clientY,
-    offsetY: e.clientY - rect.top,
-    height: rect.height,
-    fromPos: parseInt(el.dataset.pos, 10),
-    moved: false,
+    pointerId: e.pointerId,
+    grabOffset: e.clientY - el.getBoundingClientRect().top, // dónde agarré dentro del item
+    translate: 0,
   };
 
-  // Placeholder donde estaba
-  const ph = document.createElement('div');
-  ph.className = 'or-item placeholder';
-  ph.style.height = rect.height + 'px';
-  drag.placeholder = ph;
-
-  el.parentNode.insertBefore(ph, el.nextSibling);
   el.classList.add('dragging');
-  el.style.position = 'fixed';
-  el.style.width = rect.width + 'px';
-  el.style.left = rect.left + 'px';
-  el.style.top = rect.top + 'px';
-  el.style.pointerEvents = 'none';
-
-  el.setPointerCapture(e.pointerId);
+  try { el.setPointerCapture(e.pointerId); } catch (_) {}
   el.addEventListener('pointermove', onPointerMove);
   el.addEventListener('pointerup', onPointerUp);
   el.addEventListener('pointercancel', onPointerUp);
@@ -227,51 +218,53 @@ function onPointerDown(e) {
 
 function onPointerMove(e) {
   if (!drag) return;
-  if (Math.abs(e.clientY - drag.startY) > 3) drag.moved = true;
-  const y = e.clientY - drag.offsetY;
-  drag.el.style.top = y + 'px';
-
+  const el = drag.el;
   const lista = document.getElementById('or-lista');
-  const siblings = [...lista.querySelectorAll('.or-item:not(.dragging)')];
-  const centerY = e.clientY;
-  let inserted = false;
-  for (const sib of siblings) {
-    if (sib === drag.placeholder) continue;
-    const r = sib.getBoundingClientRect();
-    if (centerY < r.top + r.height / 2) {
-      lista.insertBefore(drag.placeholder, sib);
-      inserted = true;
-      break;
-    }
+
+  // 1) Coloca el elemento bajo el cursor con transform (sin sacarlo del flujo)
+  const naturalTop = el.getBoundingClientRect().top - drag.translate;
+  const desiredTop = e.clientY - drag.grabOffset;
+  drag.translate = desiredTop - naturalTop;
+  el.style.transform = `translateY(${drag.translate}px)`;
+
+  // 2) Reordena en vivo comparando el CENTRO del item arrastrado con sus vecinos
+  const mid = desiredTop + el.offsetHeight / 2;
+  const prev = el.previousElementSibling;
+  const next = el.nextElementSibling;
+
+  let movido = false;
+  if (prev) {
+    const pr = prev.getBoundingClientRect();
+    if (mid < pr.top + pr.height / 2) { lista.insertBefore(el, prev); movido = true; }
   }
-  if (!inserted) lista.appendChild(drag.placeholder);
+  if (!movido && next) {
+    const nr = next.getBoundingClientRect();
+    if (mid > nr.top + nr.height / 2) { lista.insertBefore(next, el); movido = true; }
+  }
+
+  // 3) Si cambió de sitio, recalcula el transform para que NO pegue un salto visual
+  if (movido) {
+    const naturalTop2 = el.getBoundingClientRect().top - drag.translate;
+    drag.translate = desiredTop - naturalTop2;
+    el.style.transform = `translateY(${drag.translate}px)`;
+    actualizarNumeros();
+  }
 }
 
 function onPointerUp(e) {
   if (!drag) return;
   const el = drag.el;
-  const lista = document.getElementById('or-lista');
-
-  // Coloca el elemento donde está el placeholder
-  lista.insertBefore(el, drag.placeholder);
-  lista.removeChild(drag.placeholder);
-
-  // Limpia estilos de arrastre
   el.classList.remove('dragging');
-  el.style.position = '';
-  el.style.width = '';
-  el.style.left = '';
-  el.style.top = '';
-  el.style.pointerEvents = '';
+  el.style.transform = '';
+  el.style.zIndex = '';
+  try { el.releasePointerCapture(drag.pointerId); } catch (_) {}
   el.removeEventListener('pointermove', onPointerMove);
   el.removeEventListener('pointerup', onPointerUp);
   el.removeEventListener('pointercancel', onPointerUp);
-
-  // Recalcula el array order según el DOM actual
-  const nuevos = [...lista.querySelectorAll('.or-item')].map(node => order[parseInt(node.dataset.pos, 10)]);
-  order = nuevos;
   drag = null;
-  renderLista();
+
+  sincronizarOrden();   // order siempre coherente con el DOM
+  actualizarNumeros();
 }
 
 /* ── Confirmar y revelar ──────────────────────────────────────────────── */
