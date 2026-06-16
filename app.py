@@ -2383,7 +2383,55 @@ def orden_api():
     return jsonify(game_data)
 
 
-@app.route('/<bar_slug>/local')
+@app.route('/<bar_slug>/freep')
+def freep_page(bar_slug):
+    db = get_db()
+    bar = db.execute("SELECT * FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
+    if not bar:
+        db.close()
+        return render_template('404.html'), 404
+    products = db.execute(
+        "SELECT * FROM bar_products WHERE bar_id = ? AND active = 1 ORDER BY position",
+        (bar['id'],)
+    ).fetchall()
+    db.close()
+    code = request.args.get('code', '')
+    import json as json_lib
+    products_json = json_lib.dumps([dict(p) for p in products])
+    return render_template('games/freep.html', bar=bar, code=code, products_json=products_json)
+
+@app.route('/api/freep', methods=['POST'])
+def freep_api():
+    """Valida el código y devuelve una baraja Freep barajada (74 numéricas).
+    NO se cachea: cada partida es una baraja nueva (es un duelo rejugable)."""
+    import random
+    data = request.get_json()
+    code = data.get('code', '').strip().upper()
+    bar_slug = data.get('bar_slug', '').strip()
+    today = str(date.today())
+
+    db = get_db()
+    bar = db.execute("SELECT * FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
+    if not bar:
+        db.close()
+        return jsonify({'error': 'Invalid code'}), 403
+
+    valid_code = db.execute(
+        "SELECT code FROM access_codes WHERE bar_id = ? AND valid_from <= ? AND valid_until >= ?",
+        (bar['id'], today, today)
+    ).fetchone()
+    if not valid_code or valid_code['code'] != code:
+        db.close()
+        return jsonify({'error': 'Invalid code'}), 403
+    db.close()
+
+    # Composición oficial de Freep (solo numéricas en esta versión Lite)
+    counts = {1: 6, 2: 8, 3: 8, 4: 10, 5: 10, 6: 10, 7: 8, 8: 8, 9: 6}
+    deck = []
+    for value, n in counts.items():
+        deck.extend([value] * n)
+    random.shuffle(deck)
+    return jsonify({'deck': deck})
 def local_page(bar_slug):
     db = get_db()
     bar = db.execute("SELECT * FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
@@ -2565,12 +2613,12 @@ Mensaje:
 # Slugs de todos los juegos del catálogo, en orden de posición
 ALL_GAMES = [
     "crimen", "dilema", "reinas", "conexiones",
-    "oraculo", "donde", "carta", "equilibrio", "impostor", "local", "veredicto", "perfil", "vestuario", "sinopsis", "muertes", "letra", "pensamiento", "poema", "menteagil", "constitucion", "orden",
+    "oraculo", "donde", "carta", "equilibrio", "impostor", "local", "veredicto", "perfil", "vestuario", "sinopsis", "muertes", "letra", "pensamiento", "poema", "menteagil", "constitucion", "orden", "freep",
 ]
 
 # Starter: 4 fijos siempre activos + 1 elegible a elegir entre STARTER_FREE_GAMES
 STARTER_FIXED      = ["crimen", "dilema", "reinas", "conexiones"]
-STARTER_FREE_GAMES = ["oraculo", "donde", "carta", "equilibrio", "impostor", "local", "veredicto", "perfil", "vestuario", "sinopsis", "muertes", "letra", "pensamiento", "poema", "menteagil", "constitucion", "orden"]
+STARTER_FREE_GAMES = ["oraculo", "donde", "carta", "equilibrio", "impostor", "local", "veredicto", "perfil", "vestuario", "sinopsis", "muertes", "letra", "pensamiento", "poema", "menteagil", "constitucion", "orden", "freep"]
 STARTER_MAX_FREE   = 1  # juegos libres simultáneos permitidos
 
 # Pro: hasta PRO_MAX_GAMES a elegir libremente del catálogo completo

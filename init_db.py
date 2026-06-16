@@ -330,6 +330,7 @@ for slug, name, desc, pos in [
     ('menteagil', 'Mente Ágil', 'Test psicotécnico', 19),
     ('constitucion', '¿Tú la has leído?', 'Test sobre la Constitución', 20),
     ('orden', 'El Orden', 'Ordena 5 cosas sin fallar', 21),
+    ('freep', 'Freep', 'Duelo de más o menos · 2 jugadores', 22),
 ]:
     if not db.execute("SELECT id FROM games WHERE slug = ?", (slug,)).fetchone():
         db.execute(
@@ -341,20 +342,20 @@ for slug, name, desc, pos in [
 
 # Reordenar juegos por tipo de experiencia (orden lógico de UX)
 ORDEN_JUEGOS = {
-    # Lógica / puzzle (4 fijos starter primero)
-    'crimen': 1, 'reinas': 2, 'equilibrio': 3, 'carta': 4, 'orden': 5,
+    # Lógica / puzzle / riesgo (4 fijos starter primero)
+    'crimen': 1, 'reinas': 2, 'equilibrio': 3, 'carta': 4, 'orden': 5, 'freep': 6,
     # Adivinanza / cultura
-    'conexiones': 6, 'donde': 7, 'sinopsis': 8, 'letra': 9, 'vestuario': 10,
+    'conexiones': 7, 'donde': 8, 'sinopsis': 9, 'letra': 10, 'vestuario': 11,
     # Opinión / social
-    'dilema': 11, 'veredicto': 12, 'perfil': 13,
+    'dilema': 12, 'veredicto': 13, 'perfil': 14,
     # Opinión / social (pensamiento es muy social)
-    'pensamiento': 14,
+    'pensamiento': 15,
     # Curiosidad / lectura
-    'impostor': 15, 'muertes': 16, 'oraculo': 17, 'local': 18,
+    'impostor': 16, 'muertes': 17, 'oraculo': 18, 'local': 19,
     # Reto mental / conocimiento
-    'menteagil': 19, 'constitucion': 20,
+    'menteagil': 20, 'constitucion': 21,
     # Creativo / generativo
-    'poema': 21,
+    'poema': 22,
 }
 for slug, pos in ORDEN_JUEGOS.items():
     db.execute("UPDATE games SET position = ? WHERE slug = ?", (pos, slug))
