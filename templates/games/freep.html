@@ -88,6 +88,7 @@
   transition: transform 0.05s, filter 0.15s;
 }
 .fp-btn:active { transform: scale(0.98); }
+.fp-btn:disabled { opacity: 0.45; cursor: default; }
 .fp-btn.up { background: #2E7D32; color: #fff; }
 .fp-btn.down { background: #2C5AA0; color: #fff; }
 .fp-btn.stand { background: var(--bar-bg-subtle); color: var(--text); border: 2px solid var(--border); }
@@ -137,15 +138,16 @@
   <div class="fp-wrap">
     <div class="game-tag" style="display:block;text-align:center;width:fit-content;margin:0 auto 12px;">Freep</div>
     <h2 class="headline" style="margin-bottom:6px;">Duelo de más o menos</h2>
-    <p class="fp-intro-lead">Dos jugadores, un móvil. Por turnos.<br>Gana quien acumule <b>más cartas</b>.</p>
+    <p class="fp-intro-lead">Dos jugadores, un móvil. Por turnos.<br>Se juega <b>toda la baraja</b>. Gana quien acumule <b>más cartas</b>.</p>
 
     <div class="fp-rules">
       <b>Cómo se juega:</b>
       <ul>
-        <li>Sale una carta. Predice si la <b>siguiente</b> será <b>más</b> o <b>menos</b>.</li>
-        <li><b>Aciertas</b> → la guardas y decides: seguir o plantarte.</li>
-        <li><b>Fallas</b> → pierdes todo lo de este turno.</li>
-        <li><b>¡Empate!</b> → aseguras ese par y la referencia retrocede. El empate juega a tu favor.</li>
+        <li>En tu turno sale una carta. Predice si la <b>siguiente</b> será <b>más</b> o <b>menos</b>.</li>
+        <li><b>Aciertas</b> → sigues; <b>plántate</b> cuando quieras para guardar lo acumulado.</li>
+        <li><b>Fallas</b> → pierdes lo de este turno y pasa al rival.</li>
+        <li><b>¡Empate!</b> → aseguras ese par al instante y la referencia retrocede.</li>
+        <li>Las cartas falladas vuelven a jugarse <b>sin barajar</b>. Quien recuerde el orden, manda.</li>
       </ul>
     </div>
 
@@ -196,14 +198,11 @@
     <div class="fp-verdict" id="g-verdict"></div>
 
     <div class="fp-actions">
-      <div class="fp-predict-row" id="g-predict">
-        <button class="fp-btn up" onclick="predict('up')"><span class="big">▲</span> Más</button>
-        <button class="fp-btn down" onclick="predict('down')"><span class="big">▼</span> Menos</button>
+      <div class="fp-predict-row">
+        <button class="fp-btn up" id="g-btn-up" onclick="predict('up')"><span class="big">▲</span> Más</button>
+        <button class="fp-btn down" id="g-btn-down" onclick="predict('down')"><span class="big">▼</span> Menos</button>
       </div>
-      <div class="fp-predict-row" id="g-continue" style="display:none;">
-        <button class="fp-btn stand" onclick="stand()">✋ Plantarme</button>
-        <button class="fp-btn go" onclick="nextPredict()">Seguir ▸</button>
-      </div>
+      <button class="fp-btn stand" id="g-btn-stand" onclick="stand()" style="display:none;">✋ Plantarme y guardar</button>
     </div>
   </div>
 </div>
@@ -230,7 +229,7 @@
       </div>
     </div>
 
-    <a class="fp-buy" href="https://www.playfreep.com" target="_blank" rel="noopener">
+    <a class="fp-buy" href="https://www.yamasoto.com/freep/" target="_blank" rel="noopener">
       <div class="fp-buy-logo">Freep</div>
       <div class="fp-buy-txt">
         <div class="t">¿Os ha enganchado? Es un juego de mesa real.</div>
@@ -252,10 +251,13 @@ const BAR_SLUG = "{{ bar.slug }}";
 const BAR_NAME = "{{ bar.name }}";
 const CODE = new URLSearchParams(window.location.search).get('code') || '';
 
-// Colores por valor de carta (aproximación al juego físico)
+// Colores por valor, fieles a las cartas de Freep (pares simétricos comparten color)
 const FP_COLORS = {
-  1: '#F4B400', 2: '#0F9D58', 3: '#DB4437', 4: '#4285F4', 5: '#AB47BC',
-  6: '#00ACC1', 7: '#FF7043', 8: '#5C6BC0', 9: '#26A69A'
+  1: '#4FC3F7', 9: '#4FC3F7',   // azul celeste
+  2: '#66BB6A', 8: '#66BB6A',   // verdoso
+  3: '#B388DD', 7: '#B388DD',   // lila
+  4: '#1A3A6B', 6: '#1A3A6B',   // azul marino
+  5: '#E53935'                  // rojo
 };
 
 let deck = [];
@@ -271,6 +273,8 @@ let pending = null;         // 'up' | 'down' mientras se revela
 let madeFirstPrediction = false;
 let startTime = null;
 let busy = false;
+let progressThisCycle = false;  // ¿se ha ganado alguna carta desde el último reciclaje?
+let deadCycles = 0;             // reciclajes seguidos sin que nadie gane cartas
 
 async function init() {
   try {
@@ -294,11 +298,26 @@ function drawCard() {
   if (deckPos >= deck.length) {
     // El mazo activo se agota: gira el mazo de fallos SIN barajar (mecánica de memoria)
     if (failPile.length === 0) return null;
+    // Seguro anti-bucle: si se recicla varias veces sin ganar ninguna carta, fin de ronda
+    if (!progressThisCycle) {
+      deadCycles++;
+      if (deadCycles >= 3) return null;
+    } else {
+      deadCycles = 0;
+    }
+    progressThisCycle = false;
     deck = failPile.slice();
     failPile = [];
     deckPos = 0;
   }
   return deck[deckPos++];
+}
+
+// Marca que alguien ha ganado cartas (hay progreso en este ciclo del mazo)
+function markProgress() { progressThisCycle = true; }
+
+function cardsLeft() {
+  return (deck.length - deckPos) + failPile.length;
 }
 
 function startDuel() {
@@ -310,20 +329,22 @@ function startDuel() {
   players[1].pile = 0;
   deckPos = 0;
   failPile = [];
+  progressThisCycle = false;
+  deadCycles = 0;
   turnIndex = 0;
   startTime = Date.now();
   goHandoff();
 }
 
 function goHandoff() {
+  // Si ya no quedan cartas por jugar, la ronda ha terminado
+  if (cardsLeft() <= 0) { finishGame(); return; }
   const p = players[turnIndex];
+  const rival = players[1 - turnIndex];
   document.getElementById('ho-title').textContent = `Turno de ${p.name}`;
-  if (turnIndex === 0) {
-    document.getElementById('ho-sub').textContent = 'Tú empiezas. Marca el objetivo de cartas para tu rival.';
-  } else {
-    document.getElementById('ho-sub').textContent =
-      `${players[0].name} ha conseguido ${players[0].pile} carta${players[0].pile === 1 ? '' : 's'}. ¡Supéralo!`;
-  }
+  document.getElementById('ho-sub').innerHTML =
+    `${p.name}: <b>${p.pile}</b> · ${rival.name}: <b>${rival.pile}</b><br>` +
+    `<span style="opacity:.8">Quedan ${cardsLeft()} cartas por repartir</span>`;
   document.getElementById('ho-btn').textContent = `Empezar (${p.name})`;
   showScreen('s-handoff');
 }
@@ -333,27 +354,26 @@ function beginTurn() {
   pending = null;
   madeFirstPrediction = false;
   busy = false;
-  document.getElementById('g-player').textContent = players[turnIndex].name;
-  updateTarget();
   // Primera carta de referencia
   const first = drawCard();
+  if (first === null) { finishGame(); return; }
   stack.push(first);
+  document.getElementById('g-player').textContent = players[turnIndex].name;
+  updateTarget();
   renderRef();
   document.getElementById('g-next-slot').style.display = 'none';
   document.getElementById('g-verdict').textContent = '';
   document.getElementById('g-verdict').className = 'fp-verdict';
   updateMeters();
-  showPredict();
+  setPredictEnabled(true);
+  setStandVisible(false);   // no puede plantarse antes de la primera predicción
   showScreen('s-game');
 }
 
 function updateTarget() {
-  const t = document.getElementById('g-target');
-  if (turnIndex === 1) {
-    t.innerHTML = `Objetivo: superar <b>${players[0].pile}</b> carta${players[0].pile === 1 ? '' : 's'}`;
-  } else {
-    t.textContent = 'Acumula cartas y plántate antes de fallar';
-  }
+  const me = players[turnIndex], rival = players[1 - turnIndex];
+  document.getElementById('g-target').innerHTML =
+    `Tú <b>${me.pile}</b> · ${rival.name} ${rival.pile} · quedan ${cardsLeft()}`;
 }
 
 function cardHTML(value) {
@@ -375,32 +395,38 @@ function updateMeters() {
   document.getElementById('g-inplay').textContent = stack.length;
 }
 
-function showPredict() {
-  document.getElementById('g-predict').style.display = 'flex';
-  document.getElementById('g-continue').style.display = 'none';
+function setStandVisible(v) {
+  document.getElementById('g-btn-stand').style.display = v ? 'block' : 'none';
 }
-function showContinue() {
-  document.getElementById('g-predict').style.display = 'none';
-  document.getElementById('g-continue').style.display = 'flex';
+function setPredictEnabled(v) {
+  document.getElementById('g-btn-up').disabled = !v;
+  document.getElementById('g-btn-down').disabled = !v;
 }
 
-function nextPredict() {
+// Tras un acierto/empate: limpia la carta revelada y deja listo el siguiente Más/Menos
+function readyNextPredict() {
   document.getElementById('g-next-slot').style.display = 'none';
   document.getElementById('g-verdict').textContent = '';
   document.getElementById('g-verdict').className = 'fp-verdict';
-  showPredict();
+  setPredictEnabled(true);
+  setStandVisible(true);   // ya hizo al menos una predicción con éxito
 }
 
 function predict(dir) {
   if (busy) return;
   busy = true;
+  setPredictEnabled(false);
+  setStandVisible(false);
   pending = dir;
   const ref = stack[stack.length - 1];
   const next = drawCard();
 
-  if (next === null) { // sin cartas: fin forzado del turno, conserva lo asegurado
+  if (next === null) {
+    // Era la última carta del juego (solo quedaba la referencia): el jugador la conserva
+    players[turnIndex].pile += stack.length;
+    stack = [];
     busy = false;
-    endTurn();
+    finishGame();
     return;
   }
 
@@ -418,6 +444,7 @@ function predict(dir) {
   if (next === ref) {
     // ¡EMPATE! Asegura el par (referencia + revelada) y la referencia retrocede
     players[turnIndex].pile += 2;     // los dos cartas iguales van a la pila de ganadas
+    markProgress();
     stack.pop();                      // la referencia que empató sale de "en juego" (ya asegurada)
     verdict.textContent = '¡Empate! Aseguras las dos 🔒';
     verdict.className = 'fp-verdict tie';
@@ -426,7 +453,7 @@ function predict(dir) {
     if (stack.length === 0) {
       // No queda referencia previa: roba una nueva para continuar
       const fresh = drawCard();
-      if (fresh === null) { busy = false; endTurn(); return; }
+      if (fresh === null) { busy = false; updateMeters(); finishGame(); return; }
       stack.push(fresh);
     }
     setTimeout(() => {
@@ -434,7 +461,7 @@ function predict(dir) {
       document.getElementById('g-next-slot').style.display = 'none';
       updateMeters();
       busy = false;
-      showContinue();
+      readyNextPredict();
     }, 650);
     return;
   }
@@ -451,11 +478,11 @@ function predict(dir) {
       document.getElementById('g-next-slot').style.display = 'none';
       updateMeters();
       busy = false;
-      showContinue();
+      readyNextPredict();
     }, 600);
   } else {
     // FALLO: todo lo en juego se pierde (va al mazo de fallos en orden)
-    verdict.textContent = '¡Fallo! Pierdes el turno ✘';
+    verdict.textContent = '¡Fallo! Pasa al rival ✘';
     verdict.className = 'fp-verdict bad';
     for (const card of stack) failPile.push(card);
     failPile.push(next);
@@ -468,18 +495,16 @@ function predict(dir) {
 function stand() {
   if (busy) return;
   // Plantarse: lo que queda en juego pasa a la pila de ganadas
+  if (stack.length > 0) markProgress();
   players[turnIndex].pile += stack.length;
   stack = [];
   endTurn();
 }
 
 function endTurn() {
-  if (turnIndex === 0) {
-    turnIndex = 1;
-    goHandoff();
-  } else {
-    finishGame();
-  }
+  // Alterna de jugador. goHandoff() termina la ronda si ya no quedan cartas.
+  turnIndex = 1 - turnIndex;
+  goHandoff();
 }
 
 function finishGame() {
@@ -502,11 +527,11 @@ function finishGame() {
   if (p1.pile > p2.pile) {
     col1.classList.add('win'); cr1.style.display = 'block';
     big.textContent = `🏆 ¡Gana ${p1.name}!`;
-    sub.textContent = `${p1.pile} a ${p2.pile}. Bien plantado.`;
+    sub.textContent = `${p1.pile} a ${p2.pile} cartas. Bien plantado.`;
   } else if (p2.pile > p1.pile) {
     col2.classList.add('win'); cr2.style.display = 'block';
     big.textContent = `🏆 ¡Gana ${p2.name}!`;
-    sub.textContent = `${p2.pile} a ${p1.pile}. Remontada o sentencia.`;
+    sub.textContent = `${p2.pile} a ${p1.pile} cartas. Bien plantado.`;
   } else {
     big.textContent = '🤝 ¡Empate!';
     sub.textContent = `${p1.pile} a ${p2.pile}. Toca revancha.`;
