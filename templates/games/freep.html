@@ -12,30 +12,39 @@
 html, body { overscroll-behavior: none; }
 .nook { touch-action: manipulation; }   /* elimina el zoom por doble toque */
 
-/* Pantalla de JUEGO y RELEVO a pantalla completa, todo visible sin scroll */
+/* Pantalla de JUEGO y RELEVO: overlay con el fondo del bar + caja blanca centrada */
 #s-game.active, #s-handoff.active {
   display: flex !important;
-  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;   /* explícito: compatible con Safari antiguo */
+  top: 0; left: 0; right: 0; bottom: 0;
   height: 100vh;
   height: 100dvh;
   z-index: 1000;
   background: var(--bar-bg, #ffffff);
-  padding: calc(12px + env(safe-area-inset-top)) 16px calc(14px + env(safe-area-inset-bottom));
+  padding: calc(12px + env(safe-area-inset-top)) 14px calc(12px + env(safe-area-inset-bottom));
   overflow: hidden;
-  touch-action: none;            /* sin pan ni zoom dentro del tablero */
+  touch-action: none;
   animation: none;
 }
-#s-game.active .fp-wrap {
-  flex: 1;
+#s-game.active .fp-wrap, #s-handoff.active .fp-handoff {
+  background: var(--bar-bg-card, #ffffff);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.05);
+  width: 100%;
+  max-width: 440px;
+  height: 100%;
+  max-height: 700px;             /* en desktop/tablet la caja no ocupa toda la altura */
   display: flex;
   flex-direction: column;
-  width: 100%;
-  max-width: 520px;
   margin: 0 auto;
+  padding: 20px 18px;
+  overflow: hidden;
   min-height: 0;
 }
+/* El relevo centra su contenido dentro de la caja */
+#s-handoff.active .fp-handoff { justify-content: center; align-items: center; text-align: center; }
 /* Grupo central: cartas + veredicto + botones juntos y centrados (botones cerca de la carta) */
 .fp-play {
   flex: 1;
@@ -70,11 +79,11 @@ html, body { overscroll-behavior: none; }
 .fp-turn-head { margin-bottom: 14px; }
 .fp-player-badge {
   display: inline-block; font-size: 13px; font-weight: 800; letter-spacing: 0.3px;
-  color: #fff; background: var(--bar-primary);
+  color: var(--bar-primary-text); background: var(--bar-primary);
   padding: 6px 16px; border-radius: 999px; margin-bottom: 6px;
 }
 .fp-target { font-size: 13px; color: var(--text-secondary); min-height: 18px; }
-.fp-target b { color: var(--bar-primary); }
+.fp-target b { color: var(--bar-accent-dark); }
 
 /* Marcadores de turno (asegurado / en juego) */
 .fp-meters { display: flex; gap: 10px; justify-content: center; margin: 4px 0 18px; }
@@ -115,7 +124,7 @@ html, body { overscroll-behavior: none; }
 .fp-verdict { min-height: 30px; font-size: 18px; font-weight: 800; margin: 6px 0 12px; }
 .fp-verdict.ok { color: #2E7D32; }
 .fp-verdict.bad { color: #C0392B; }
-.fp-verdict.tie { color: var(--bar-primary); }
+.fp-verdict.tie { color: var(--bar-accent-dark); }
 
 /* Botones de predicción */
 .fp-actions { display: flex; flex-direction: column; gap: 10px; }
@@ -131,7 +140,7 @@ html, body { overscroll-behavior: none; }
 .fp-btn.up { background: #2E7D32; color: #fff; }
 .fp-btn.down { background: #2C5AA0; color: #fff; }
 .fp-btn.stand { background: var(--bar-bg-subtle); color: var(--text); border: 2px solid var(--border); }
-.fp-btn.go { background: var(--bar-primary); color: #fff; }
+.fp-btn.go { background: var(--bar-primary); color: var(--bar-primary-text); }
 .fp-btn .big { font-size: 22px; }
 
 /* Ajustes cuando la pantalla de juego está a pantalla completa */
@@ -158,7 +167,7 @@ html, body { overscroll-behavior: none; }
 .fp-score-col .cards { font-size: 40px; font-weight: 800; color: var(--text); line-height: 1; }
 .fp-score-col.win .cards { color: #2E7D32; }
 .fp-score-col .unit { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; margin-top: 3px; }
-.fp-result-big { font-size: 24px; font-weight: 800; text-align: center; color: var(--bar-primary); margin-bottom: 2px; }
+.fp-result-big { font-size: 24px; font-weight: 800; text-align: center; color: var(--bar-accent-dark); margin-bottom: 2px; }
 .fp-result-sub { text-align: center; font-size: 14px; color: var(--text-secondary); margin-bottom: 6px; }
 
 /* CTA compra Freep */

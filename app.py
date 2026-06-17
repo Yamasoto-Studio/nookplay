@@ -2432,6 +2432,9 @@ def freep_api():
         deck.extend([value] * n)
     random.shuffle(deck)
     return jsonify({'deck': deck})
+
+
+@app.route('/<bar_slug>/local')
 def local_page(bar_slug):
     db = get_db()
     bar = db.execute("SELECT * FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()

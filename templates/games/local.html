@@ -160,6 +160,7 @@ async function init() {
       body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG })
     });
     gameData = await res.json();
+    if (!gameData || gameData.error) throw new Error(gameData && gameData.error ? gameData.error : 'sin datos');
     renderGame();
   } catch(e) {
     document.getElementById('s-loading').innerHTML = `
