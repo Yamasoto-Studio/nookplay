@@ -7,6 +7,44 @@
 {% block game_content %}
 <style>
 /* ── Freep · paleta propia sobre la base del bar ───────────────────────── */
+
+/* Anti-zoom / anti-desplazamiento en toda la página de Freep */
+html, body { overscroll-behavior: none; }
+.nook { touch-action: manipulation; }   /* elimina el zoom por doble toque */
+
+/* Pantalla de JUEGO y RELEVO a pantalla completa, todo visible sin scroll */
+#s-game.active, #s-handoff.active {
+  display: flex !important;
+  flex-direction: column;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;   /* explícito: compatible con Safari antiguo */
+  height: 100vh;
+  height: 100dvh;
+  z-index: 1000;
+  background: var(--bar-bg, #ffffff);
+  padding: calc(12px + env(safe-area-inset-top)) 16px calc(14px + env(safe-area-inset-bottom));
+  overflow: hidden;
+  touch-action: none;            /* sin pan ni zoom dentro del tablero */
+  animation: none;
+}
+#s-game.active .fp-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+  min-height: 0;
+}
+/* Grupo central: cartas + veredicto + botones juntos y centrados (botones cerca de la carta) */
+.fp-play {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  min-height: 0;
+}
 .fp-wrap { text-align: center; }
 .fp-intro-lead { font-size: 14px; color: var(--text-secondary); line-height: 1.55; margin-bottom: 18px; }
 .fp-rules {
@@ -51,9 +89,10 @@
 /* Zona de carta */
 .fp-stage { position: relative; min-height: 190px; display: flex; align-items: center; justify-content: center; gap: 14px; margin-bottom: 8px; }
 .fp-card {
-  width: 120px; height: 168px; border-radius: 16px; position: relative;
+  width: clamp(84px, 26vw, 120px); height: clamp(118px, 36vw, 168px);
+  border-radius: 16px; position: relative;
   display: flex; align-items: center; justify-content: center;
-  font-size: 64px; font-weight: 800; color: #fff;
+  font-size: clamp(44px, 14vw, 64px); font-weight: 800; color: #fff;
   box-shadow: 0 8px 24px rgba(0,0,0,0.18);
   border: 4px solid rgba(255,255,255,0.85);
   user-select: none;
@@ -94,6 +133,15 @@
 .fp-btn.stand { background: var(--bar-bg-subtle); color: var(--text); border: 2px solid var(--border); }
 .fp-btn.go { background: var(--bar-primary); color: #fff; }
 .fp-btn .big { font-size: 22px; }
+
+/* Ajustes cuando la pantalla de juego está a pantalla completa */
+#s-game.active .fp-turn-head { margin-bottom: 6px; }
+#s-game.active .fp-meters { margin: 2px 0 4px; }
+#s-game.active .fp-meter { padding: 7px 8px; }
+#s-game.active .fp-meter .n { font-size: 22px; }
+#s-game.active .fp-stage { min-height: 0; margin-bottom: 0; }
+#s-game.active .fp-verdict { min-height: 24px; margin: 4px 0; }
+.fp-exit-bottom { margin-top: 6px; }
 
 /* Relevo entre jugadores */
 .fp-handoff { text-align: center; padding: 26px 8px; }
@@ -184,26 +232,30 @@
       <div class="fp-meter"><div class="n" id="g-inplay">0</div><div class="l">En juego</div></div>
     </div>
 
-    <div class="fp-stage">
-      <div class="fp-card-slot">
-        <div class="fp-card-label">Referencia</div>
-        <div class="fp-card" id="g-ref"></div>
+    <div class="fp-play">
+      <div class="fp-stage">
+        <div class="fp-card-slot">
+          <div class="fp-card-label">Referencia</div>
+          <div class="fp-card" id="g-ref"></div>
+        </div>
+        <div class="fp-card-slot" id="g-next-slot" style="display:none;">
+          <div class="fp-card-label" id="g-next-label">Siguiente</div>
+          <div class="fp-card" id="g-next"></div>
+        </div>
       </div>
-      <div class="fp-card-slot" id="g-next-slot" style="display:none;">
-        <div class="fp-card-label" id="g-next-label">Siguiente</div>
-        <div class="fp-card" id="g-next"></div>
+
+      <div class="fp-verdict" id="g-verdict"></div>
+
+      <div class="fp-actions">
+        <div class="fp-predict-row">
+          <button class="fp-btn up" id="g-btn-up" onclick="predict('up')"><span class="big">▲</span> Más</button>
+          <button class="fp-btn down" id="g-btn-down" onclick="predict('down')"><span class="big">▼</span> Menos</button>
+        </div>
+        <button class="fp-btn stand" id="g-btn-stand" onclick="stand()" style="display:none;">✋ Plantarme y guardar</button>
       </div>
     </div>
 
-    <div class="fp-verdict" id="g-verdict"></div>
-
-    <div class="fp-actions">
-      <div class="fp-predict-row">
-        <button class="fp-btn up" id="g-btn-up" onclick="predict('up')"><span class="big">▲</span> Más</button>
-        <button class="fp-btn down" id="g-btn-down" onclick="predict('down')"><span class="big">▼</span> Menos</button>
-      </div>
-      <button class="fp-btn stand" id="g-btn-stand" onclick="stand()" style="display:none;">✋ Plantarme y guardar</button>
-    </div>
+    <button class="btn-back-game fp-exit-bottom" onclick="exitGame()">← Volver al menú</button>
   </div>
 </div>
 
@@ -250,6 +302,27 @@
 const BAR_SLUG = "{{ bar.slug }}";
 const BAR_NAME = "{{ bar.name }}";
 const CODE = new URLSearchParams(window.location.search).get('code') || '';
+
+// ── Comodidad táctil: bloquear zoom y desplazamiento accidental en Freep ──
+(function lockViewport() {
+  let vp = document.querySelector('meta[name="viewport"]');
+  if (!vp) { vp = document.createElement('meta'); vp.name = 'viewport'; document.head.appendChild(vp); }
+  vp.setAttribute('content',
+    'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover');
+  // iOS ignora user-scalable: cortar el pinch a mano
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(ev =>
+    document.addEventListener(ev, e => e.preventDefault(), { passive: false }));
+  // Cortar pellizco con dos dedos (Android de refuerzo)
+  document.addEventListener('touchmove', e => {
+    if (e.touches && e.touches.length > 1) e.preventDefault();
+  }, { passive: false });
+})();
+
+function exitGame() {
+  if (confirm('¿Salir de la partida? Se perderá el progreso.')) {
+    window.location = '/' + BAR_SLUG + '?code=' + CODE;
+  }
+}
 
 // Colores por valor, fieles a las cartas de Freep (pares simétricos comparten color)
 const FP_COLORS = {
@@ -323,6 +396,9 @@ function cardsLeft() {
 function startDuel() {
   const n1 = document.getElementById('fp-n1').value.trim();
   const n2 = document.getElementById('fp-n2').value.trim();
+  // Cierra el teclado antes de pasar a pantalla completa
+  document.getElementById('fp-n1').blur();
+  document.getElementById('fp-n2').blur();
   players[0].name = n1 || 'Jugador 1';
   players[1].name = n2 || 'Jugador 2';
   players[0].pile = 0;
@@ -581,9 +657,23 @@ function rematch() {
   }).catch(() => showScreen('s-intro'));
 }
 
+// Saca las pantallas a pantalla completa fuera de la tarjeta, para que se fijen
+// a la ventana de verdad (sin que ningún contenedor las descoloque).
+(function reparentFullscreen() {
+  ['s-handoff', 's-game'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el.parentNode !== document.body) document.body.appendChild(el);
+  });
+})();
+
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
+  const fullscreen = (id === 's-game' || id === 's-handoff');
+  // Cierra el teclado y vuelve arriba para evitar que la vista quede desplazada
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+  document.body.style.overflow = fullscreen ? 'hidden' : '';
+  window.scrollTo(0, 0);
 }
 
 init();
