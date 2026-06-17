@@ -383,7 +383,7 @@ def generate_weekly_codes():
     sunday = monday + timedelta(days=6)
 
     db = get_db()
-    bars = db.execute("SELECT id, slug FROM bars WHERE active = 1").fetchall()
+    bars = db.execute("SELECT id, slug FROM bars WHERE active = 1 AND slug != 'demo'").fetchall()
     for bar in bars:
         existing = db.execute(
             "SELECT id FROM access_codes WHERE bar_id = ? AND valid_from = ?",
@@ -911,10 +911,31 @@ def bar(bar_slug):
         "SELECT * FROM bar_products WHERE bar_id = ? AND active = 1 ORDER BY position",
         (bar['id'],)
     ).fetchall()
+
+    # Demo: garantizar un código permanente y entregarlo a la plantilla (acceso sin pedir código)
+    demo_code = ''
+    if bar_slug == 'demo':
+        from datetime import timedelta
+        today = str(date.today())
+        vigente = db.execute(
+            "SELECT code FROM access_codes WHERE bar_id = ? AND valid_from <= ? AND valid_until >= ? ORDER BY id LIMIT 1",
+            (bar['id'], today, today)
+        ).fetchone()
+        if vigente:
+            demo_code = vigente['code']
+        else:
+            demo_code = 'DEMO'
+            lejano = str(date.today() + timedelta(days=3650))
+            db.execute(
+                "INSERT INTO access_codes (bar_id, code, valid_from, valid_until) VALUES (?,?,?,?)",
+                (bar['id'], demo_code, today, lejano)
+            )
+            db.commit()
+
     db.close()
     import json as json_lib
     products_json = json_lib.dumps([dict(p) for p in products])
-    return render_template('bar.html', bar=bar, products=products, products_json=products_json)
+    return render_template('bar.html', bar=bar, products=products, products_json=products_json, demo_code=demo_code)
 
 @app.route('/<bar_slug>/crimen')
 def crimen_page(bar_slug):

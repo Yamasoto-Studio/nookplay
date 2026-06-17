@@ -11,6 +11,41 @@
     --bar-bg-subtle: {{ bar.color_bg_subtle }};
     --bar-accent-dark: {{ bar.color_accent_dark }};
   }
+
+  /* ── Modo demo ── */
+  .demo-ribbon {
+    background: var(--bar-accent-dark); color: #fff;
+    border-radius: 12px; padding: 12px 14px; margin-bottom: 14px;
+    font-size: 13px; line-height: 1.5; text-align: left;
+  }
+  .demo-ribbon strong { color: var(--bar-primary); }
+  .activity-card-grid { position: relative; }
+  .activity-card-grid.locked { opacity: 0.55; filter: grayscale(0.6); }
+  .activity-card-grid.locked .activity-img-wrap { filter: grayscale(1); }
+  .lock-badge {
+    position: absolute; top: 6px; right: 8px; z-index: 2;
+    font-size: 16px; background: var(--bar-bg-card);
+    border-radius: 50%; width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.18);
+  }
+  .demo-wall-overlay {
+    position: fixed; inset: 0; z-index: 2000;
+    background: rgba(0,0,0,0.55);
+    display: none; align-items: center; justify-content: center;
+    padding: 22px;
+  }
+  .demo-wall-overlay.show { display: flex; }
+  .demo-wall-card {
+    background: var(--bar-bg-card); border-radius: 18px;
+    max-width: 380px; width: 100%; padding: 26px 22px; text-align: center;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+  }
+  .demo-wall-emoji { font-size: 38px; margin-bottom: 8px; }
+  .demo-wall-card h3 { font-size: 19px; color: var(--text); margin-bottom: 12px; line-height: 1.25; }
+  .demo-wall-card p { font-size: 14px; color: var(--text-secondary); line-height: 1.55; margin-bottom: 12px; }
+  .demo-wall-card .demo-wall-foot { font-weight: 700; color: var(--text); }
+  .demo-wall-card .btn-primary { width: 100%; margin-top: 6px; }
 </style>
 
 <div class="nook">
@@ -44,6 +79,11 @@
 
       <!-- PANTALLA: MENÚ DE ACTIVIDADES -->
       <div class="screen" id="s-menu">
+        {% if bar.slug == 'demo' %}
+        <div class="demo-ribbon">
+          <strong>Esto es una demostración.</strong> Así se vería Nookplay en tu negocio. Prueba los juegos destacados; el resto están bloqueados solo en este ejemplo.
+        </div>
+        {% endif %}
         <p class="menu-welcome" id="menu-welcome"></p>
 
         <div id="activities-list" class="activities-grid"></div>
@@ -192,6 +232,12 @@ const BAR_WELCOME = "{{ bar.welcome_message }}";
 let validatedCode = null;
 let currentGame = null;
 
+// ── Modo demo ─────────────────────────────────────────────────────────────
+const IS_DEMO = (BAR_SLUG === 'demo');
+const DEMO_CODE = "{{ demo_code|default('') }}";
+// Los 3 juegos jugables en la demo (el resto se muestran bloqueados). Editable.
+const DEMO_PLAYABLE = ['crimen', 'freep', 'orden'];
+
 // Set welcome message on code screen
 document.addEventListener('DOMContentLoaded', () => {
   const el = document.getElementById('code-welcome');
@@ -206,8 +252,8 @@ document.addEventListener('DOMContentLoaded', () => {
 // Si el código ya está en la URL (volviendo de un juego) — ir directo al menú
 const urlParams = new URLSearchParams(window.location.search);
 const urlCode = urlParams.get('code');
-if (urlCode) {
-  validatedCode = urlCode;
+if (IS_DEMO || urlCode) {
+  validatedCode = IS_DEMO ? (urlCode || DEMO_CODE) : urlCode;
   // Ocultar pantalla de código inmediatamente (antes del paint) para evitar flash
   const codeScreen = document.getElementById('s-code');
   if (codeScreen) codeScreen.style.display = 'none';
@@ -326,12 +372,16 @@ async function showMenu() {
   welcomeEl.innerHTML = `${customMsg}<br><span class="menu-welcome-sub">Elige tu pasatiempo de hoy.</span>`;
 
   const list = document.getElementById('activities-list');
-  // Solo mostrar los juegos activos y jugables
-  const activeGames = ACTIVITIES.filter(a => a.active);
-  const hasHidden = ACTIVITIES.length > activeGames.length;
+  // En demo mostramos TODOS los juegos (los no jugables, bloqueados con candado).
+  // En un bar normal, solo los activos y jugables.
+  const activeGames = IS_DEMO ? ACTIVITIES.slice() : ACTIVITIES.filter(a => a.active);
+  const hasHidden = !IS_DEMO && ACTIVITIES.length > activeGames.length;
 
-  list.innerHTML = activeGames.map(a => `
-    <div class="activity-card-grid" onclick="startActivity('${a.slug}')">
+  list.innerHTML = activeGames.map(a => {
+    const locked = IS_DEMO && !DEMO_PLAYABLE.includes(a.slug);
+    return `
+    <div class="activity-card-grid${locked ? ' locked' : ''}" onclick="${locked ? 'showDemoWall()' : `startActivity('${a.slug}')`}">
+      ${locked ? '<div class="lock-badge">🔒</div>' : ''}
       <div class="activity-img-wrap">
         ${a.icon.startsWith('/') ? `<img src="${a.icon}" alt="${a.name}" class="activity-img">` : `<span class="activity-img-emoji">${a.icon}</span>`}
       </div>
@@ -339,8 +389,8 @@ async function showMenu() {
         <div class="activity-name">${a.name}</div>
         <div class="activity-desc">${a.description}</div>
       </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 
   // Botón de descubrimiento si hay juegos no activos en este bar
   const discoverBtn = document.getElementById('discover-more-btn');
@@ -377,7 +427,17 @@ async function showMenu() {
 
 function startActivity(slug) {
   // Ruta genérica — funciona con cualquier juego presente y futuro
-  window.location = `/${BAR_SLUG}/${slug}?code=${validatedCode}`;
+  const code = validatedCode || (IS_DEMO ? DEMO_CODE : '');
+  window.location = `/${BAR_SLUG}/${slug}?code=${code}`;
+}
+
+function showDemoWall() {
+  const overlay = document.getElementById('demo-wall');
+  if (overlay) overlay.classList.add('show');
+}
+function hideDemoWall() {
+  const overlay = document.getElementById('demo-wall');
+  if (overlay) overlay.classList.remove('show');
 }
 
 function showScreen(id) {
@@ -385,5 +445,17 @@ function showScreen(id) {
   document.getElementById(id).classList.add('active');
 }
 </script>
+
+<!-- Muro informativo de la demo (al tocar un juego bloqueado) -->
+<div class="demo-wall-overlay" id="demo-wall" onclick="hideDemoWall()">
+  <div class="demo-wall-card" onclick="event.stopPropagation()">
+    <div class="demo-wall-emoji">🔒</div>
+    <h3>Este juego está bloqueado en la demo</h3>
+    <p>Lo que estás viendo es un <strong>ejemplo</strong> de lo que sería Nookplay en tu negocio: más de 20 juegos y pasatiempos que <strong>cambian cada día</strong>, listos para que tus clientes jueguen gratis mientras esperan.</p>
+    <p>Una forma sencilla de amenizar la espera, fidelizar y dejar buen sabor de boca, sin que tengas que hacer nada.</p>
+    <p class="demo-wall-foot">En tu local estarían todos desbloqueados.</p>
+    <button class="btn-primary" onclick="hideDemoWall()">Seguir probando la demo</button>
+  </div>
+</div>
 
 {% endblock %}
