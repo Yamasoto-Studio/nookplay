@@ -170,7 +170,8 @@ tag centrado → contenido → SELECCIÓN (se puede cambiar) → botón CONFIRMA
 - Paleta neutra a propósito, para adaptarse a la identidad de cada bar.
 
 ## PENDIENTES
-- Verificar tras deploy que el bug de generación quedó resuelto (forzar pregen → scheduler-status → 0 errores, crimen/yellow y oraculo/yellow presentes).
+- [RESUELTO 18 jun] Bug de generación IA: 0 errores tras los fixes. crimen/yellow jugable (lo persistió un fallback, por eso no salía en la lista de pregen pero sí está en BD; comportamiento correcto). local/demo ausente a propósito (demo sin ciudad → Conexión Local no aplica).
+- [MEJORA FUTURA, no bloqueante] El `_pregen_lock` es `threading.Lock()` y NO bloquea entre los 2 workers de gunicorn (solo entre hilos del mismo proceso). El check de `pregen_running` en `app_state` lo mitiga, pero no es 100% hermético: dos workers podrían lanzar regeneración a la vez. Endurecer al escalar con un lock a nivel de BD (p. ej. fila `pregen_running` con comprobación atómica). Síntoma a vigilar: lista de "generados" con más items que `pregenerated_today` (BD real) tras una regeneración.
 - Envío automático de código semanal por email (lunes 6am): ruta `GET /api/weekly-code/<bar_slug>` + trigger + plantilla. (WhatsApp queda para cuando haya empresa verificada / eSIM dedicada.)
 - Ajustar dificultad de Mente Ágil si sigue fácil (ya se endureció el prompt una vez).
 - Vigilar rigor de datos de ¿Tú la has leído? (Constitución) en primeras generaciones.
