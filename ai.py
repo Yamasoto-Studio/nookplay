@@ -1,8 +1,142 @@
 import requests
 import json
+import re
+import time
 from datetime import date
 import os
 import hashlib
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Helpers de robustez IA: parseo tolerante + llamada con reintento
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _parse_ia_json(text):
+    """Parsea JSON de una respuesta de IA de forma tolerante.
+
+    1. Limpia fences de markdown (```json ... ```).
+    2. Intenta json.loads normal.
+    3. Si falla, intenta extraer el primer objeto {...} del texto.
+    4. Si sigue fallando, intenta reparar truncamiento (cerrar comillas/llaves).
+    Lanza json.JSONDecodeError si todo falla.
+    """
+    if text is None:
+        raise ValueError("Respuesta IA vacía (None)")
+
+    t = text.strip()
+    t = t.replace('```json', '').replace('```', '').strip()
+
+    # Intento 1: directo
+    try:
+        return json.loads(t)
+    except json.JSONDecodeError:
+        pass
+
+    # Intento 2: extraer el primer bloque {...} más externo
+    inicio = t.find('{')
+    fin = t.rfind('}')
+    if inicio != -1 and fin != -1 and fin > inicio:
+        candidato = t[inicio:fin + 1]
+        try:
+            return json.loads(candidato)
+        except json.JSONDecodeError:
+            t = t[inicio:]  # quedarnos desde la primera llave para reparar
+
+    # Intento 3: reparar truncamiento (típico "Unterminated string")
+    reparado = _reparar_json_truncado(t)
+    if reparado is not None:
+        return json.loads(reparado)
+
+    # Si nada funcionó, relanzar para que el caller lo capture
+    return json.loads(t)
+
+
+def _reparar_json_truncado(t):
+    """Intenta cerrar un JSON cortado a media respuesta.
+
+    Cierra una comilla abierta si la hay, y añade las llaves/corchetes
+    que falten según el balance. Devuelve el string reparado o None.
+    """
+    if not t or '{' not in t:
+        return None
+
+    # Contar comillas no escapadas para saber si hay un string abierto
+    en_string = False
+    escapado = False
+    pila = []  # llaves/corchetes abiertos
+    for ch in t:
+        if escapado:
+            escapado = False
+            continue
+        if ch == '\\':
+            escapado = True
+            continue
+        if ch == '"':
+            en_string = not en_string
+            continue
+        if en_string:
+            continue
+        if ch in '{[':
+            pila.append(ch)
+        elif ch == '}':
+            if pila and pila[-1] == '{':
+                pila.pop()
+        elif ch == ']':
+            if pila and pila[-1] == '[':
+                pila.pop()
+
+    reparado = t
+    # Cerrar string abierto
+    if en_string:
+        reparado += '"'
+    # Quitar una posible coma colgante antes de cerrar
+    reparado = re.sub(r',\s*$', '', reparado.rstrip())
+    # Cerrar contenedores pendientes en orden inverso
+    for ch in reversed(pila):
+        reparado += '}' if ch == '{' else ']'
+
+    try:
+        json.loads(reparado)
+        return reparado
+    except json.JSONDecodeError:
+        return None
+
+
+def _post_ia(prompt, max_tokens, api_key, reintentos=2, modelo='claude-sonnet-4-6'):
+    """Llama a la API de Anthropic y devuelve el JSON parseado de forma robusta.
+
+    Reintenta ante fallos de red, errores de API o JSON no parseable.
+    Lanza Exception con detalle si agota los reintentos.
+    """
+    ultimo_error = None
+    for intento in range(reintentos + 1):
+        try:
+            response = requests.post(
+                'https://api.anthropic.com/v1/messages',
+                headers={
+                    'x-api-key': api_key,
+                    'anthropic-version': '2023-06-01',
+                    'content-type': 'application/json'
+                },
+                json={
+                    'model': modelo,
+                    'max_tokens': max_tokens,
+                    'messages': [{'role': 'user', 'content': prompt}]
+                },
+                timeout=60
+            )
+            data = response.json()
+            if 'content' not in data:
+                raise Exception(f"API error: {data.get('error', data)}")
+            text = data['content'][0]['text']
+            return _parse_ia_json(text)
+        except Exception as e:
+            ultimo_error = e
+            if intento < reintentos:
+                time.sleep(1.5 * (intento + 1))  # backoff suave
+                continue
+            raise Exception(f"Generación IA falló tras {reintentos + 1} intentos: {ultimo_error}")
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Build bar context dynamically from DB data
@@ -161,28 +295,7 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
   "explicacion": "3-4 frases que revelan el método, el motivo real y el detalle que lo delataba. Satisfactorio, con giro, con el toque de ironía final."
 }}"""
 
-    response = requests.post(
-        'https://api.anthropic.com/v1/messages',
-        headers={
-            'x-api-key': api_key,
-            'anthropic-version': '2023-06-01',
-            'content-type': 'application/json'
-        },
-        json={
-            'model': 'claude-sonnet-4-6',
-            'max_tokens': 1200,
-            'messages': [{'role': 'user', 'content': prompt}]
-        },
-        timeout=60
-    )
-
-    data = response.json()
-    if 'content' not in data:
-        raise Exception(f"API error: {data.get('error', data)}")
-
-    text = data['content'][0]['text'].strip()
-    text = text.replace('```json', '').replace('```', '').strip()
-    return json.loads(text)
+    return _post_ia(prompt, 1500, api_key)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -229,28 +342,7 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
 
 La afirmación en la posición """ + str(falsa_idx) + """ (índice 0-3) debe ser la FALSA."""
 
-    response = requests.post(
-        'https://api.anthropic.com/v1/messages',
-        headers={
-            'x-api-key': api_key,
-            'anthropic-version': '2023-06-01',
-            'content-type': 'application/json'
-        },
-        json={
-            'model': 'claude-sonnet-4-6',
-            'max_tokens': 1000,
-            'messages': [{'role': 'user', 'content': prompt}]
-        },
-        timeout=60
-    )
-
-    data = response.json()
-    if 'content' not in data:
-        raise Exception(f"API error: {data.get('error', data)}")
-
-    text = data['content'][0]['text'].strip()
-    text = text.replace('```json', '').replace('```', '').strip()
-    return json.loads(text)
+    return _post_ia(prompt, 1000, api_key)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -300,28 +392,7 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
   "contexto_b": "En qué porcentaje aproximado crees que la gente elegiría B? Solo el número, ej: 55"
 }""" + _bloque_evitar(evitar)
 
-    response = requests.post(
-        'https://api.anthropic.com/v1/messages',
-        headers={
-            'x-api-key': api_key,
-            'anthropic-version': '2023-06-01',
-            'content-type': 'application/json'
-        },
-        json={
-            'model': 'claude-sonnet-4-6',
-            'max_tokens': 800,
-            'messages': [{'role': 'user', 'content': prompt}]
-        },
-        timeout=60
-    )
-
-    data = response.json()
-    if 'content' not in data:
-        raise Exception(f"API error: {data.get('error', data)}")
-
-    text = data['content'][0]['text'].strip()
-    text = text.replace('```json', '').replace('```', '').strip()
-    return json.loads(text)
+    return _post_ia(prompt, 800, api_key)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -388,28 +459,7 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
 
 IMPORTANTE: Las palabras deben estar en MAYÚSCULAS."""
 
-    response = requests.post(
-        'https://api.anthropic.com/v1/messages',
-        headers={
-            'x-api-key': api_key,
-            'anthropic-version': '2023-06-01',
-            'content-type': 'application/json'
-        },
-        json={
-            'model': 'claude-sonnet-4-6',
-            'max_tokens': 800,
-            'messages': [{'role': 'user', 'content': prompt}]
-        },
-        timeout=60
-    )
-
-    data = response.json()
-    if 'content' not in data:
-        raise Exception(f"API error: {data.get('error', data)}")
-
-    text = data['content'][0]['text'].strip()
-    text = text.replace('```json', '').replace('```', '').strip()
-    result = json.loads(text)
+    result = _post_ia(prompt, 800, api_key)
     
     # Mezclar las 8 palabras aleatoriamente
     import random as _random
@@ -495,28 +545,7 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
   "frase_del_dia": "Una frase filosófica absurda que vale para todos los signos hoy"
 }"""
 
-    response = requests.post(
-        'https://api.anthropic.com/v1/messages',
-        headers={
-            'x-api-key': api_key,
-            'anthropic-version': '2023-06-01',
-            'content-type': 'application/json'
-        },
-        json={
-            'model': 'claude-sonnet-4-6',
-            'max_tokens': 2000,
-            'messages': [{'role': 'user', 'content': prompt}]
-        },
-        timeout=60
-    )
-
-    data = response.json()
-    if 'content' not in data:
-        raise Exception(f"API error: {data.get('error', data)}")
-
-    text = data['content'][0]['text'].strip()
-    text = text.replace('```json', '').replace('```', '').strip()
-    return json.loads(text)
+    return _post_ia(prompt, 2500, api_key)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -571,28 +600,7 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
 
 IMPORTANTE: El lugar correcto debe estar en la posición 0 del array opciones."""
 
-    response = requests.post(
-        'https://api.anthropic.com/v1/messages',
-        headers={
-            'x-api-key': api_key,
-            'anthropic-version': '2023-06-01',
-            'content-type': 'application/json'
-        },
-        json={
-            'model': 'claude-sonnet-4-6',
-            'max_tokens': 1000,
-            'messages': [{'role': 'user', 'content': prompt}]
-        },
-        timeout=60
-    )
-
-    data = response.json()
-    if 'content' not in data:
-        raise Exception(f"API error: {data.get('error', data)}")
-
-    text = data['content'][0]['text'].strip()
-    text = text.replace('```json', '').replace('```', '').strip()
-    result = json.loads(text)
+    result = _post_ia(prompt, 1000, api_key)
 
     # Mezclar opciones manteniendo referencia al correcto
     import random as _random
@@ -1094,28 +1102,7 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
 
 IMPORTANTE para trivia: opciones y correcta son obligatorios. Para los demás tipos, opciones puede ser null y correcta -1."""
 
-    response = requests.post(
-        'https://api.anthropic.com/v1/messages',
-        headers={
-            'x-api-key': api_key,
-            'anthropic-version': '2023-06-01',
-            'content-type': 'application/json'
-        },
-        json={
-            'model': 'claude-sonnet-4-6',
-            'max_tokens': 1200,
-            'messages': [{'role': 'user', 'content': prompt}]
-        },
-        timeout=60
-    )
-
-    data = response.json()
-    if 'content' not in data:
-        raise Exception(f"API error: {data.get('error', data)}")
-
-    text = data['content'][0]['text'].strip()
-    text = text.replace('```json', '').replace('```', '').strip()
-    result = json.loads(text)
+    result = _post_ia(prompt, 1200, api_key)
     result['ciudad'] = bar_city
     result['bar_name'] = bar_name
     return result
@@ -1220,28 +1207,7 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
   "pct_culpable_estimado": "Porcentaje estimado que lo declararía culpable. Solo el número, ej: 62"
 }""" + _bloque_evitar(evitar)
 
-    response = requests.post(
-        'https://api.anthropic.com/v1/messages',
-        headers={
-            'x-api-key': api_key,
-            'anthropic-version': '2023-06-01',
-            'content-type': 'application/json'
-        },
-        json={
-            'model': 'claude-sonnet-4-6',
-            'max_tokens': 800,
-            'messages': [{'role': 'user', 'content': prompt}]
-        },
-        timeout=60
-    )
-
-    data = response.json()
-    if 'content' not in data:
-        raise Exception(f"API error: {data.get('error', data)}")
-
-    text = data['content'][0]['text'].strip()
-    text = text.replace('```json', '').replace('```', '').strip()
-    return json.loads(text)
+    return _post_ia(prompt, 800, api_key)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1294,28 +1260,7 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
   "explicacion": "Explicación de por qué esta respuesta tiene sentido con los datos del perfil. 2-3 frases."
 }""" + _bloque_evitar(evitar)
 
-    response = requests.post(
-        'https://api.anthropic.com/v1/messages',
-        headers={
-            'x-api-key': api_key,
-            'anthropic-version': '2023-06-01',
-            'content-type': 'application/json'
-        },
-        json={
-            'model': 'claude-sonnet-4-6',
-            'max_tokens': 900,
-            'messages': [{'role': 'user', 'content': prompt}]
-        },
-        timeout=60
-    )
-
-    data = response.json()
-    if 'content' not in data:
-        raise Exception(f"API error: {data.get('error', data)}")
-
-    text = data['content'][0]['text'].strip()
-    text = text.replace('```json', '').replace('```', '').strip()
-    return json.loads(text)
+    return _post_ia(prompt, 900, api_key)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1380,28 +1325,7 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
   }
 }""" + _bloque_evitar(evitar)
 
-    response = requests.post(
-        'https://api.anthropic.com/v1/messages',
-        headers={
-            'x-api-key': api_key,
-            'anthropic-version': '2023-06-01',
-            'content-type': 'application/json'
-        },
-        json={
-            'model': 'claude-sonnet-4-6',
-            'max_tokens': 1200,
-            'messages': [{'role': 'user', 'content': prompt}]
-        },
-        timeout=60
-    )
-
-    data = response.json()
-    if 'content' not in data:
-        raise Exception(f"API error: {data.get('error', data)}")
-
-    text = data['content'][0]['text'].strip()
-    text = text.replace('```json', '').replace('```', '').strip()
-    return json.loads(text)
+    return _post_ia(prompt, 1200, api_key)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1448,28 +1372,7 @@ Devuelve SOLO un objeto JSON válido, sin markdown, donde "correcta" es el índi
   "dato_extra": "Dato curioso real sobre la película correcta. 1-2 frases."
 }""" + _bloque_evitar(evitar)
 
-    response = requests.post(
-        'https://api.anthropic.com/v1/messages',
-        headers={
-            'x-api-key': api_key,
-            'anthropic-version': '2023-06-01',
-            'content-type': 'application/json'
-        },
-        json={
-            'model': 'claude-sonnet-4-6',
-            'max_tokens': 800,
-            'messages': [{'role': 'user', 'content': prompt}]
-        },
-        timeout=60
-    )
-
-    data = response.json()
-    if 'content' not in data:
-        raise Exception(f"API error: {data.get('error', data)}")
-
-    text = data['content'][0]['text'].strip()
-    text = text.replace('```json', '').replace('```', '').strip()
-    return json.loads(text)
+    return _post_ia(prompt, 800, api_key)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1505,17 +1408,7 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
   "dato_extra": "Un dato adicional curioso real sobre el caso o la época. 1-2 frases."
 }""" + _bloque_evitar(evitar)
 
-    response = requests.post(
-        'https://api.anthropic.com/v1/messages',
-        headers={'x-api-key': api_key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json'},
-        json={'model': 'claude-sonnet-4-6', 'max_tokens': 900, 'messages': [{'role': 'user', 'content': prompt}]},
-        timeout=60
-    )
-    data = response.json()
-    if 'content' not in data:
-        raise Exception(f"API error: {data.get('error', data)}")
-    text = data['content'][0]['text'].strip().replace('```json', '').replace('```', '').strip()
-    return json.loads(text)
+    return _post_ia(prompt, 900, api_key)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1559,17 +1452,7 @@ Devuelve SOLO un objeto JSON válido, sin markdown, donde "correcta" es el índi
   "dato_extra": "Dato curioso real sobre la canción correcta. 1-2 frases."
 }""" + _bloque_evitar(evitar)
 
-    response = requests.post(
-        'https://api.anthropic.com/v1/messages',
-        headers={'x-api-key': api_key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json'},
-        json={'model': 'claude-sonnet-4-6', 'max_tokens': 900, 'messages': [{'role': 'user', 'content': prompt}]},
-        timeout=60
-    )
-    data = response.json()
-    if 'content' not in data:
-        raise Exception(f"API error: {data.get('error', data)}")
-    text = data['content'][0]['text'].strip().replace('```json', '').replace('```', '').strip()
-    return json.loads(text)
+    return _post_ia(prompt, 900, api_key)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1608,17 +1491,7 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
 }"""
 
     try:
-        response = requests.post(
-            'https://api.anthropic.com/v1/messages',
-            headers={'x-api-key': api_key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json'},
-            json={'model': 'claude-sonnet-4-6', 'max_tokens': 400, 'messages': [{'role': 'user', 'content': prompt}]},
-            timeout=60
-        )
-        data = response.json()
-        if 'content' not in data:
-            raise Exception("API error")
-        text = data['content'][0]['text'].strip().replace('```json', '').replace('```', '').strip()
-        return json.loads(text)
+        return _post_ia(prompt, 400, api_key)
     except Exception:
         cat = CATEGORIAS_PENSAMIENTO_FALLBACK[seed % len(CATEGORIAS_PENSAMIENTO_FALLBACK)]
         return {"categoria": cat, "instruccion": "Escribe lo primero que se te ocurra. Ganas si coincides con la mayoría.", "pista": "Piensa rápido, piensa como los demás."}
@@ -1723,17 +1596,7 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
   }
 }"""
 
-    response = requests.post(
-        'https://api.anthropic.com/v1/messages',
-        headers={'x-api-key': api_key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json'},
-        json={'model': 'claude-sonnet-4-6', 'max_tokens': 1100, 'messages': [{'role': 'user', 'content': prompt}]},
-        timeout=60
-    )
-    data = response.json()
-    if 'content' not in data:
-        raise Exception(f"API error: {data.get('error', data)}")
-    text = data['content'][0]['text'].strip().replace('```json', '').replace('```', '').strip()
-    return json.loads(text)
+    return _post_ia(prompt, 1100, api_key)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1766,14 +1629,4 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
   "dato_extra": "Una curiosidad adicional real sobre la Constitución. 1 frase."
 }"""
 
-    response = requests.post(
-        'https://api.anthropic.com/v1/messages',
-        headers={'x-api-key': api_key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json'},
-        json={'model': 'claude-sonnet-4-6', 'max_tokens': 700, 'messages': [{'role': 'user', 'content': prompt}]},
-        timeout=60
-    )
-    data = response.json()
-    if 'content' not in data:
-        raise Exception(f"API error: {data.get('error', data)}")
-    text = data['content'][0]['text'].strip().replace('```json', '').replace('```', '').strip()
-    return json.loads(text)
+    return _post_ia(prompt, 700, api_key)

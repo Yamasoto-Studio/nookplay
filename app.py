@@ -440,7 +440,41 @@ def get_historial_reciente(db, game_type, bar_slug=None, dias=10, campo='titulo'
     return items[:30]
 
 
-# Estado global de la pre-generación (para mostrar progreso en vivo)
+def _persistir_generado(bar_id, game_type, game_data, es_global=False):
+    """Guarda un juego generado bajo demanda en generated_games (idempotente).
+
+    Usa una conexión propia con commit para que persista entre workers.
+    Si es_global=True, solo guarda si no existe ya un registro global para hoy.
+    Devuelve True si guardó, False si ya existía o hubo error no crítico.
+    """
+    import json as _json
+    from datetime import date as _date
+    hoy = str(_date.today())
+    try:
+        dbp = get_db()
+        if es_global:
+            ya = dbp.execute(
+                "SELECT id FROM generated_games WHERE game_type = ? AND game_date = ?",
+                (game_type, hoy)
+            ).fetchone()
+        else:
+            ya = dbp.execute(
+                "SELECT id FROM generated_games WHERE bar_id = ? AND game_type = ? AND game_date = ?",
+                (bar_id, game_type, hoy)
+            ).fetchone()
+        if ya:
+            dbp.close()
+            return False
+        dbp.execute(
+            "INSERT INTO generated_games (bar_id, game_type, game_date, content) VALUES (?,?,?,?)",
+            (bar_id, game_type, hoy, _json.dumps(game_data))
+        )
+        dbp.commit()
+        dbp.close()
+        return True
+    except Exception as e:
+        print(f"[FALLBACK] No se pudo persistir {game_type}/{bar_id}: {e}")
+        return False
 import threading as _threading
 _pregen_estado = {
     'corriendo': False,
@@ -1300,7 +1334,12 @@ def dilema_api():
     db.close()
 
     try:
-        game_data = generate_dilema(bar_name, bar_slug)
+        _dbev = get_db()
+        _ev = get_historial_reciente(_dbev, 'dilema', bar_slug, campo='situacion')
+        _dbev.close()
+        game_data = generate_dilema(bar_name, bar_slug, evitar=_ev)
+        _bid = bar['id']
+        _persistir_generado(_bid, 'dilema', game_data, es_global=False)
         _game_cache[cache_key] = game_data
         return jsonify(game_data)
     except Exception as e:
@@ -1361,7 +1400,12 @@ def veredicto_api():
     db.close()
 
     try:
-        game_data = generate_veredicto(bar_name, bar_slug)
+        _dbev = get_db()
+        _ev = get_historial_reciente(_dbev, 'veredicto', bar_slug, campo='titulo')
+        _dbev.close()
+        game_data = generate_veredicto(bar_name, bar_slug, evitar=_ev)
+        _bid = bar['id']
+        _persistir_generado(_bid, 'veredicto', game_data, es_global=False)
         _game_cache[cache_key] = game_data
         return jsonify(game_data)
     except Exception as e:
@@ -1442,7 +1486,12 @@ def perfil_api():
     db.close()
 
     try:
-        game_data = generate_perfil(bar_slug)
+        _dbev = get_db()
+        _ev = get_historial_reciente(_dbev, 'perfil', bar_slug, campo='nombre')
+        _dbev.close()
+        game_data = generate_perfil(bar_slug, evitar=_ev)
+        _bid = bar['id']
+        _persistir_generado(_bid, 'perfil', game_data, es_global=False)
         _game_cache[cache_key] = game_data
         return jsonify(game_data)
     except Exception as e:
@@ -1519,7 +1568,12 @@ def vestuario_api():
     db.close()
 
     try:
-        game_data = generate_vestuario(bar_slug)
+        _dbev = get_db()
+        _ev = get_historial_reciente(_dbev, 'vestuario', bar_slug, campo='preguntas')
+        _dbev.close()
+        game_data = generate_vestuario(bar_slug, evitar=_ev)
+        _bid = bar['id']
+        _persistir_generado(_bid, 'vestuario', game_data, es_global=False)
         _game_cache[cache_key] = game_data
         return jsonify(game_data)
     except Exception as e:
@@ -1595,7 +1649,12 @@ def sinopsis_api():
     db.close()
 
     try:
-        game_data = generate_sinopsis(bar_slug)
+        _dbev = get_db()
+        _ev = get_historial_reciente(_dbev, 'sinopsis', None, campo='opciones')
+        _dbev.close()
+        game_data = generate_sinopsis(bar_slug, evitar=_ev)
+        _bid = bar['id']
+        _persistir_generado(_bid, 'sinopsis', game_data, es_global=True)
         _game_cache[cache_key] = game_data
         return jsonify(game_data)
     except Exception as e:
@@ -1670,7 +1729,12 @@ def muertes_api():
 
     db.close()
     try:
-        game_data = generate_muertes(bar_slug)
+        _dbev = get_db()
+        _ev = get_historial_reciente(_dbev, 'muertes', None, campo='titulo')
+        _dbev.close()
+        game_data = generate_muertes(bar_slug, evitar=_ev)
+        _bid = bar['id']
+        _persistir_generado(_bid, 'muertes', game_data, es_global=True)
         _game_cache[cache_key] = game_data
         return jsonify(game_data)
     except Exception as e:
@@ -1745,7 +1809,12 @@ def letra_api():
 
     db.close()
     try:
-        game_data = generate_letra(bar_slug)
+        _dbev = get_db()
+        _ev = get_historial_reciente(_dbev, 'letra', None, campo='opciones')
+        _dbev.close()
+        game_data = generate_letra(bar_slug, evitar=_ev)
+        _bid = bar['id']
+        _persistir_generado(_bid, 'letra', game_data, es_global=True)
         _game_cache[cache_key] = game_data
         return jsonify(game_data)
     except Exception as e:
@@ -1816,6 +1885,8 @@ def pensamiento_api():
     db.close()
     try:
         game_data = generate_pensamiento(bar_slug)
+        _bid = bar['id']
+        _persistir_generado(_bid, 'pensamiento', game_data, es_global=True)
         _game_cache[cache_key] = game_data
         return jsonify(game_data)
     except Exception as e:
@@ -1968,6 +2039,8 @@ def menteagil_api():
     db.close()
     try:
         game_data = generate_menteagil(bar_slug)
+        _bid = bar['id']
+        _persistir_generado(_bid, 'menteagil', game_data, es_global=True)
         _game_cache[cache_key] = game_data
         return jsonify(game_data)
     except Exception as e:
@@ -2039,6 +2112,8 @@ def constitucion_api():
     db.close()
     try:
         game_data = generate_constitucion(bar_slug)
+        _bid = bar['id']
+        _persistir_generado(_bid, 'constitucion', game_data, es_global=True)
         _game_cache[cache_key] = game_data
         return jsonify(game_data)
     except Exception as e:
@@ -2162,6 +2237,8 @@ def conexiones_api():
     db.close()
     try:
         game_data = generate_conexiones(bar['name'], bar_slug)
+        _bid = bar['id']
+        _persistir_generado(_bid, 'conexiones', game_data, es_global=False)
         _game_cache[cache_key] = game_data
         return jsonify(game_data)
     except Exception as e:
@@ -2225,6 +2302,8 @@ def oraculo_api():
     db.close()
     try:
         game_data = generate_oraculo(bar_slug)
+        _bid = bar['id']
+        _persistir_generado(_bid, 'oraculo', game_data, es_global=True)
         _game_cache[cache_key] = game_data
         return jsonify(game_data)
     except Exception as e:
@@ -2288,6 +2367,8 @@ def donde_api():
     db.close()
     try:
         game_data = generate_donde(bar_slug)
+        _bid = bar['id']
+        _persistir_generado(_bid, 'donde', game_data, es_global=True)
         _game_cache[cache_key] = game_data
         return jsonify(game_data)
     except Exception as e:
@@ -2551,6 +2632,7 @@ def local_api():
     db.close()
     try:
         game_data = generate_conexion_local(bar['name'], city, province, bar_slug)
+        _persistir_generado(bar['id'], 'local', game_data, es_global=False)
         _game_cache[cache_key] = game_data
         return jsonify(game_data)
     except Exception as e:
