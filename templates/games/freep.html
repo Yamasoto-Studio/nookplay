@@ -199,6 +199,23 @@ html, body { overscroll-behavior: none; }
   to { transform: scale(1) translateY(0); opacity: 1; }
 }
 
+/* Cartas GANADAS: salen hacia el lado del jugador (izq = J1, der = J2) */
+.fp-card.fp-win-left  { animation: fpWinLeft  0.55s cubic-bezier(0.5, 0, 0.75, 0) forwards; }
+.fp-card.fp-win-right { animation: fpWinRight 0.55s cubic-bezier(0.5, 0, 0.75, 0) forwards; }
+@keyframes fpWinLeft {
+  to { transform: translateX(-130%) scale(0.7) rotate(-12deg); opacity: 0; }
+}
+@keyframes fpWinRight {
+  to { transform: translateX(130%) scale(0.7) rotate(12deg); opacity: 0; }
+}
+
+/* Cartas PERDIDAS: suben hacia el mazo de descartes (arriba) y se desvanecen */
+.fp-card.fp-lose-up { animation: fpLoseUp 0.6s cubic-bezier(0.5, 0, 0.75, 0) forwards; }
+@keyframes fpLoseUp {
+  0% { transform: translateY(0) scale(1); opacity: 1; }
+  100% { transform: translateY(-180%) scale(0.6) rotate(4deg); opacity: 0; }
+}
+
 .fp-verdict { min-height: 30px; font-size: 18px; font-weight: 800; margin: 6px 0 12px; }
 .fp-verdict.ok { color: #2E7D32; }
 .fp-verdict.bad { color: #C0392B; }
@@ -503,6 +520,28 @@ function drawCard() {
 // Marca que alguien ha ganado cartas (hay progreso en este ciclo del mazo)
 function markProgress() { progressThisCycle = true; }
 
+// Anima las cartas visibles deslizándolas hacia el lado del jugador (ganadas) o arriba (perdidas).
+// dir: 'win' (al lado del jugador actual) | 'lose' (arriba, hacia descartes)
+function animarSalidaCartas(dir) {
+  const refEl = document.getElementById('g-ref');
+  const nextEl = document.getElementById('g-next');
+  const slotVisible = document.getElementById('g-next-slot').style.display !== 'none';
+  let clase;
+  if (dir === 'lose') {
+    clase = 'fp-lose-up';
+  } else {
+    // ganadas: J1 (turnIndex 0) salen por la izquierda, J2 por la derecha
+    clase = (turnIndex === 0) ? 'fp-win-left' : 'fp-win-right';
+  }
+  [refEl, nextEl].forEach(el => {
+    if (!el) return;
+    el.classList.remove('fp-settle', 'fp-shake', 'reveal-anim', 'fp-win-left', 'fp-win-right', 'fp-lose-up');
+    void el.offsetWidth;
+    el.classList.add(clase);
+  });
+  return slotVisible;
+}
+
 function cardsLeft() {
   return (deck.length - deckPos) + failPile.length;
 }
@@ -623,7 +662,7 @@ function renderRef() {
   el.style.background = c;
   el.innerHTML = `<span class="corner tl">${ref}</span>${ref}<span class="corner br">${ref}</span>`;
   // Animación de asentamiento al centro
-  el.classList.remove('fp-settle', 'fp-shake');
+  el.classList.remove('fp-settle', 'fp-shake', 'fp-win-left', 'fp-win-right', 'fp-lose-up');
   void el.offsetWidth;          // reinicia la animación
   el.classList.add('fp-settle');
 }
@@ -699,13 +738,15 @@ function predict(dir) {
       if (fresh === null) { busy = false; updateMeters(); finishGame(); return; }
       stack.push(fresh);
     }
+    // Las dos cartas iguales se deslizan hacia el lado del jugador (las ha ganado)
+    setTimeout(() => { animarSalidaCartas('win'); }, 350);
     setTimeout(() => {
       renderRef();
       document.getElementById('g-next-slot').style.display = 'none';
       updateMeters();
       busy = false;
       readyNextPredict();
-    }, 650);
+    }, 950);
     return;
   }
 
@@ -732,17 +773,28 @@ function predict(dir) {
     failPile.push(next);
     stack = [];
     updateMeters();
+    // Tras la sacudida y una pausa para leer el fallo, las cartas suben hacia los descartes
+    setTimeout(() => { animarSalidaCartas('lose'); }, 950);
     setTimeout(() => { busy = false; endTurn(); }, 1700);
   }
 }
 
 function stand() {
   if (busy) return;
+  busy = true;
   // Plantarse: lo que queda en juego pasa a la pila de ganadas
   if (stack.length > 0) markProgress();
   players[turnIndex].pile += stack.length;
   stack = [];
-  endTurn();
+  setPredictEnabled(false);
+  setStandVisible(false);
+  const verdict = document.getElementById('g-verdict');
+  verdict.textContent = '🔒 Cartas aseguradas';
+  verdict.className = 'fp-verdict ok';
+  // La carta de referencia se desliza hacia el lado del jugador (se las lleva)
+  animarSalidaCartas('win');
+  updateMeters();
+  setTimeout(() => { busy = false; endTurn(); }, 750);
 }
 
 function endTurn() {
