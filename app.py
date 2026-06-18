@@ -351,7 +351,10 @@ def rotate_weekly_codes():
 
 @app.route('/')
 def home():
-    return render_template('home.html')
+    db = get_db()
+    game_count = db.execute("SELECT COUNT(*) AS n FROM games WHERE active = 1").fetchone()['n']
+    db.close()
+    return render_template('home.html', game_count=game_count)
 
 @app.route('/juegos')
 def games_catalog():
@@ -2646,10 +2649,10 @@ ALL_GAMES = [
 # Starter: 4 fijos siempre activos + 1 elegible a elegir entre STARTER_FREE_GAMES
 STARTER_FIXED      = ["crimen", "dilema", "reinas", "conexiones"]
 STARTER_FREE_GAMES = ["oraculo", "donde", "carta", "equilibrio", "impostor", "local", "veredicto", "perfil", "vestuario", "sinopsis", "muertes", "letra", "pensamiento", "poema", "menteagil", "constitucion", "orden", "freep"]
-STARTER_MAX_FREE   = 1  # juegos libres simultáneos permitidos
+STARTER_MAX_FREE   = 2  # juegos libres simultáneos permitidos
 
 # Pro: hasta PRO_MAX_GAMES a elegir libremente del catálogo completo
-PRO_MAX_GAMES = 11  # cuando el catálogo crezca más, Pro sigue limitado aquí
+PRO_MAX_GAMES = 12  # cuando el catálogo crezca más, Pro sigue limitado aquí
 
 # Premium: acceso a todo ALL_GAMES sin límite
 
@@ -2659,7 +2662,7 @@ PLAN_CFG = {
     "starter": {
         "name":  "Plan Starter",
         "price": "6,95€/mes",
-        "desc":  "4 juegos fijos + 1 libre a elegir",
+        "desc":  "4 juegos fijos + 2 libres a elegir",
         "stats": "basic",
     },
     "pro": {
@@ -2710,9 +2713,8 @@ def get_bar_games(bar_slug):
     # (datos antiguos), conservar solo el primero y desactivar el resto
     if plan == "starter":
         free_active = [s for s in active_slugs if s not in STARTER_FIXED]
-        if len(free_active) > 1:
-            keep = free_active[0]
-            for extra in free_active[1:]:
+        if len(free_active) > STARTER_MAX_FREE:
+            for extra in free_active[STARTER_MAX_FREE:]:
                 db.execute(
                     "UPDATE bar_games SET active = 0 WHERE bar_id = ? AND game_slug = ?",
                     (bar["id"], extra),
@@ -2790,6 +2792,21 @@ def save_bar_games():
         if active and game_slug not in STARTER_FIXED and game_slug not in STARTER_FREE_GAMES:
             db.close()
             return jsonify({"error": "Este juego requiere un plan superior"}), 400
+        if active and game_slug not in STARTER_FIXED:
+            # Máximo STARTER_MAX_FREE juegos libres simultáneos
+            free_active = db.execute(
+                "SELECT game_slug FROM bar_games WHERE bar_id = ? AND active = 1",
+                (bar["id"],)
+            ).fetchall()
+            free_count = len([r for r in free_active if r["game_slug"] not in STARTER_FIXED])
+            already = db.execute(
+                "SELECT active FROM bar_games WHERE bar_id = ? AND game_slug = ?",
+                (bar["id"], game_slug)
+            ).fetchone()
+            is_already = already and already["active"]
+            if not is_already and free_count >= STARTER_MAX_FREE:
+                db.close()
+                return jsonify({"error": f"El plan Starter permite {STARTER_MAX_FREE} juegos libres. Desactiva uno para cambiarlo."}), 400
 
     elif plan == "pro" and active:
         # Pro: máximo PRO_MAX_GAMES activos simultáneos
@@ -2808,14 +2825,6 @@ def save_bar_games():
 
     sql = "INSERT INTO bar_games (bar_id, game_slug, active) VALUES (?, ?, ?) ON CONFLICT(bar_id, game_slug) DO UPDATE SET active = excluded.active"
     db.execute(sql, (bar["id"], game_slug, 1 if active else 0))
-
-    # Starter: selección única para juego libre
-    if plan == "starter" and active and game_slug not in STARTER_FIXED:
-        placeholders = ",".join("?" * len(STARTER_FIXED))
-        db.execute(
-            f"UPDATE bar_games SET active = 0 WHERE bar_id = ? AND game_slug != ? AND game_slug NOT IN ({placeholders})",
-            (bar["id"], game_slug, *STARTER_FIXED),
-        )
 
     db.commit()
     db.close()
