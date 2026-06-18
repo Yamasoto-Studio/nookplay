@@ -85,6 +85,48 @@ html, body { overscroll-behavior: none; }
 .fp-target { font-size: 13px; color: var(--text-secondary); min-height: 18px; }
 .fp-target b { color: var(--bar-accent-dark); }
 
+/* Indicador fijo de ronda de mazo (zona de memoria) */
+.fp-round-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; font-weight: 800; letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding: 3px 10px; border-radius: 20px;
+  margin-top: 6px;
+  background: #F2EBE3; color: var(--text-secondary);
+  transition: background 0.3s, color 0.3s;
+}
+.fp-round-badge.memory {
+  background: var(--bar-accent-dark, #C4622D);
+  color: #fff;
+  animation: fp-badge-pulse 1.6s ease-in-out 2;
+}
+@keyframes fp-badge-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+
+/* Overlay de aviso al entrar en zona de memoria */
+.fp-memory-overlay {
+  position: fixed; inset: 0; z-index: 1200;
+  display: none; align-items: center; justify-content: center;
+  background: rgba(26,26,26,0.55); padding: 24px;
+}
+.fp-memory-overlay.show { display: flex; animation: fp-fade-in 0.25s ease; }
+.fp-memory-card {
+  background: #fff; border-radius: 18px; padding: 28px 24px;
+  max-width: 340px; text-align: center;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.25);
+}
+.fp-memory-card .ico { font-size: 40px; margin-bottom: 8px; }
+.fp-memory-card h3 { font-size: 20px; font-weight: 800; margin: 0 0 10px; color: var(--bar-accent-dark, #C4622D); }
+.fp-memory-card p { font-size: 14px; line-height: 1.5; color: var(--text-secondary); margin: 0 0 18px; }
+.fp-memory-card button {
+  background: var(--bar-accent-dark, #C4622D); color: #fff; border: none;
+  border-radius: 10px; padding: 11px 28px; font-size: 15px; font-weight: 700;
+  cursor: pointer; font-family: inherit;
+}
+@keyframes fp-fade-in { from { opacity: 0; } to { opacity: 1; } }
+
 /* Marcadores de turno (asegurado / en juego) */
 .fp-meters { display: flex; gap: 10px; justify-content: center; margin: 4px 0 18px; }
 .fp-meter {
@@ -234,6 +276,7 @@ html, body { overscroll-behavior: none; }
     <div class="fp-turn-head">
       <div class="fp-player-badge" id="g-player"></div>
       <div class="fp-target" id="g-target"></div>
+      <div><span class="fp-round-badge" id="g-round-badge">Baraja inicial</span></div>
     </div>
 
     <div class="fp-meters">
@@ -265,6 +308,16 @@ html, body { overscroll-behavior: none; }
     </div>
 
     <button class="btn-back-game fp-exit-bottom" onclick="exitGame()">← Volver al menú</button>
+  </div>
+</div>
+
+<!-- AVISO: entrada en zona de memoria (se juegan los descartes) -->
+<div class="fp-memory-overlay" id="fp-memory-overlay">
+  <div class="fp-memory-card">
+    <div class="ico">🧠</div>
+    <h3>¡Empiezan los descartes!</h3>
+    <p>Se acabó la baraja inicial. Ahora se vuelven a jugar las cartas falladas, <b>en el mismo orden y sin barajar</b>. Quien recuerde lo que salió, gana.</p>
+    <button onclick="cerrarAvisoMemoria()">¡Entendido!</button>
   </div>
 </div>
 
@@ -357,6 +410,9 @@ let startTime = null;
 let busy = false;
 let progressThisCycle = false;  // ¿se ha ganado alguna carta desde el último reciclaje?
 let deadCycles = 0;             // reciclajes seguidos sin que nadie gane cartas
+let mazoRonda = 1;             // 1 = baraja inicial; 2+ = jugando descartes (memoria)
+let avisoMemoriaMostrado = false;  // el overlay de memoria solo se muestra una vez por partida
+let reanudarTrasAviso = null;      // callback para continuar el turno tras cerrar el aviso
 
 async function init() {
   try {
@@ -392,6 +448,7 @@ function drawCard() {
     deck = failPile.slice();
     failPile = [];
     deckPos = 0;
+    mazoRonda++;   // entramos en una nueva pasada del mazo (zona de memoria)
   }
   return deck[deckPos++];
 }
@@ -423,6 +480,8 @@ function startDuel() {
   failPile = [];
   progressThisCycle = false;
   deadCycles = 0;
+  mazoRonda = 1;
+  avisoMemoriaMostrado = false;
   turnIndex = 0;
   startTime = Date.now();
   goHandoff();
@@ -460,12 +519,47 @@ function beginTurn() {
   setPredictEnabled(true);
   setStandVisible(false);   // no puede plantarse antes de la primera predicción
   showScreen('s-game');
+  // Si al sacar la primera carta hemos entrado en zona de memoria, avisar
+  comprobarAvisoMemoria();
 }
 
 function updateTarget() {
   const me = players[turnIndex], rival = players[1 - turnIndex];
   document.getElementById('g-target').innerHTML =
     `Tú <b>${me.pile}</b> · ${rival.name} ${rival.pile} · quedan ${cardsLeft()}`;
+  actualizarRondaUI();
+}
+
+// Actualiza el indicador fijo de ronda de mazo (baraja inicial vs. memoria)
+function actualizarRondaUI() {
+  const badge = document.getElementById('g-round-badge');
+  if (!badge) return;
+  if (mazoRonda <= 1) {
+    badge.textContent = 'Baraja inicial';
+    badge.classList.remove('memory');
+  } else {
+    badge.textContent = `🧠 Memoria · pasada ${mazoRonda}`;
+    badge.classList.add('memory');
+  }
+}
+
+// Muestra el aviso de entrada en zona de memoria (solo la 1ª vez por partida).
+// Devuelve true si lo ha mostrado (el turno debe esperar a que se cierre).
+function comprobarAvisoMemoria(continuar) {
+  if (mazoRonda >= 2 && !avisoMemoriaMostrado) {
+    avisoMemoriaMostrado = true;
+    reanudarTrasAviso = continuar || null;
+    document.getElementById('fp-memory-overlay').classList.add('show');
+    return true;
+  }
+  return false;
+}
+
+function cerrarAvisoMemoria() {
+  document.getElementById('fp-memory-overlay').classList.remove('show');
+  const cb = reanudarTrasAviso;
+  reanudarTrasAviso = null;
+  if (typeof cb === 'function') cb();
 }
 
 function cardHTML(value) {
@@ -485,6 +579,11 @@ function renderRef() {
 function updateMeters() {
   document.getElementById('g-secured').textContent = players[turnIndex].pile;
   document.getElementById('g-inplay').textContent = stack.length;
+  // Refrescar el contador "quedan" y el indicador de ronda en vivo (puede cambiar mid-turno)
+  const me = players[turnIndex], rival = players[1 - turnIndex];
+  document.getElementById('g-target').innerHTML =
+    `Tú <b>${me.pile}</b> · ${rival.name} ${rival.pile} · quedan ${cardsLeft()}`;
+  actualizarRondaUI();
 }
 
 function setStandVisible(v) {
