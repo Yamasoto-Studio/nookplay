@@ -79,7 +79,7 @@
 
       <!-- PANTALLA: MENÚ DE ACTIVIDADES -->
       <div class="screen" id="s-menu">
-        {% if bar.slug == 'demo' %}
+        {% if is_demo %}
         <div class="demo-ribbon">
           <strong>Esto es una demostración.</strong> Así se vería Nookplay en tu negocio. Prueba los juegos destacados; el resto están bloqueados solo en este ejemplo.
         </div>
@@ -232,11 +232,11 @@ const BAR_WELCOME = "{{ bar.welcome_message }}";
 let validatedCode = null;
 let currentGame = null;
 
-// ── Modo demo ─────────────────────────────────────────────────────────────
-const IS_DEMO = (BAR_SLUG === 'demo');
+// ── Modo demo (plan 'demo') ───────────────────────────────────────────────
+const IS_DEMO = {{ 'true' if is_demo else 'false' }};
 const DEMO_CODE = "{{ demo_code|default('') }}";
-// Los 3 juegos jugables en la demo (el resto se muestran bloqueados). Editable.
-const DEMO_PLAYABLE = ['crimen', 'freep', 'orden'];
+// En demo, los juegos JUGABLES son los que el admin haya activado para este local;
+// el resto del catálogo se muestra bloqueado con candado.
 
 // Set welcome message on code screen
 document.addEventListener('DOMContentLoaded', () => {
@@ -372,13 +372,13 @@ async function showMenu() {
   welcomeEl.innerHTML = `${customMsg}<br><span class="menu-welcome-sub">Elige tu pasatiempo de hoy.</span>`;
 
   const list = document.getElementById('activities-list');
-  // En demo mostramos TODOS los juegos (los no jugables, bloqueados con candado).
-  // En un bar normal, solo los activos y jugables.
+  // En demo mostramos TODO el catálogo: los activos (elegidos en el admin) son jugables,
+  // el resto se ven bloqueados con candado. En un bar normal, solo los activos.
   const activeGames = IS_DEMO ? ACTIVITIES.slice() : ACTIVITIES.filter(a => a.active);
   const hasHidden = !IS_DEMO && ACTIVITIES.length > activeGames.length;
 
   list.innerHTML = activeGames.map(a => {
-    const locked = IS_DEMO && !DEMO_PLAYABLE.includes(a.slug);
+    const locked = IS_DEMO && !a.active;
     return `
     <div class="activity-card-grid${locked ? ' locked' : ''}" onclick="${locked ? 'showDemoWall()' : `startActivity('${a.slug}')`}">
       ${locked ? '<div class="lock-badge">🔒</div>' : ''}

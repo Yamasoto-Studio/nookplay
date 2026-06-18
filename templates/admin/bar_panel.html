@@ -325,6 +325,7 @@
         <option value="pro">🥈 Pro — hasta 10 a elegir</option>
         <option value="total">🥇 Total — todos los juegos</option>
         <option value="gift">🎁 Gift — todos (gratuito)</option>
+        <option value="demo">🔓 Demo — escaparate público (sin código)</option>
       </select>
       {% else %}
       <a href="mailto:nookplay@yamasoto.com?subject=Upgrade {{ bar.name }}" style="font-size:12px; font-weight:600; color:var(--accent); text-decoration:none; padding:6px 14px; border-radius:20px; border:1px solid var(--accent); white-space:nowrap;">Mejorar plan →</a>
@@ -387,6 +388,7 @@
     premium: { star:'🥇', bg:'#FFF8E1', border:'#FFD54F', name:'Plan Premium', desc:'Todos los juegos del catálogo' },
     total:   { star:'🥇', bg:'#FFF8E1', border:'#FFD54F', name:'Plan Total',   desc:'Todos los juegos incluidos' },
     gift:    { star:'🎁', bg:'#E8F5E9', border:'#A5D6A7', name:'Plan Gift',    desc:'Todos los juegos (regalo)' },
+    demo:    { star:'🔓', bg:'#E3F2FD', border:'#90CAF9', name:'Plan Demo',    desc:'Escaparate público sin código · los activos se juegan, el resto se ven bloqueados' },
   };
 
   function renderBanner(plan) {

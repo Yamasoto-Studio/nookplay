@@ -383,7 +383,7 @@ def generate_weekly_codes():
     sunday = monday + timedelta(days=6)
 
     db = get_db()
-    bars = db.execute("SELECT id, slug FROM bars WHERE active = 1 AND slug != 'demo'").fetchall()
+    bars = db.execute("SELECT id, slug FROM bars WHERE active = 1 AND (plan IS NULL OR plan != 'demo')").fetchall()
     for bar in bars:
         existing = db.execute(
             "SELECT id FROM access_codes WHERE bar_id = ? AND valid_from = ?",
@@ -912,13 +912,15 @@ def bar(bar_slug):
         (bar['id'],)
     ).fetchall()
 
-    # Demo: garantizar un código permanente y entregarlo a la plantilla (acceso sin pedir código)
+    # Demo (plan 'demo'): garantizar un código y entregarlo a la plantilla (acceso sin pedir código)
     demo_code = ''
-    if bar_slug == 'demo':
+    is_demo = (bar['plan'] or '') == 'demo'
+    if is_demo:
         from datetime import timedelta
         today = str(date.today())
+        # Misma consulta (sin ORDER BY) que usan las APIs de los juegos, para que el código coincida
         vigente = db.execute(
-            "SELECT code FROM access_codes WHERE bar_id = ? AND valid_from <= ? AND valid_until >= ? ORDER BY id LIMIT 1",
+            "SELECT code FROM access_codes WHERE bar_id = ? AND valid_from <= ? AND valid_until >= ?",
             (bar['id'], today, today)
         ).fetchone()
         if vigente:
@@ -935,7 +937,8 @@ def bar(bar_slug):
     db.close()
     import json as json_lib
     products_json = json_lib.dumps([dict(p) for p in products])
-    return render_template('bar.html', bar=bar, products=products, products_json=products_json, demo_code=demo_code)
+    return render_template('bar.html', bar=bar, products=products, products_json=products_json,
+                           demo_code=demo_code, is_demo=is_demo)
 
 @app.route('/<bar_slug>/crimen')
 def crimen_page(bar_slug):
@@ -2723,7 +2726,7 @@ def get_bar_games(bar_slug):
         slug = g["slug"]
         is_active = slug in active_slugs
 
-        if plan in ("gift", "total", "premium"):
+        if plan in ("gift", "total", "premium", "demo"):
             # Acceso ilimitado a todo el catálogo
             is_fixed = False
             available = True
@@ -3008,6 +3011,8 @@ def admin_create_bar():
             active_slugs = ALL_GAMES
         elif plan == 'pro':
             active_slugs = ALL_GAMES  # Pro empieza con todos disponibles; el admin los filtra
+        elif plan == 'demo':
+            active_slugs = []  # Demo nace vacío; el admin elige qué juegos enseñar
         else:  # starter
             active_slugs = STARTER_FIXED  # Los 4 fijos; el libre lo elige el propietario
 

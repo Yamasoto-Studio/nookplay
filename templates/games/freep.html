@@ -367,6 +367,7 @@ async function init() {
     });
     const data = await res.json();
     if (data.error) throw new Error(data.error);
+    if (!Array.isArray(data.deck) || data.deck.length < 20) throw new Error('baraja vacía');
     deck = data.deck;
     showScreen('s-intro');
   } catch (e) {
@@ -403,6 +404,12 @@ function cardsLeft() {
 }
 
 function startDuel() {
+  if (!Array.isArray(deck) || deck.length < 20) {
+    // El deck no se cargó bien: reintentar carga en vez de terminar la partida
+    showScreen('s-loading');
+    init();
+    return;
+  }
   const n1 = document.getElementById('fp-n1').value.trim();
   const n2 = document.getElementById('fp-n2').value.trim();
   // Cierra el teclado antes de pasar a pantalla completa
