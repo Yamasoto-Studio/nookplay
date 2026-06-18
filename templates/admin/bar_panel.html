@@ -11,6 +11,9 @@
   .admin-header-logo img { height: 20px; }
   .admin-logout { font-size: 13px; color: #6B6059; text-decoration: none; padding: 6px 12px; border: 1px solid #E5DDD5; border-radius: 8px; }
 
+  /* Ocultar botones accesibilidad en admin (solo para juegos) */
+  .a11y-container { display: none !important; }
+
   /* Bar hero */
   .admin-bar-hero { background: {{ bar.color_primary }}; border-radius: 14px; padding: 20px; display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
   .admin-bar-logo { width: 56px; height: 56px; border-radius: 10px; background: rgba(255,255,255,0.2); overflow: hidden; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
@@ -44,9 +47,27 @@
   .product-item { border: 1px solid #E5DDD5; border-radius: 12px; padding: 14px; margin-bottom: 10px; }
   .product-item h4 { font-size: 13px; font-weight: 600; color: #6B6059; margin-bottom: 10px; }
 
-  /* Save button */
-  .btn-save { width: 100%; padding: 14px; background: #C4622D; color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit; }
-  .btn-save:hover { opacity: 0.9; }
+  /* Save button - hidden (will be floating) */
+  .btn-save { display: none; }
+
+  /* Floating save button */
+  .btn-save-floating { 
+    position: fixed; 
+    bottom: 20px; right: 16px; z-index: 999; 
+    width: auto; 
+    padding: 12px 20px; 
+    background: #C4622D; 
+    color: #fff; 
+    border: none; 
+    border-radius: 12px; 
+    font-size: 14px; 
+    font-weight: 600; 
+    cursor: pointer; 
+    box-shadow: 0 4px 16px rgba(196, 98, 45, 0.3); 
+    transition: all 0.2s;
+  }
+  .btn-save-floating:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(196, 98, 45, 0.4); }
+  .btn-save-floating:active { transform: translateY(0); }
   .save-success { display: none; text-align: center; color: #22aa55; font-size: 14px; font-weight: 500; margin-top: 10px; }
 
   /* Toggle */
@@ -300,10 +321,11 @@
     </div>
     {% endif %}
 
-    <button type="button" class="btn-save" onclick="saveChanges()">Guardar cambios</button>
-    <div class="save-success" id="save-success">✅ Cambios guardados</div>
-
   </form>
+
+  <!-- Botón guardar flotante -->
+  <button type="button" class="btn-save-floating" onclick="saveChanges()">💾 Guardar</button>
+  <div class="save-success" id="save-success" style="position:fixed; bottom:70px; right:16px; z-index:998; margin:0; padding:10px 16px; border-radius:8px; background:white; box-shadow:0 2px 8px rgba(0,0,0,0.1);">✅ Cambios guardados</div>
 
 
 
@@ -737,32 +759,25 @@ async function saveChanges() {
 
 {% if admin_role != 'superadmin' %}
 <!-- ══ CAMBIAR CONTRASEÑA ══════════════════════════════════════════ -->
-<div style="margin-top:32px; padding-top:24px; border-top:1px solid var(--border);">
-  <h3 style="font-size:15px; font-weight:700; color:var(--text); margin:0 0 16px;">🔑 Cambiar contraseña</h3>
-  <div style="display:flex; flex-direction:column; gap:12px; max-width:400px;">
-    <div>
-      <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px;">Contraseña actual</label>
-      <input type="password" id="cp_current" placeholder="••••••••"
-             style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:var(--bg-subtle); color:var(--text); box-sizing:border-box;">
-    </div>
-    <div>
-      <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px;">Nueva contraseña</label>
-      <input type="password" id="cp_new" placeholder="Mínimo 8 caracteres"
-             style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:var(--bg-subtle); color:var(--text); box-sizing:border-box;">
-    </div>
-    <div>
-      <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px;">Repetir nueva contraseña</label>
-      <input type="password" id="cp_confirm" placeholder="Repite la contraseña"
-             style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:var(--bg-subtle); color:var(--text); box-sizing:border-box;">
-    </div>
-    <div>
-      <button type="button" onclick="changePassword()"
-              style="background:var(--text); color:var(--bg); border:none; border-radius:8px; padding:10px 20px; font-size:14px; font-weight:600; cursor:pointer;">
-        Cambiar contraseña
-      </button>
-      <span id="cp_msg" style="display:none; margin-left:12px; font-size:13px;"></span>
-    </div>
+<div class="form-card" style="margin-bottom: 80px;">
+  <h3>🔑 Cambiar contraseña</h3>
+  <div class="field">
+    <label for="cp_current">Contraseña actual</label>
+    <input type="password" id="cp_current" placeholder="••••••••">
   </div>
+  <div class="field">
+    <label for="cp_new">Nueva contraseña</label>
+    <input type="password" id="cp_new" placeholder="Mínimo 8 caracteres">
+  </div>
+  <div class="field">
+    <label for="cp_confirm">Repetir nueva contraseña</label>
+    <input type="password" id="cp_confirm" placeholder="Repite la contraseña">
+  </div>
+  <button type="button" onclick="changePassword()" 
+          style="width:100%; padding:11px; background:#C4622D; color:#fff; border:none; border-radius:10px; font-size:15px; font-weight:600; cursor:pointer; font-family:inherit; margin-bottom:10px;">
+    Cambiar contraseña
+  </button>
+  <div id="cp_msg" style="display:none; text-align:center; font-size:13px; font-weight:500; padding:8px; border-radius:6px; background:#F0FFF0; color:#22aa55;"></div>
 </div>
 
 <script>
@@ -778,14 +793,17 @@ async function changePassword() {
     body: JSON.stringify({ current_password: current, new_password: newPw, confirm_password: confirm })
   });
   const data = await res.json();
-  msg.style.display = 'inline';
+  msg.style.display = 'block';
   if (data.ok) {
-    msg.style.color = 'green';
+    msg.style.background = '#F0FFF0';
+    msg.style.color = '#22aa55';
     msg.textContent = '✅ Contraseña cambiada correctamente.';
     document.getElementById('cp_current').value = '';
     document.getElementById('cp_new').value = '';
     document.getElementById('cp_confirm').value = '';
+    setTimeout(() => msg.style.display = 'none', 3000);
   } else {
+    msg.style.background = '#FFF5F5';
     msg.style.color = '#c0392b';
     msg.textContent = '⚠️ ' + (data.error || 'Error desconocido');
   }
