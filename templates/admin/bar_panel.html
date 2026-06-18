@@ -12,7 +12,7 @@
   .admin-logout { font-size: 13px; color: #6B6059; text-decoration: none; padding: 6px 12px; border: 1px solid #E5DDD5; border-radius: 8px; }
 
   /* Ocultar botones accesibilidad en admin (solo para juegos) */
-  .a11y-container { display: none !important; }
+  .a11y-toggle { display: none !important; }
 
   /* Bar hero */
   .admin-bar-hero { background: {{ bar.color_primary }}; border-radius: 14px; padding: 20px; display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
@@ -53,7 +53,7 @@
   /* Floating save button */
   .btn-save-floating { 
     position: fixed; 
-    bottom: 20px; right: 16px; z-index: 999; 
+    bottom: 20px; right: 16px; z-index: 1000; 
     width: auto; 
     padding: 12px 20px; 
     background: #C4622D; 
@@ -759,7 +759,7 @@ async function saveChanges() {
 
 {% if admin_role != 'superadmin' %}
 <!-- ══ CAMBIAR CONTRASEÑA ══════════════════════════════════════════ -->
-<div class="form-card" style="margin-bottom: 80px;">
+<div class="form-card" style="margin-bottom: 80px; max-width: 420px; margin-left: auto; margin-right: auto;">
   <h3>🔑 Cambiar contraseña</h3>
   <div class="field">
     <label for="cp_current">Contraseña actual</label>
