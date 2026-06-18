@@ -383,5 +383,15 @@ if bar_yellow:
     print('Juegos de Yellow asignados.')
 
 
+# ── Corrección email admin Yellow ──────────────────────────────────────────
+# Actualiza el email si está registrado con una variante antigua
+db.execute("""
+    UPDATE admin_users
+    SET email = 'yellow.specialty.koffee@gmail.com'
+    WHERE bar_slug = 'yellow'
+      AND email != 'yellow.specialty.koffee@gmail.com'
+""")
+db.commit()
+
 db.close()
 print('✅ DB lista.')

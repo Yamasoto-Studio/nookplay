@@ -893,6 +893,34 @@ def admin_create_user():
         return jsonify({'ok': False, 'error': str(e)}), 500
 
 
+@app.route('/admin/api/change-password', methods=['POST'])
+@admin_required
+def admin_change_password():
+    """Permite a un bar_admin cambiar su propia contraseña."""
+    data = request.get_json()
+    current_pw = data.get('current_password', '').strip()
+    new_pw = data.get('new_password', '').strip()
+    confirm_pw = data.get('confirm_password', '').strip()
+
+    if not current_pw or not new_pw or not confirm_pw:
+        return jsonify({'ok': False, 'error': 'Rellena todos los campos.'}), 400
+    if new_pw != confirm_pw:
+        return jsonify({'ok': False, 'error': 'Las contraseñas nuevas no coinciden.'}), 400
+    if len(new_pw) < 8:
+        return jsonify({'ok': False, 'error': 'La contraseña debe tener al menos 8 caracteres.'}), 400
+
+    db = get_db()
+    user = db.execute("SELECT * FROM admin_users WHERE id = ?", (session['admin_user_id'],)).fetchone()
+    if not user or user['password_hash'] != hash_password(current_pw):
+        db.close()
+        return jsonify({'ok': False, 'error': 'La contraseña actual no es correcta.'}), 403
+
+    db.execute("UPDATE admin_users SET password_hash = ? WHERE id = ?",
+               (hash_password(new_pw), session['admin_user_id']))
+    db.commit()
+    db.close()
+    return jsonify({'ok': True})
+
 
 with app.app_context():
     init_db()
