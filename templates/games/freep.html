@@ -113,19 +113,37 @@ html, body { overscroll-behavior: none; }
 }
 .fp-memory-overlay.show { display: flex; animation: fp-fade-in 0.25s ease; }
 .fp-memory-card {
-  background: #fff; border-radius: 18px; padding: 28px 24px;
-  max-width: 340px; text-align: center;
+  background: #fff; border-radius: 18px; padding: 32px 26px;
+  max-width: 360px; text-align: center;
   box-shadow: 0 12px 40px rgba(0,0,0,0.25);
 }
-.fp-memory-card .ico { font-size: 40px; margin-bottom: 8px; }
-.fp-memory-card h3 { font-size: 20px; font-weight: 800; margin: 0 0 10px; color: var(--bar-accent-dark, #C4622D); }
-.fp-memory-card p { font-size: 14px; line-height: 1.5; color: var(--text-secondary); margin: 0 0 18px; }
+.fp-memory-card .ico { font-size: 48px; margin-bottom: 10px; }
+.fp-memory-card h3 { font-size: 24px; font-weight: 800; margin: 0 0 14px; color: var(--bar-accent-dark, #C4622D); }
+.fp-memory-card p { font-size: 16px; line-height: 1.55; color: var(--text-secondary); margin: 0 0 14px; }
+.fp-memory-card .fp-memory-hint { color: var(--text); }
 .fp-memory-card button {
   background: var(--bar-accent-dark, #C4622D); color: #fff; border: none;
-  border-radius: 10px; padding: 11px 28px; font-size: 15px; font-weight: 700;
-  cursor: pointer; font-family: inherit;
+  border-radius: 12px; padding: 13px 34px; font-size: 17px; font-weight: 800;
+  cursor: pointer; font-family: inherit; margin-top: 4px;
 }
 @keyframes fp-fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+/* Suspense antes del ganador */
+.fp-suspense-overlay {
+  position: fixed; inset: 0; z-index: 1300;
+  display: none; align-items: center; justify-content: center;
+  background: var(--bar-accent-dark, #1A1A1A); padding: 24px;
+}
+.fp-suspense-overlay.show { display: flex; animation: fp-fade-in 0.3s ease; }
+.fp-suspense-text {
+  color: #fff; font-size: 26px; font-weight: 800; text-align: center;
+  animation: fp-suspense-pop 0.5s ease;
+}
+@keyframes fp-suspense-pop {
+  0% { transform: scale(0.7); opacity: 0; }
+  60% { transform: scale(1.08); }
+  100% { transform: scale(1); opacity: 1; }
+}
 
 /* Marcadores de turno (asegurado / en juego) */
 .fp-meters { display: flex; gap: 10px; justify-content: center; margin: 4px 0 18px; }
@@ -163,6 +181,24 @@ html, body { overscroll-behavior: none; }
 .fp-card.reveal-anim { animation: fpFlip 0.28s ease; }
 @keyframes fpFlip { from { transform: rotateY(90deg) scale(0.9); opacity: 0; } to { transform: rotateY(0) scale(1); opacity: 1; } }
 
+/* Sacudida al fallar (enfatiza el error) */
+.fp-card.fp-shake { animation: fpShake 0.5s ease; }
+@keyframes fpShake {
+  0%, 100% { transform: translateX(0); }
+  15% { transform: translateX(-9px) rotate(-3deg); }
+  30% { transform: translateX(8px) rotate(3deg); }
+  45% { transform: translateX(-7px) rotate(-2deg); }
+  60% { transform: translateX(6px) rotate(2deg); }
+  75% { transform: translateX(-4px) rotate(-1deg); }
+}
+
+/* Entrada suave de la carta de referencia al centro */
+.fp-card.fp-settle { animation: fpSettle 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); }
+@keyframes fpSettle {
+  from { transform: scale(0.82) translateY(8px); opacity: 0.4; }
+  to { transform: scale(1) translateY(0); opacity: 1; }
+}
+
 .fp-verdict { min-height: 30px; font-size: 18px; font-weight: 800; margin: 6px 0 12px; }
 .fp-verdict.ok { color: #2E7D32; }
 .fp-verdict.bad { color: #C0392B; }
@@ -184,6 +220,11 @@ html, body { overscroll-behavior: none; }
 .fp-btn.stand { background: var(--bar-bg-subtle); color: var(--text); border: 2px solid var(--border); }
 .fp-btn.go { background: var(--bar-primary); color: var(--bar-primary-text); }
 .fp-btn .big { font-size: 22px; }
+
+/* Botón de inicio de turno a dos líneas, texto mayor */
+.fp-btn.go.two-line { flex-direction: column; gap: 2px; padding: 18px 12px; line-height: 1.15; }
+.fp-btn.go.two-line .lbl { font-size: 17px; font-weight: 700; opacity: 0.92; }
+.fp-btn.go.two-line .nm { font-size: 24px; font-weight: 800; }
 
 /* Ajustes cuando la pantalla de juego está a pantalla completa */
 #s-game.active .fp-turn-head { margin-bottom: 6px; }
@@ -315,10 +356,16 @@ html, body { overscroll-behavior: none; }
 <div class="fp-memory-overlay" id="fp-memory-overlay">
   <div class="fp-memory-card">
     <div class="ico">🧠</div>
-    <h3>¡Empiezan los descartes!</h3>
-    <p>Se acabó la baraja inicial. Ahora se vuelven a jugar las cartas falladas, <b>en el mismo orden y sin barajar</b>. Quien recuerde lo que salió, gana.</p>
-    <button onclick="cerrarAvisoMemoria()">¡Entendido!</button>
+    <h3>¡Ronda de descartes!</h3>
+    <p>Se ha agotado la baraja inicial. Ahora se vuelven a jugar las cartas falladas, <b>en el mismo orden en que cayeron y sin barajar</b>.</p>
+    <p class="fp-memory-hint">Quien recuerde qué cartas salieron antes tiene ventaja. <b>¡Aquí se gana con memoria!</b></p>
+    <button onclick="cerrarAvisoMemoria()">¡Vamos!</button>
   </div>
+</div>
+
+<!-- SUSPENSE: cuenta atrás breve antes de revelar el ganador -->
+<div class="fp-suspense-overlay" id="fp-suspense-overlay">
+  <div class="fp-suspense-text" id="fp-suspense-text">Contando cartas…</div>
 </div>
 
 <!-- RESULTADO -->
@@ -496,7 +543,8 @@ function goHandoff() {
   document.getElementById('ho-sub').innerHTML =
     `${p.name}: <b>${p.pile}</b> · ${rival.name}: <b>${rival.pile}</b><br>` +
     `<span style="opacity:.8">Quedan ${cardsLeft()} cartas por repartir</span>`;
-  document.getElementById('ho-btn').textContent = `Empezar (${p.name})`;
+  document.getElementById('ho-btn').innerHTML = `<span class="lbl">Empezar</span><span class="nm">${p.name}</span>`;
+  document.getElementById('ho-btn').classList.add('two-line');
   showScreen('s-handoff');
 }
 
@@ -574,6 +622,10 @@ function renderRef() {
   const el = document.getElementById('g-ref');
   el.style.background = c;
   el.innerHTML = `<span class="corner tl">${ref}</span>${ref}<span class="corner br">${ref}</span>`;
+  // Animación de asentamiento al centro
+  el.classList.remove('fp-settle', 'fp-shake');
+  void el.offsetWidth;          // reinicia la animación
+  el.classList.add('fp-settle');
 }
 
 function updateMeters() {
@@ -675,11 +727,12 @@ function predict(dir) {
     // FALLO: todo lo en juego se pierde (va al mazo de fallos en orden)
     verdict.textContent = '¡Fallo! Pasa al rival ✘';
     verdict.className = 'fp-verdict bad';
+    nextEl.classList.add('fp-shake');   // sacude la carta revelada para enfatizar el fallo
     for (const card of stack) failPile.push(card);
     failPile.push(next);
     stack = [];
     updateMeters();
-    setTimeout(() => { busy = false; endTurn(); }, 1100);
+    setTimeout(() => { busy = false; endTurn(); }, 1700);
   }
 }
 
@@ -699,6 +752,34 @@ function endTurn() {
 }
 
 function finishGame() {
+  // Secuencia de suspense antes de revelar el ganador
+  const overlay = document.getElementById('fp-suspense-overlay');
+  const txt = document.getElementById('fp-suspense-text');
+  const p1 = players[0], p2 = players[1];
+  overlay.classList.add('show');
+  txt.textContent = 'Contando cartas…';
+
+  setTimeout(() => {
+    txt.style.animation = 'none';
+    void txt.offsetWidth;            // reinicia la animación
+    txt.style.animation = '';
+    txt.textContent = `${p1.name} ${p1.pile} · ${p2.name} ${p2.pile}`;
+  }, 1100);
+
+  setTimeout(() => {
+    txt.style.animation = 'none';
+    void txt.offsetWidth;
+    txt.style.animation = '';
+    txt.textContent = 'Y el ganador es…';
+  }, 2200);
+
+  setTimeout(() => {
+    overlay.classList.remove('show');
+    mostrarResultado();
+  }, 3300);
+}
+
+function mostrarResultado() {
   const p1 = players[0], p2 = players[1];
   const elapsed = Math.floor((Date.now() - startTime) / 1000);
 
