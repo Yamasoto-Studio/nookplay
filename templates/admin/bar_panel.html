@@ -25,6 +25,10 @@
   .code-card { background: #fff; border-radius: 14px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
   .card-title { font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: #A89B91; margin-bottom: 12px; }
   .weekly-code { font-size: 36px; font-weight: 700; letter-spacing: 6px; color: #1A1A1A; font-family: monospace; text-align: center; padding: 16px; background: #F7F2EB; border-radius: 10px; margin-bottom: 8px; }
+  .code-boxes { display: flex; gap: 8px; justify-content: center; margin: 14px 0 10px; flex-wrap: wrap; }
+  .code-box { width: 44px; height: 58px; border: 2px solid #1A1A1A; border-radius: 9px; background: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 30px; font-weight: 800; font-family: ui-monospace, 'SF Mono', monospace; color: #1A1A1A; }
+  .code-print-btn { margin-top: 12px; background: none; border: 1px solid var(--border, #E5DDD5); color: #6B6059; border-radius: 8px; padding: 8px 14px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
+  .code-print-btn:hover { background: #F7F2EB; }
   .code-validity { font-size: 13px; color: #6B6059; text-align: center; }
   .code-hint { font-size: 12px; color: #A89B91; text-align: center; margin-top: 6px; line-height: 1.5; }
 
@@ -107,10 +111,56 @@
   <!-- Código semanal -->
   <div class="code-card">
     <div class="card-title">Código de esta semana</div>
-    <div class="weekly-code">{{ current_code }}</div>
+    <div class="code-boxes" id="code-boxes"></div>
     <div class="code-validity">Válido hasta el {{ valid_until }}</div>
-    <div class="code-hint">Configura este código en tu TPV cada lunes.<br>El lunes siguiente recibirás el nuevo código por WhatsApp.</div>
+    <div class="code-hint">📋 Cópialo en la pizarra de tu barra para que los clientes lo vean al pedir.<br>Cada lunes cambia: entra aquí y actualízalo.</div>
+    <button type="button" class="code-print-btn" onclick="abrirCodigoImprimible()">🖨️ Ver versión para imprimir</button>
   </div>
+
+  <script>
+    // Pinta el código en casillas grandes, carácter a carácter (evita errores al copiarlo)
+    (function() {
+      const code = {{ current_code|tojson }};
+      const cont = document.getElementById('code-boxes');
+      if (!cont) return;
+      cont.innerHTML = '';
+      [...String(code)].forEach(ch => {
+        const box = document.createElement('span');
+        box.className = 'code-box';
+        box.textContent = ch;
+        cont.appendChild(box);
+      });
+    })();
+
+    function abrirCodigoImprimible() {
+      const code = {{ current_code|tojson }};
+      const validez = {{ valid_until|tojson }};
+      const barName = {{ bar.name|tojson }};
+      const w = window.open('', '_blank');
+      w.document.write(`
+        <!DOCTYPE html><html><head><meta charset="utf-8"><title>Código ${barName}</title>
+        <style>
+          @page { margin: 1.5cm; }
+          body { font-family: -apple-system, Segoe UI, Roboto, sans-serif; text-align: center; padding: 40px 20px; color: #1A1A1A; }
+          .marca { font-size: 18px; letter-spacing: 2px; color: #C4622D; font-weight: 800; text-transform: uppercase; margin-bottom: 8px; }
+          .sub { font-size: 15px; color: #6B6059; margin-bottom: 36px; }
+          .label { font-size: 14px; text-transform: uppercase; letter-spacing: 2px; color: #6B6059; margin-bottom: 18px; }
+          .boxes { display: flex; gap: 12px; justify-content: center; margin-bottom: 30px; }
+          .b { width: 84px; height: 110px; border: 3px solid #1A1A1A; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 64px; font-weight: 800; font-family: ui-monospace, monospace; }
+          .val { font-size: 14px; color: #6B6059; }
+          .tip { margin-top: 40px; font-size: 13px; color: #999; }
+        </style></head><body>
+          <div class="marca">Nookplay · ${barName}</div>
+          <div class="sub">Escanea el QR de la ventana y entra este código para jugar</div>
+          <div class="label">Código de esta semana</div>
+          <div class="boxes">${[...String(code)].map(c => '<div class="b">' + c + '</div>').join('')}</div>
+          <div class="val">Válido hasta el ${validez}</div>
+          <div class="tip">Colócalo en la barra, junto al punto de pago.</div>
+        </body></html>`);
+      w.document.close();
+      setTimeout(() => w.print(), 300);
+    }
+  </script>
 
   <!-- Stats mini -->
   <div class="stats-mini">
