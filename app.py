@@ -495,6 +495,64 @@ _pregen_estado = {
 _pregen_lock = _threading.Lock()
 
 
+def _intentar_claim_pregen(ttl=300):
+    """Intenta tomar el lock de pre-generación de forma atómica (entre workers).
+
+    Devuelve True si este proceso ha tomado el lock, False si ya estaba tomado.
+    Usa una transacción IMMEDIATE de SQLite para que solo un worker gane.
+    """
+    ahora = time.time()
+    db = get_db()
+    try:
+        db.execute("CREATE TABLE IF NOT EXISTS app_state (key TEXT PRIMARY KEY, value TEXT DEFAULT '')")
+        db.commit()
+        db.execute("BEGIN IMMEDIATE")
+        row = db.execute("SELECT value FROM app_state WHERE key = 'pregen_running'").fetchone()
+        ocupado = False
+        if row and row['value']:
+            try:
+                ocupado = (ahora - float(row['value'])) < ttl
+            except (ValueError, TypeError):
+                ocupado = False
+        if ocupado:
+            db.execute("ROLLBACK")
+            return False
+        db.execute("INSERT OR REPLACE INTO app_state (key, value) VALUES ('pregen_running', ?)", (str(ahora),))
+        db.execute("COMMIT")
+        return True
+    except Exception:
+        try:
+            db.execute("ROLLBACK")
+        except Exception:
+            pass
+        return False
+    finally:
+        db.close()
+
+
+def _liberar_lock_pregen():
+    """Libera el lock de pre-generación."""
+    try:
+        db = get_db()
+        db.execute("INSERT OR REPLACE INTO app_state (key, value) VALUES ('pregen_running', '')", ())
+        db.commit()
+        db.close()
+    except Exception:
+        pass
+
+
+def pregen_daily_games_scheduled():
+    """Wrapper del cron diario: toma el lock atómico para que solo un worker
+    de gunicorn ejecute la pre-generación de las 6am (evita doble trabajo)."""
+    if not _intentar_claim_pregen():
+        print("[CRON] Pre-generación ya en curso en otro worker; se omite.")
+        return
+    try:
+        pregen_daily_games()
+    finally:
+        _liberar_lock_pregen()
+
+
 def pregen_daily_games():
     """Ejecuta cada día a las 6am — pre-genera los juegos del día para todos los bares."""
     today = str(date.today())
@@ -672,8 +730,8 @@ def start_scheduler():
     scheduler = BackgroundScheduler(timezone=pytz.timezone('Europe/Madrid'))
     # Lunes a las 6am — códigos semanales
     scheduler.add_job(generate_weekly_codes, CronTrigger(day_of_week='mon', hour=6, minute=0))
-    # Cada día a las 6am — pre-generación de juegos
-    scheduler.add_job(pregen_daily_games, CronTrigger(hour=6, minute=0))
+    # Cada día a las 6am — pre-generación de juegos (con lock atómico entre workers)
+    scheduler.add_job(pregen_daily_games_scheduled, CronTrigger(hour=6, minute=0))
     # Cada día a las 4am — copia de seguridad de la BD (antes de la regeneración)
     scheduler.add_job(backup_database, CronTrigger(hour=4, minute=0))
     scheduler.start()
@@ -708,59 +766,43 @@ def admin_pregen_now():
         return jsonify({'ok': False, 'error': 'No autorizado'}), 403
     today = str(date.today())
 
-    # Evitar dos ejecuciones simultáneas (consultando BD, compartida entre workers)
-    dbc = get_db()
-    dbc.execute("CREATE TABLE IF NOT EXISTS app_state (key TEXT PRIMARY KEY, value TEXT DEFAULT '')")
-    dbc.commit()
-    running_row = dbc.execute("SELECT value FROM app_state WHERE key = 'pregen_running'").fetchone()
-    dbc.close()
-    if running_row and running_row['value']:
-        try:
-            if (time.time() - float(running_row['value'])) < 300:
-                return jsonify({'ok': True, 'msg': 'Ya hay una regeneración en curso.', 'corriendo': True})
-        except Exception:
-            pass
+    # Claim atómico del lock a nivel de BD (compartido y seguro entre los 2 workers
+    # de gunicorn). threading.Lock NO basta porque solo aísla hilos del mismo proceso.
+    if not _intentar_claim_pregen():
+        return jsonify({'ok': True, 'msg': 'Ya hay una regeneración en curso.', 'corriendo': True})
 
     def _run():
-        with _pregen_lock:
+        # El lock ya está tomado (claim atómico arriba). Este hilo solo ejecuta.
+        try:
+            # Limpiar errores previos y borrar contenido de hoy para regenerar
+            dbx = get_db()
+            dbx.execute("INSERT OR REPLACE INTO app_state (key, value) VALUES ('pregen_errores', '')", ())
+            dbx.execute("DELETE FROM generated_games WHERE game_date = ?", (today,))
+            dbx.commit()
+            dbx.close()
+            global _game_cache
+            _game_cache = {k: v for k, v in _game_cache.items() if today not in k}
+
+            resumen = pregen_daily_games()
+
+            # Guardar errores y éxitos en BD para diagnóstico
+            errores = resumen['error'] if resumen else []
+            oks = resumen['ok'] if resumen else []
+            dbx2 = get_db()
+            dbx2.execute("INSERT OR REPLACE INTO app_state (key, value) VALUES ('pregen_errores', ?)", ('|||'.join(errores),))
+            dbx2.execute("INSERT OR REPLACE INTO app_state (key, value) VALUES ('pregen_ok', ?)", ('|||'.join(oks),))
+            dbx2.commit()
+            dbx2.close()
+        except Exception as e:
             try:
-                # Marcar inicio en BD (compartido entre workers)
-                dbx = get_db()
-                dbx.execute("INSERT OR REPLACE INTO app_state (key, value) VALUES ('pregen_running', ?)", (str(time.time()),))
-                dbx.execute("INSERT OR REPLACE INTO app_state (key, value) VALUES ('pregen_errores', '')", ())
-                dbx.execute("DELETE FROM generated_games WHERE game_date = ?", (today,))
-                dbx.commit()
-                dbx.close()
-                global _game_cache
-                _game_cache = {k: v for k, v in _game_cache.items() if today not in k}
-
-                resumen = pregen_daily_games()
-
-                # Guardar errores y éxitos en BD para diagnóstico
-                errores = resumen['error'] if resumen else []
-                oks = resumen['ok'] if resumen else []
-                dbx2 = get_db()
-                dbx2.execute("INSERT OR REPLACE INTO app_state (key, value) VALUES ('pregen_errores', ?)", ('|||'.join(errores),))
-                dbx2.execute("INSERT OR REPLACE INTO app_state (key, value) VALUES ('pregen_ok', ?)", ('|||'.join(oks),))
-                dbx2.commit()
-                dbx2.close()
-            except Exception as e:
-                try:
-                    dbx3 = get_db()
-                    dbx3.execute("INSERT OR REPLACE INTO app_state (key, value) VALUES ('pregen_errores', ?)", (f"FATAL: {str(e)[:200]}",))
-                    dbx3.commit()
-                    dbx3.close()
-                except Exception:
-                    pass
-            finally:
-                # Marcar fin (borrar la marca de running)
-                try:
-                    dbf = get_db()
-                    dbf.execute("INSERT OR REPLACE INTO app_state (key, value) VALUES ('pregen_running', '')", ())
-                    dbf.commit()
-                    dbf.close()
-                except Exception:
-                    pass
+                dbx3 = get_db()
+                dbx3.execute("INSERT OR REPLACE INTO app_state (key, value) VALUES ('pregen_errores', ?)", (f"FATAL: {str(e)[:200]}",))
+                dbx3.commit()
+                dbx3.close()
+            except Exception:
+                pass
+        finally:
+            _liberar_lock_pregen()
 
     t = _threading.Thread(target=_run, daemon=True)
     t.start()

@@ -46,6 +46,19 @@
   .demo-wall-card p { font-size: 14px; color: var(--text-secondary); line-height: 1.55; margin-bottom: 12px; }
   .demo-wall-card .demo-wall-foot { font-weight: 700; color: var(--text); }
   .demo-wall-card .btn-primary { width: 100%; margin-top: 6px; }
+
+  /* Banner de racha de visitas (fidelización, datos solo en el navegador) */
+  .streak-banner {
+    background: linear-gradient(135deg, var(--bar-primary) 0%, var(--bar-accent-dark) 100%);
+    color: var(--bar-primary-text, #fff);
+    border-radius: 14px; padding: 12px 16px; margin: 0 0 16px;
+    display: flex; align-items: center; gap: 12px;
+    animation: streak-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .streak-icon { font-size: 28px; line-height: 1; flex-shrink: 0; }
+  .streak-text { font-size: 14px; line-height: 1.35; }
+  .streak-text b { font-weight: 800; }
+  @keyframes streak-in { from { opacity: 0; transform: translateY(-8px) scale(0.96); } to { opacity: 1; transform: none; } }
 </style>
 
 <div class="nook">
@@ -86,6 +99,8 @@
         </div>
         {% endif %}
         <p class="menu-welcome" id="menu-welcome"></p>
+
+        <div id="streak-banner" class="streak-banner" style="display:none;"></div>
 
         <div id="activities-list" class="activities-grid"></div>
 
@@ -363,6 +378,74 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
+// ── Racha de visitas (fidelización) ──────────────────────────────────────
+// Guarda en el navegador del cliente (sin datos personales, sin servidor)
+// cuántos días distintos ha visitado ESTE local y su racha consecutiva.
+// Refuerza el "vuelve mañana" sin ser intrusivo. En demo no se muestra.
+function actualizarRacha() {
+  const banner = document.getElementById('streak-banner');
+  if (!banner || IS_DEMO) { if (banner) banner.style.display = 'none'; return; }
+
+  const KEY = `nookplay_racha_${BAR_SLUG}`;
+  const hoy = new Date().toISOString().slice(0, 10);  // YYYY-MM-DD local
+
+  let datos;
+  try {
+    datos = JSON.parse(localStorage.getItem(KEY)) || null;
+  } catch (_) { datos = null; }
+
+  // Primera visita de siempre a este local
+  if (!datos || !datos.ultimaVisita) {
+    datos = { ultimaVisita: hoy, racha: 1, totalDias: 1 };
+    guardarRacha(KEY, datos);
+    mostrarRacha(banner, '👋', `¡Bienvenido a Nookplay en <b>${BAR_NAME}</b>! Vuelve cada día y encontrarás juegos nuevos.`);
+    return;
+  }
+
+  // Ya ha venido hoy: no recalcular, solo saludar acorde a su racha
+  if (datos.ultimaVisita === hoy) {
+    mostrarMensajeRacha(banner, datos.racha, datos.totalDias);
+    return;
+  }
+
+  // Calcular diferencia de días desde la última visita
+  const ayer = new Date(); ayer.setDate(ayer.getDate() - 1);
+  const ayerStr = ayer.toISOString().slice(0, 10);
+
+  if (datos.ultimaVisita === ayerStr) {
+    // Vino ayer: la racha continúa
+    datos.racha = (datos.racha || 1) + 1;
+  } else {
+    // Saltó uno o más días: la racha se reinicia, pero celebramos el regreso
+    datos.racha = 1;
+  }
+  datos.totalDias = (datos.totalDias || 0) + 1;
+  datos.ultimaVisita = hoy;
+  guardarRacha(KEY, datos);
+  mostrarMensajeRacha(banner, datos.racha, datos.totalDias);
+}
+
+function guardarRacha(key, datos) {
+  try { localStorage.setItem(key, JSON.stringify(datos)); } catch (_) {}
+}
+
+function mostrarMensajeRacha(banner, racha, totalDias) {
+  if (racha >= 2) {
+    const ico = racha >= 5 ? '🔥' : '✨';
+    mostrarRacha(banner, ico, `¡Llevas <b>${racha} días seguidos</b> jugando en ${BAR_NAME}! Hoy hay juegos nuevos.`);
+  } else if (totalDias >= 2) {
+    mostrarRacha(banner, '👏', `¡Qué bien tenerte de vuelta en <b>${BAR_NAME}</b>! Hoy estrenamos juegos.`);
+  } else {
+    // Solo ha venido un día (hoy): mensaje suave de descubrimiento
+    mostrarRacha(banner, '🎲', `Cada día hay juegos nuevos en <b>${BAR_NAME}</b>. ¡Vuelve mañana!`);
+  }
+}
+
+function mostrarRacha(banner, icono, texto) {
+  banner.innerHTML = `<span class="streak-icon">${icono}</span><span class="streak-text">${texto}</span>`;
+  banner.style.display = 'flex';
+}
+
 async function showMenu() {
   if (!ACTIVITIES.length) await loadActivities();
   const welcomeEl = document.getElementById('menu-welcome');
@@ -371,6 +454,8 @@ async function showMenu() {
   customMsg = customMsg.replace(/[\.\s]*Elige tu pasatiempo de hoy\.?/gi, '').trim();
   if (!customMsg) customMsg = `Bienvenido al ${BAR_NAME}.`;
   welcomeEl.innerHTML = `${customMsg}<br><span class="menu-welcome-sub">Elige tu pasatiempo de hoy.</span>`;
+
+  actualizarRacha();
 
   const list = document.getElementById('activities-list');
   // En demo mostramos TODO el catálogo: los activos (elegidos en el admin) son jugables,
