@@ -38,6 +38,48 @@
   .stat-mini-val { font-size: 24px; font-weight: 600; color: #1A1A1A; line-height: 1; }
   .stat-mini-label { font-size: 11px; color: #A89B91; margin-top: 4px; line-height: 1.3; }
 
+  /* Panel de valor / insights del local */
+  .insights-card { background: #fff; border-radius: 14px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+  .insights-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 16px; }
+  .insights-head h3 { font-size: 15px; font-weight: 700; color: #1A1A1A; margin: 0; }
+  .insights-trend { font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 20px; }
+  .insights-trend.up { background: #E6F4EA; color: #1E7E34; }
+  .insights-trend.down { background: #FDECEA; color: #C0392B; }
+  .insights-trend.flat { background: #F2EBE3; color: #6B6059; }
+  .insights-hero { text-align: center; padding: 6px 0 18px; }
+  .insights-hero-num { font-size: 44px; font-weight: 800; color: var(--bar-accent-dark, #C4622D); line-height: 1; }
+  .insights-hero-lbl { font-size: 13px; color: #6B6059; margin-top: 4px; }
+  /* Mini gráfico de barras por día */
+  .insights-chart { display: flex; align-items: flex-end; justify-content: space-between; gap: 6px; height: 80px; margin: 8px 0 18px; padding: 0 4px; }
+  .insights-bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 4px; }
+  .insights-bar { width: 100%; max-width: 28px; background: var(--bar-accent-dark, #C4622D); border-radius: 5px 5px 0 0; min-height: 3px; transition: height 0.4s ease; opacity: 0.85; }
+  .insights-bar.today { opacity: 1; box-shadow: 0 0 0 2px rgba(196,98,45,0.25); }
+  .insights-bar-day { font-size: 10px; color: #A89B91; font-weight: 600; }
+  .insights-bar-val { font-size: 10px; color: #6B6059; font-weight: 700; }
+  /* Tarjetas de highlights */
+  .insights-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .insight-tile { background: #F9F5F0; border-radius: 10px; padding: 12px; }
+  .insight-tile-ico { font-size: 18px; margin-bottom: 4px; }
+  .insight-tile-val { font-size: 15px; font-weight: 700; color: #1A1A1A; line-height: 1.2; }
+  .insight-tile-lbl { font-size: 11px; color: #A89B91; margin-top: 2px; }
+  .insights-empty { text-align: center; padding: 20px 10px; color: #A89B91; font-size: 13px; line-height: 1.5; }
+  .insights-empty .big { font-size: 30px; display: block; margin-bottom: 8px; }
+  .insights-hint-hour { font-size: 11px; color: #A89B91; margin-top: 10px; text-align: center; font-style: italic; }
+
+  /* Guía de onboarding */
+  .onboard-card { background: linear-gradient(135deg, #FFF8F2 0%, #FDF1E7 100%); border: 1px solid #F0DDC9; border-radius: 14px; padding: 18px 20px; margin-bottom: 16px; }
+  .onboard-toggle { display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; }
+  .onboard-toggle h3 { font-size: 14px; font-weight: 700; color: #1A1A1A; margin: 0; }
+  .onboard-chevron { font-size: 13px; color: #C4622D; transition: transform 0.2s; }
+  .onboard-card.open .onboard-chevron { transform: rotate(180deg); }
+  .onboard-body { display: none; margin-top: 14px; }
+  .onboard-card.open .onboard-body { display: block; }
+  .onboard-step { display: flex; gap: 12px; margin-bottom: 14px; align-items: flex-start; }
+  .onboard-step:last-child { margin-bottom: 0; }
+  .onboard-num { flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; background: #C4622D; color: #fff; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+  .onboard-step-txt { font-size: 13px; line-height: 1.45; color: #5C5048; }
+  .onboard-step-txt b { color: #1A1A1A; }
+
   /* Form sections */
   .form-card { background: #fff; border-radius: 14px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
   .form-card h3 { font-size: 15px; font-weight: 600; color: #1A1A1A; margin-bottom: 16px; }
@@ -162,21 +204,119 @@
     }
   </script>
 
-  <!-- Stats mini -->
-  <div class="stats-mini">
-    <div class="stat-mini-card">
-      <div class="stat-mini-val">{{ stats.today }}</div>
-      <div class="stat-mini-label">Partidas hoy</div>
+  <!-- Guía rápida (onboarding) -->
+  <div class="onboard-card" id="onboard-card">
+    <div class="onboard-toggle" onclick="document.getElementById('onboard-card').classList.toggle('open')">
+      <h3>👋 Cómo funciona Nookplay en tu local</h3>
+      <span class="onboard-chevron">▼</span>
     </div>
-    <div class="stat-mini-card">
-      <div class="stat-mini-val">{{ stats.week }}</div>
-      <div class="stat-mini-label">Esta semana</div>
-    </div>
-    <div class="stat-mini-card">
-      <div class="stat-mini-val">{{ stats.pct_correct }}%</div>
-      <div class="stat-mini-label">Han acertado</div>
+    <div class="onboard-body">
+      <div class="onboard-step">
+        <div class="onboard-num">1</div>
+        <div class="onboard-step-txt"><b>Pega el vinilo con el QR</b> en la ventana o la entrada. Es fijo, se pone una vez y no cambia nunca.</div>
+      </div>
+      <div class="onboard-step">
+        <div class="onboard-num">2</div>
+        <div class="onboard-step-txt"><b>Cada lunes, copia el código</b> que ves arriba en una pizarra junto a la barra o el punto de pago. Cambia cada semana: así para jugar hay que estar en tu local.</div>
+      </div>
+      <div class="onboard-step">
+        <div class="onboard-num">3</div>
+        <div class="onboard-step-txt"><b>Tus clientes escanean y juegan.</b> Escanean el QR, escriben el código y acceden a juegos nuevos cada día mientras consumen.</div>
+      </div>
+      <div class="onboard-step">
+        <div class="onboard-num">4</div>
+        <div class="onboard-step-txt"><b>Personaliza desde aquí abajo:</b> mensaje de bienvenida, despedida, tus productos y los juegos activos. Recuerda pulsar <b>Guardar</b>.</div>
+      </div>
     </div>
   </div>
+
+  <!-- Panel de valor: tu semana en Nookplay -->
+  <div class="insights-card">
+    <div class="insights-head">
+      <h3>📊 Tu semana en Nookplay</h3>
+      {% if analytics.has_data and analytics.trend_pct is not none %}
+        {% if analytics.trend_dir == 'up' %}
+          <span class="insights-trend up">↑ {{ analytics.trend_pct }}% vs. semana pasada</span>
+        {% elif analytics.trend_dir == 'down' %}
+          <span class="insights-trend down">↓ {{ analytics.trend_pct }}% vs. semana pasada</span>
+        {% else %}
+          <span class="insights-trend flat">≈ estable</span>
+        {% endif %}
+      {% endif %}
+    </div>
+
+    {% if analytics.has_data %}
+      <div class="insights-hero">
+        <div class="insights-hero-num">{{ analytics.week }}</div>
+        <div class="insights-hero-lbl">partidas esta semana · {{ analytics.today }} hoy</div>
+      </div>
+
+      {% if analytics.daily %}
+      <div class="insights-chart" id="insights-chart" data-max="{{ analytics.best_day_count }}">
+        {% for d in analytics.daily %}
+          <div class="insights-bar-col">
+            <span class="insights-bar-val">{{ d.count if d.count else '' }}</span>
+            <div class="insights-bar{% if loop.last %} today{% endif %}" data-count="{{ d.count }}"></div>
+            <span class="insights-bar-day">{{ d.dia }}</span>
+          </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <div class="insights-grid">
+        {% if analytics.best_day %}
+        <div class="insight-tile">
+          <div class="insight-tile-ico">📅</div>
+          <div class="insight-tile-val">{{ analytics.best_day }}</div>
+          <div class="insight-tile-lbl">tu día más activo</div>
+        </div>
+        {% endif %}
+        {% if analytics.has_hour_data %}
+        <div class="insight-tile">
+          <div class="insight-tile-ico">🕐</div>
+          <div class="insight-tile-val">{{ analytics.best_hour }}</div>
+          <div class="insight-tile-lbl">franja con más juego</div>
+        </div>
+        {% endif %}
+        {% if analytics.top_game_name %}
+        <div class="insight-tile">
+          <div class="insight-tile-ico">🎯</div>
+          <div class="insight-tile-val">{{ analytics.top_game_name }}</div>
+          <div class="insight-tile-lbl">el favorito de tus clientes</div>
+        </div>
+        {% endif %}
+        <div class="insight-tile">
+          <div class="insight-tile-ico">📆</div>
+          <div class="insight-tile-val">{{ analytics.active_days }} {{ 'día' if analytics.active_days == 1 else 'días' }}</div>
+          <div class="insight-tile-lbl">con actividad esta semana</div>
+        </div>
+      </div>
+
+      {% if not analytics.has_hour_data %}
+      <div class="insights-hint-hour">Los datos por franja horaria aparecerán según se vaya jugando.</div>
+      {% endif %}
+    {% else %}
+      <div class="insights-empty">
+        <span class="big">🌱</span>
+        Aún no hay partidas esta semana.<br>
+        En cuanto tus clientes empiecen a jugar, aquí verás qué días y horas funcionan mejor y qué juego engancha más.
+      </div>
+    {% endif %}
+  </div>
+
+  <script>
+    // Dibuja las alturas del mini-gráfico de barras proporcionalmente
+    (function() {
+      const chart = document.getElementById('insights-chart');
+      if (!chart) return;
+      const max = Math.max(1, parseInt(chart.dataset.max) || 1);
+      chart.querySelectorAll('.insights-bar').forEach(bar => {
+        const c = parseInt(bar.dataset.count) || 0;
+        const pct = c === 0 ? 0 : Math.max(8, (c / max) * 100);
+        requestAnimationFrame(() => { bar.style.height = pct + '%'; });
+      });
+    })();
+  </script>
 
   <!-- Formulario -->
   <form id="admin-form">

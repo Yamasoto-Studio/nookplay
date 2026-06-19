@@ -373,6 +373,12 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 import pytz
 
+_TZ_MADRID = pytz.timezone('Europe/Madrid')
+
+def now_madrid_iso():
+    """Devuelve el timestamp actual en hora local de Madrid, formato ISO (YYYY-MM-DD HH:MM:SS)."""
+    return datetime.now(_TZ_MADRID).strftime('%Y-%m-%d %H:%M:%S')
+
 def generate_weekly_codes():
     """Ejecuta cada lunes a las 6am — genera códigos semanales para todos los bares."""
     from datetime import timedelta
@@ -628,14 +634,50 @@ def pregen_daily_games():
     db.close()
     return resumen
 
+def backup_database():
+    """Copia de seguridad diaria de la BD usando la API segura de SQLite.
+
+    Usa sqlite3 .backup() (consistente incluso con escrituras en curso, a
+    diferencia de copiar el fichero). Guarda en /data/backups y mantiene
+    solo los últimos 7 días para no llenar el disco.
+    """
+    import os as _os
+    import glob as _glob
+    try:
+        backup_dir = '/data/backups'
+        _os.makedirs(backup_dir, exist_ok=True)
+        hoy = date.today().strftime('%Y-%m-%d')
+        destino = _os.path.join(backup_dir, f'nookplay-{hoy}.db')
+
+        origen = sqlite3.connect('/data/nookplay.db', timeout=30)
+        dest = sqlite3.connect(destino)
+        with dest:
+            origen.backup(dest)
+        dest.close()
+        origen.close()
+
+        # Rotación: conservar solo los 7 backups más recientes
+        backups = sorted(_glob.glob(_os.path.join(backup_dir, 'nookplay-*.db')))
+        for viejo in backups[:-7]:
+            try:
+                _os.remove(viejo)
+            except OSError:
+                pass
+        print(f"[BACKUP] Copia creada: {destino} ({len(backups[-7:])} copias conservadas)")
+    except Exception as e:
+        print(f"[BACKUP] Error al hacer copia de seguridad: {e}")
+
+
 def start_scheduler():
     scheduler = BackgroundScheduler(timezone=pytz.timezone('Europe/Madrid'))
     # Lunes a las 6am — códigos semanales
     scheduler.add_job(generate_weekly_codes, CronTrigger(day_of_week='mon', hour=6, minute=0))
     # Cada día a las 6am — pre-generación de juegos
     scheduler.add_job(pregen_daily_games, CronTrigger(hour=6, minute=0))
+    # Cada día a las 4am — copia de seguridad de la BD (antes de la regeneración)
+    scheduler.add_job(backup_database, CronTrigger(hour=4, minute=0))
     scheduler.start()
-    print("[SCHEDULER] Iniciado — códigos lunes 6am, juegos diarios 6am")
+    print("[SCHEDULER] Iniciado — códigos lunes 6am, juegos diarios 6am, backup diario 4am")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Admin routes
@@ -816,6 +858,113 @@ def admin_logout():
     session.clear()
     return redirect('/admin/login')
 
+def calcular_analytics_bar(db, bar_slug):
+    """Calcula métricas de valor para el dueño del local.
+
+    Devuelve un dict con la "historia" de la semana: volumen, tendencia,
+    día y franja horaria más activos, y juego favorito. Pensado para
+    justificar la suscripción mostrando uso real, no datos vacíos.
+
+    Nota sobre los datos: la tabla `plays` deduplica por (código, día, juego),
+    así que cada registro = "un juego distinto jugado por una mesa ese día".
+    Es una medida de actividad/cobertura, no de pulsaciones brutas.
+    """
+    from datetime import timedelta
+    hoy = date.today()
+    monday = hoy - timedelta(days=hoy.weekday())
+    monday_prev = monday - timedelta(days=7)
+    sunday_prev = monday - timedelta(days=1)
+
+    a = {
+        'week': 0, 'today': 0, 'prev_week': 0, 'trend_pct': None, 'trend_dir': 'flat',
+        'best_day': None, 'best_day_count': 0,
+        'best_hour': None, 'best_hour_count': 0,
+        'top_game': None, 'top_game_count': 0,
+        'active_days': 0, 'has_data': False, 'has_hour_data': False,
+        'daily': [],  # lista de {dia, count} de la semana actual para mini-gráfico
+    }
+
+    # Volumen semana actual y hoy
+    a['week'] = db.execute(
+        "SELECT COUNT(*) n FROM plays WHERE bar_slug=? AND played_on>=?",
+        (bar_slug, str(monday))).fetchone()['n']
+    a['today'] = db.execute(
+        "SELECT COUNT(*) n FROM plays WHERE bar_slug=? AND played_on=?",
+        (bar_slug, str(hoy))).fetchone()['n']
+
+    if a['week'] == 0:
+        return a
+    a['has_data'] = True
+
+    # Semana anterior (para tendencia)
+    a['prev_week'] = db.execute(
+        "SELECT COUNT(*) n FROM plays WHERE bar_slug=? AND played_on>=? AND played_on<=?",
+        (bar_slug, str(monday_prev), str(sunday_prev))).fetchone()['n']
+    if a['prev_week'] > 0:
+        diff = (a['week'] - a['prev_week']) / a['prev_week'] * 100
+        a['trend_pct'] = round(abs(diff))
+        a['trend_dir'] = 'up' if diff > 5 else ('down' if diff < -5 else 'flat')
+
+    # Reparto por día de la semana actual
+    dias_es = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
+    por_dia = db.execute(
+        "SELECT played_on, COUNT(*) n FROM plays WHERE bar_slug=? AND played_on>=? GROUP BY played_on",
+        (bar_slug, str(monday))).fetchall()
+    conteo_dia = {r['played_on']: r['n'] for r in por_dia}
+    a['active_days'] = len(conteo_dia)
+    for i in range(7):
+        d = monday + timedelta(days=i)
+        if d > hoy:
+            break
+        c = conteo_dia.get(str(d), 0)
+        a['daily'].append({'dia': dias_es[i][:3], 'count': c})
+        if c > a['best_day_count']:
+            a['best_day_count'] = c
+            a['best_day'] = dias_es[i]
+
+    # Franja horaria más activa (requiere played_at; solo registros nuevos lo tienen)
+    filas_hora = db.execute(
+        "SELECT played_at FROM plays WHERE bar_slug=? AND played_on>=? AND played_at!=''",
+        (bar_slug, str(monday))).fetchall()
+    if filas_hora:
+        from collections import Counter
+        horas = Counter()
+        for r in filas_hora:
+            try:
+                h = int(r['played_at'][11:13])
+                horas[h] += 1
+            except (ValueError, IndexError):
+                continue
+        if horas:
+            a['has_hour_data'] = True
+            top_h, top_c = horas.most_common(1)[0]
+            a['best_hour'] = f"{top_h:02d}:00–{(top_h+1)%24:02d}:00"
+            a['best_hour_count'] = top_c
+
+    # Juego favorito de la semana
+    top_juego = db.execute(
+        "SELECT game_type, COUNT(*) n FROM plays WHERE bar_slug=? AND played_on>=? GROUP BY game_type ORDER BY n DESC LIMIT 1",
+        (bar_slug, str(monday))).fetchone()
+    if top_juego:
+        a['top_game'] = top_juego['game_type']
+        a['top_game_count'] = top_juego['n']
+
+    return a
+
+
+# Nombres legibles de los juegos (para mostrar al dueño del local)
+GAME_NOMBRES = {
+    'crimen': 'El Crimen del Día', 'impostor': 'El Impostor', 'dilema': 'El Dilema',
+    'conexiones': 'Conexiones', 'oraculo': 'El Oráculo', 'donde': '¿Dónde está?',
+    'local': 'Conexión Local', 'veredicto': 'El Veredicto', 'perfil': 'El Perfil',
+    'vestuario': 'El Vestuario', 'sinopsis': 'La Sinopsis', 'muertes': 'Muertes Célebres',
+    'letra': 'Adivina la Letra', 'pensamiento': 'El Mismo Pensamiento',
+    'menteagil': 'Mente Ágil', 'constitucion': '¿Tú la has leído?', 'poema': 'El Poema',
+    'freep': 'Freep', 'reinas': 'Las Reinas', 'equilibrio': 'Equilibrio',
+    'carta': 'La Carta', 'orden': 'En Orden',
+}
+
+
 @app.route('/admin/<bar_slug>')
 @admin_required
 def admin_bar(bar_slug):
@@ -852,10 +1001,15 @@ def admin_bar(bar_slug):
         (bar_slug, str(monday))
     ).fetchone()['n']
     pct_correct = round((correct_week / stats_week * 100)) if stats_week > 0 else 0
+    analytics = calcular_analytics_bar(db, bar_slug)
     db.close()
     stats = {'today': stats_today, 'week': stats_week, 'pct_correct': pct_correct}
+    # Nombre legible del juego favorito
+    if analytics.get('top_game'):
+        analytics['top_game_name'] = GAME_NOMBRES.get(analytics['top_game'], analytics['top_game'])
     return render_template('admin/bar_panel.html', bar=bar, products=products,
                            current_code=current_code, valid_until=valid_until_str, stats=stats,
+                           analytics=analytics,
                            admin_role=session.get('admin_role','bar_admin'))
 
 @app.route('/admin/api/save', methods=['POST'])
@@ -1043,10 +1197,28 @@ def impostor_page(bar_slug):
 # API — Validación de acceso
 # --------------------------------------------------------------------------
 
+def _normalizar_codigo(raw):
+    """Normaliza el código tecleado por el cliente para tolerar errores comunes.
+
+    Los códigos usan el alfabeto ABCDEFGHJKLMNPQRSTUVWXYZ23456789 (sin O, I, 0, 1
+    para evitar confusiones visuales). La normalización es deliberadamente
+    conservadora: limpia espacios y separadores y pasa a mayúsculas, pero NO
+    intenta "adivinar" letras confundibles (mapear O->0, I->1, etc.), porque un
+    autocorrección equivocada podría validar un código distinto al real. Es más
+    seguro que el cliente reintente que arriesgar un acceso erróneo.
+    """
+    if not raw:
+        return ''
+    s = raw.strip().upper()
+    for sep in (' ', '-', '_', '.', '·', '\t'):
+        s = s.replace(sep, '')
+    return s
+
+
 @app.route('/api/validate', methods=['POST'])
 def validate_code():
     data = request.get_json()
-    code = data.get('code', '').strip().upper()
+    code = _normalizar_codigo(data.get('code', ''))
     bar_slug = data.get('bar_slug', '').strip()
     today = str(date.today())
 
@@ -1057,6 +1229,10 @@ def validate_code():
         db.close()
         return jsonify({'valid': False, 'message': 'Local no encontrado.'})
 
+    if not code:
+        db.close()
+        return jsonify({'valid': False, 'message': 'Escribe el código que aparece en la barra.'})
+
     # Buscar código válido esta semana
     valid = db.execute("""
         SELECT code FROM access_codes
@@ -1065,7 +1241,8 @@ def validate_code():
 
     if not valid:
         db.close()
-        return jsonify({'valid': False, 'message': 'Código no válido o caducado.'})
+        return jsonify({'valid': False,
+                        'message': 'Ese código no nos cuadra. Revisa la pizarra de la barra y vuelve a intentarlo — son 5 caracteres.'})
 
     # Registrar acceso (solo analytics)
     db.execute("INSERT INTO access_log (bar_id, code_used) VALUES (?, ?)", (bar['id'], code))
@@ -1213,8 +1390,8 @@ def register_play():
 
     if not played:
         db.execute(
-            "INSERT INTO plays (code, bar_slug, played_on, correct, game_type, choice, elapsed) VALUES (?,?,?,?,?,?,?)",
-            (code, bar_slug, today, 1 if correct else 0, game_type, choice, elapsed)
+            "INSERT INTO plays (code, bar_slug, played_on, correct, game_type, choice, elapsed, played_at) VALUES (?,?,?,?,?,?,?,?)",
+            (code, bar_slug, today, 1 if correct else 0, game_type, choice, elapsed, now_madrid_iso())
         )
         db.commit()
     db.close()
@@ -1919,8 +2096,8 @@ def pensamiento_responder():
         db = get_db()
         norm = _normalizar_respuesta(respuesta)
         db.execute(
-            "INSERT INTO plays (code, bar_slug, game_type, played_on, correct, elapsed, answer_text) VALUES (?,?,?,?,?,?,?)",
-            (code, bar_slug, 'pensamiento', today, 1, elapsed, norm)
+            "INSERT INTO plays (code, bar_slug, game_type, played_on, correct, elapsed, answer_text, played_at) VALUES (?,?,?,?,?,?,?,?)",
+            (code, bar_slug, 'pensamiento', today, 1, elapsed, norm, now_madrid_iso())
         )
         db.commit()
 
