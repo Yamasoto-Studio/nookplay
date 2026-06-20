@@ -49,14 +49,15 @@
 
   /* Banner de racha de visitas (fidelización, datos solo en el navegador) */
   .streak-banner {
-    background: linear-gradient(135deg, var(--bar-primary) 0%, var(--bar-accent-dark) 100%);
-    color: var(--bar-primary-text, #fff);
-    border-radius: 14px; padding: 12px 16px; margin: 0 0 16px;
+    background: var(--bar-bg-subtle);
+    color: var(--bar-accent-dark);
+    border-left: 4px solid var(--bar-primary);
+    border-radius: 12px; padding: 12px 16px; margin: 0 0 16px;
     display: flex; align-items: center; gap: 12px;
     animation: streak-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
-  .streak-icon { font-size: 28px; line-height: 1; flex-shrink: 0; }
-  .streak-text { font-size: 14px; line-height: 1.35; }
+  .streak-icon { font-size: 26px; line-height: 1; flex-shrink: 0; }
+  .streak-text { font-size: 14px; line-height: 1.35; color: var(--bar-accent-dark); }
   .streak-text b { font-weight: 800; }
   @keyframes streak-in { from { opacity: 0; transform: translateY(-8px) scale(0.96); } to { opacity: 1; transform: none; } }
 </style>
