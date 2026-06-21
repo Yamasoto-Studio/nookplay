@@ -1376,6 +1376,89 @@ Devuelve SOLO un objeto JSON válido, sin markdown, donde "correcta" es el índi
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# NUEVOS_JUEGOS_AQUI
+# ─────────────────────────────────────────────────────────────────────────────
+
+def generate_titular(bar_slug, evitar=None):
+    today = str(date.today())
+    api_key = os.environ.get('ANTHROPIC_API_KEY')
+    seed = get_day_seed(bar_slug)
+
+    prompt = """Eres el creador de un juego para bares llamado "El Titular Imposible". Muestras un titular de noticia surrealista y el jugador decide si es REAL (ocurrio de verdad) o FALSO (inventado).
+
+FECHA: """ + today + """
+SEED: """ + str(seed) + """
+
+INSTRUCCIONES - sigue este orden:
+
+PASO 1: Decide al azar (segun el SEED) si el titular del dia sera REAL o FALSO.
+
+PASO 2A - Si es REAL:
+- Elige una noticia real, verificable y genuinamente sorprendente o absurda (sucesos curiosos, estudios cientificos raros, records insolitos, hechos historicos extranos).
+- Redacta el titular como apareceria en un periodico, sin exagerar ni inventar.
+- En "explicacion" cuenta brevemente el contexto real: que paso de verdad, donde y por que. Que el jugador piense "no me lo puedo creer, pero es cierto".
+
+PASO 2B - Si es FALSO:
+- Inventa un titular plausible pero falso, en el mismo tono que los reales.
+- Que sea creible: ni demasiado obvio ni imposible de descartar.
+- En "explicacion" aclara que es inventado y anade una curiosidad REAL relacionada con el tema, para que el jugador igualmente aprenda algo ("Aunque esto no ocurrio, lo que si es cierto es que...").
+
+REGLAS:
+- El titular: 1 frase, estilo periodistico, en espanol.
+- Nada ofensivo, politico-partidista ni morboso. Tono divertido y de sobremesa.
+- La "explicacion": 2-3 frases, amena.
+
+Devuelve SOLO un objeto JSON valido, sin markdown:
+{
+  "titular": "El titular de la noticia, una sola frase.",
+  "es_real": true,
+  "explicacion": "Si es real: el contexto veridico. Si es falso: que es inventado + una curiosidad real relacionada.",
+  "tema": "palabra o dos que resuman el tema (para no repetir)"
+}""" + _bloque_evitar(evitar)
+
+    return _post_ia(prompt, 700, api_key)
+
+
+def generate_definicion(bar_slug, evitar=None):
+    today = str(date.today())
+    api_key = os.environ.get('ANTHROPIC_API_KEY')
+    seed = get_day_seed(bar_slug)
+
+    prompt = """Eres el creador de un juego de vocabulario para bares llamado "La Definicion Falsa". Muestras una palabra real poco conocida del espanol y 4 definiciones; solo una es la verdadera del diccionario. El jugador adivina cual.
+
+FECHA: """ + today + """
+SEED: """ + str(seed) + """
+
+INSTRUCCIONES - sigue este orden exacto:
+
+PASO 1: Elige una palabra del espanol REAL y recogida en el diccionario, poco conocida pero bonita o curiosa, que merezca la pena aprender (ej: "gablete", "cazcalear", "bochinche", "albur", "perendengue"). Varia segun el SEED. Evita palabras vulgares o demasiado tecnicas.
+
+PASO 2: Escribe su definicion REAL del diccionario, en lenguaje sencillo y breve.
+
+PASO 3: Inventa 3 definiciones FALSAS pero muy creibles, en el mismo estilo y registro que la real. Que sean plausibles y dificiles de descartar.
+
+PASO 4: Coloca la definicion real en una posicion aleatoria (0-3) e indica su indice en "correcta".
+
+PASO 5: Escribe una frase de ejemplo usando la palabra correctamente, para que el jugador aprenda a "lucirla".
+
+REGLAS:
+- Las 4 definiciones deben tener una longitud y un tono parecidos (que no destaque la real por ser mas larga o mas formal).
+- Todo en espanol.
+
+Devuelve SOLO un objeto JSON valido, sin markdown:
+{
+  "palabra": "la palabra del dia",
+  "opciones": ["definicion A", "definicion B", "definicion C", "definicion D"],
+  "correcta": 2,
+  "ejemplo": "Frase de ejemplo usando la palabra correctamente.",
+  "origen": "Breve apunte sobre su origen o curiosidad, 1 frase (puede quedar vacio)."
+}""" + _bloque_evitar(evitar)
+
+    return _post_ia(prompt, 800, api_key)
+
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Muertes Absurdas generator
 # ─────────────────────────────────────────────────────────────────────────────
 

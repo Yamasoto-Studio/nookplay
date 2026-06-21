@@ -332,6 +332,8 @@ for slug, name, desc, pos in [
     ('constitucion', '¿Tú la has leído?', 'Test sobre la Constitución', 20),
     ('orden', 'El Orden', 'Ordena 5 cosas sin fallar', 21),
     ('freep', 'Freep', 'Duelo de más o menos · 2 jugadores', 22),
+    ('titular', 'El Titular Imposible', '¿Noticia real o inventada?', 23),
+    ('definicion', 'La Definición Falsa', 'Aprende una palabra nueva', 24),
 ]:
     if not db.execute("SELECT id FROM games WHERE slug = ?", (slug,)).fetchone():
         db.execute(
@@ -355,8 +357,10 @@ ORDEN_JUEGOS = {
     'impostor': 16, 'muertes': 17, 'oraculo': 18, 'local': 19,
     # Reto mental / conocimiento
     'menteagil': 20, 'constitucion': 21,
+    # Curiosidad / cultura general (nuevos)
+    'titular': 22, 'definicion': 23,
     # Creativo / generativo
-    'poema': 22,
+    'poema': 24,
 }
 for slug, pos in ORDEN_JUEGOS.items():
     db.execute("UPDATE games SET position = ? WHERE slug = ?", (pos, slug))
