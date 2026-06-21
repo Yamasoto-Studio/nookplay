@@ -26,7 +26,7 @@ html, body { overscroll-behavior: none; }
 .dv-handoff { text-align: center; }
 .dv-handoff-ico { font-size: 48px; margin-bottom: 12px; }
 .dv-handoff h2 { font-size: 22px; font-weight: 800; color: var(--text); margin-bottom: 8px; }
-.dv-handoff p { font-size: 14px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 20px; }
+.dv-handoff p { font-size: 14px; color: var(--text-secondary); line-height: 1.55; margin-bottom: 28px; }
 
 .dv-field { text-align: left; margin-bottom: 14px; }
 .dv-field label { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
@@ -93,6 +93,7 @@ html, body { overscroll-behavior: none; }
     <h2 id="ho-title">Pásale el móvil a...</h2>
     <p id="ho-sub"></p>
     <button class="btn-primary" id="ho-btn" onclick="comenzarTurno()" style="width:100%;">Estoy listo</button>
+    <button class="btn-back-game" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Salir al menú</button>
   </div>
 </div>
 
@@ -117,6 +118,7 @@ html, body { overscroll-behavior: none; }
     <p class="dv-hint-secreto">🔒 Que el otro jugador no mire la pantalla.</p>
 
     <button class="btn-primary" onclick="confirmarEscritura()" style="width:100%;">Listo, pasar el móvil</button>
+    <button class="btn-back-game" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Salir al menú</button>
   </div>
 </div>
 
@@ -129,6 +131,7 @@ html, body { overscroll-behavior: none; }
     <div id="g-statements"></div>
 
     <button class="btn-primary" id="g-confirmar" onclick="confirmarAdivinanza()" style="display:none; width:100%; margin-top:6px;">Esta es la mentira</button>
+    <button class="btn-back-game" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Salir al menú</button>
   </div>
 </div>
 
@@ -143,6 +146,7 @@ html, body { overscroll-behavior: none; }
     </div>
     <div class="dv-progreso" id="r-progreso"></div>
     <button class="btn-primary" onclick="siguienteRonda()" style="width:100%;" id="r-next-btn">Siguiente ronda</button>
+    <button class="btn-back-game" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Salir al menú</button>
   </div>
 </div>
 

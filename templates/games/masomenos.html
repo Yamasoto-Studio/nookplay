@@ -23,11 +23,17 @@ html, body { overscroll-behavior: none; }
 .mm-name-row label { font-size: 13px; font-weight: 600; color: var(--text-secondary); width: 80px; flex-shrink: 0; }
 .mm-name-row input { flex: 1; padding: 11px 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 15px; font-family: inherit; background: var(--bar-bg-subtle); color: var(--text); }
 
-.mm-handoff-ico { font-size: 48px; margin-bottom: 12px; }
-.mm-handoff h2 { font-size: 22px; font-weight: 800; color: var(--text); margin-bottom: 8px; }
-.mm-handoff p { font-size: 14px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 20px; }
+.mm-handoff-ico { font-size: 48px; margin-bottom: 14px; }
+.mm-handoff h2 { font-size: 22px; font-weight: 800; color: var(--text); margin-bottom: 10px; }
+.mm-handoff p { font-size: 14px; color: var(--text-secondary); line-height: 1.55; margin-bottom: 28px; }
 
-.mm-turno-tag { font-size: 13px; font-weight: 700; color: var(--bar-accent-dark); margin-bottom: 8px; }
+.mm-turno-tag {
+  display: inline-block;
+  font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  padding: 4px 14px; border-radius: 20px;
+  background: var(--bar-primary); color: var(--bar-primary-text);
+  margin: 0 auto 16px;
+}
 .mm-pregunta { font-size: 17px; font-weight: 700; color: var(--text); margin-bottom: 18px; line-height: 1.35; }
 
 .mm-opciones { display: flex; flex-direction: column; gap: 12px; margin-bottom: 12px; }
@@ -99,6 +105,7 @@ html, body { overscroll-behavior: none; }
     <h2 id="ho-title"></h2>
     <p id="ho-sub"></p>
     <button class="btn-primary" onclick="comenzarTurno()" style="width:100%;">Estoy listo</button>
+    <button class="btn-back-game" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Salir al menú</button>
   </div>
 </div>
 
@@ -112,6 +119,7 @@ html, body { overscroll-behavior: none; }
       <div class="mm-vs">VS</div>
       <button class="mm-op" id="op-1" onclick="elegir(1)"></button>
     </div>
+    <button class="btn-back-game" onclick="window.location='/{{ bar.slug }}?code=' + CODE" style="margin-top:18px;">← Salir al menú</button>
   </div>
 </div>
 
@@ -127,6 +135,7 @@ html, body { overscroll-behavior: none; }
     </div>
     <div class="mm-progreso" id="r-progreso"></div>
     <button class="btn-primary" onclick="siguienteRonda()" style="width:100%;" id="r-next-btn">Siguiente</button>
+    <button class="btn-back-game" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Salir al menú</button>
   </div>
 </div>
 
