@@ -1,0 +1,275 @@
+{% extends "game_base.html" %}
+{% block title %}Más o Menos — {{ bar.name }}{% endblock %}
+{% block og_title %}Más o Menos · duelo de cifras — {{ bar.name }}{% endblock %}
+{% block og_description %}¿Cuál es mayor? Reta a quien tengas enfrente a adivinar cifras curiosas. Un juego para dos en {{ bar.name }} con Nookplay.{% endblock %}
+{% block og_url %}/{{ bar.slug }}/masomenos{% endblock %}
+
+{% block game_content %}
+<style>
+html, body { overscroll-behavior: none; }
+.nook { touch-action: manipulation; }
+
+.mm-wrap { text-align: center; }
+.mm-lead { font-size: 14px; color: var(--text-secondary); line-height: 1.55; margin-bottom: 18px; }
+.mm-badge-dobles { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; background: var(--bar-bg-subtle); color: var(--bar-accent-dark); border: 1px solid var(--border); border-radius: 20px; padding: 4px 12px; margin-bottom: 14px; }
+
+.mm-rules { text-align: left; background: var(--bar-bg-subtle); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 14px 16px; font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 18px; }
+.mm-rules b { color: var(--text); }
+.mm-rules ol { margin: 8px 0 0; padding-left: 20px; }
+.mm-rules li { margin-bottom: 5px; }
+
+.mm-names { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
+.mm-name-row { display: flex; align-items: center; gap: 10px; text-align: left; }
+.mm-name-row label { font-size: 13px; font-weight: 600; color: var(--text-secondary); width: 80px; flex-shrink: 0; }
+.mm-name-row input { flex: 1; padding: 11px 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 15px; font-family: inherit; background: var(--bar-bg-subtle); color: var(--text); }
+
+.mm-handoff-ico { font-size: 48px; margin-bottom: 12px; }
+.mm-handoff h2 { font-size: 22px; font-weight: 800; color: var(--text); margin-bottom: 8px; }
+.mm-handoff p { font-size: 14px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 20px; }
+
+.mm-turno-tag { font-size: 13px; font-weight: 700; color: var(--bar-accent-dark); margin-bottom: 8px; }
+.mm-pregunta { font-size: 17px; font-weight: 700; color: var(--text); margin-bottom: 18px; line-height: 1.35; }
+
+.mm-opciones { display: flex; flex-direction: column; gap: 12px; margin-bottom: 12px; }
+.mm-op {
+  padding: 20px 16px; border-radius: var(--radius-md);
+  border: 2px solid var(--border); background: var(--bar-bg-subtle);
+  font-size: 18px; font-weight: 700; color: var(--text);
+  cursor: pointer; font-family: inherit; transition: all 0.15s;
+}
+.mm-op:hover { border-color: var(--bar-primary); }
+.mm-op .mm-valor { display: block; font-size: 22px; font-weight: 800; margin-top: 8px; }
+.mm-op.ganadora { border-color: #2E7D32; background: #F0FFF4; }
+.mm-op.ganadora .mm-valor { color: #2E7D32; }
+.mm-op.perdedora { border-color: var(--border); opacity: 0.6; }
+.mm-op.elegida-mal { border-color: #C0392B; background: #FFF0EE; }
+.mm-op.disabled { pointer-events: none; }
+
+.mm-vs { font-size: 13px; font-weight: 800; color: var(--text-muted); margin: 2px 0; }
+
+.mm-resultado { text-align: center; padding: 14px; border-radius: var(--radius-md); margin: 14px 0; font-size: 17px; font-weight: 800; }
+.mm-resultado.acierto { background: #F0FFF4; color: #2E7D32; border: 2px solid #81C784; }
+.mm-resultado.fallo { background: #FFF0EE; color: #C0392B; border: 2px solid #F1948A; }
+.mm-dato { font-size: 13px; color: var(--text-secondary); line-height: 1.5; font-weight: 500; margin-top: 6px; }
+
+.mm-marcador { display: flex; justify-content: center; gap: 24px; margin-bottom: 16px; }
+.mm-marcador-col { text-align: center; }
+.mm-marcador-num { font-size: 30px; font-weight: 800; color: var(--bar-accent-dark); }
+.mm-marcador-nom { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+.mm-progreso { font-size: 12px; color: var(--text-muted); margin-bottom: 14px; }
+</style>
+
+<!-- LOADING -->
+<div class="screen active" id="s-loading">
+  <div class="loading"><div class="loading-spinner"></div><p>Preparando el duelo de cifras...</p></div>
+</div>
+
+<!-- INTRO -->
+<div class="screen" id="s-intro">
+  <div class="mm-wrap">
+    <div class="mm-badge-dobles">👥 Para dos jugadores</div>
+    <div class="game-tag" style="display:block;text-align:center;width:fit-content;margin:0 auto 12px;">Más o Menos</div>
+    <h2 class="headline" style="margin-bottom:6px;">Duelo de cifras</h2>
+    <p class="mm-lead">Un móvil, dos jugadores, por turnos.<br>¿Cuál de las dos cosas tiene la cifra <b>más alta</b>?</p>
+
+    <div class="mm-rules">
+      <b>Cómo se juega:</b>
+      <ol>
+        <li>En tu turno aparecen <b>dos cosas</b>. Elige cuál crees que tiene la cifra <b>mayor</b>.</li>
+        <li>Se revela quién gana y un dato curioso.</li>
+        <li>Pasas el móvil: le toca al rival con una pregunta nueva.</li>
+        <li>Gana quien <b>más aciertos</b> tenga tras 6 rondas (3 cada uno).</li>
+      </ol>
+    </div>
+
+    <div class="mm-names">
+      <div class="mm-name-row"><label>Jugador 1</label><input id="mm-n1" maxlength="14" placeholder="Jugador 1"></div>
+      <div class="mm-name-row"><label>Jugador 2</label><input id="mm-n2" maxlength="14" placeholder="Jugador 2"></div>
+    </div>
+
+    <button class="btn-primary" onclick="empezar()" style="width:100%;">Empezar duelo</button>
+    <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
+  </div>
+</div>
+
+<!-- RELEVO -->
+<div class="screen" id="s-handoff">
+  <div class="mm-wrap">
+    <div class="mm-handoff-ico">🤝</div>
+    <h2 id="ho-title"></h2>
+    <p id="ho-sub"></p>
+    <button class="btn-primary" onclick="comenzarTurno()" style="width:100%;">Estoy listo</button>
+  </div>
+</div>
+
+<!-- JUEGO -->
+<div class="screen" id="s-game">
+  <div class="mm-wrap">
+    <div class="mm-turno-tag" id="g-turno"></div>
+    <div class="mm-pregunta" id="g-pregunta"></div>
+    <div class="mm-opciones">
+      <button class="mm-op" id="op-0" onclick="elegir(0)"></button>
+      <div class="mm-vs">VS</div>
+      <button class="mm-op" id="op-1" onclick="elegir(1)"></button>
+    </div>
+  </div>
+</div>
+
+<!-- RESULTADO DE RONDA -->
+<div class="screen" id="s-round">
+  <div class="mm-wrap">
+    <div class="mm-resultado" id="r-resultado"></div>
+    <div class="mm-opciones" id="r-opciones" style="margin-bottom:10px;"></div>
+    <div class="mm-dato" id="r-dato"></div>
+    <div class="mm-marcador" style="margin-top:16px;">
+      <div class="mm-marcador-col"><div class="mm-marcador-num" id="r-p1">0</div><div class="mm-marcador-nom" id="r-n1"></div></div>
+      <div class="mm-marcador-col"><div class="mm-marcador-num" id="r-p2">0</div><div class="mm-marcador-nom" id="r-n2"></div></div>
+    </div>
+    <div class="mm-progreso" id="r-progreso"></div>
+    <button class="btn-primary" onclick="siguienteRonda()" style="width:100%;" id="r-next-btn">Siguiente</button>
+  </div>
+</div>
+
+<!-- FINAL -->
+<div class="screen" id="s-final">
+  <div class="mm-wrap">
+    <div class="mm-resultado acierto" id="f-resultado" style="font-size:22px;"></div>
+    <div class="mm-marcador" style="margin-top:8px;">
+      <div class="mm-marcador-col"><div class="mm-marcador-num" id="f-p1">0</div><div class="mm-marcador-nom" id="f-n1"></div></div>
+      <div class="mm-marcador-col"><div class="mm-marcador-num" id="f-p2">0</div><div class="mm-marcador-nom" id="f-n2"></div></div>
+    </div>
+    <button class="btn-primary" onclick="location.reload()" style="width:100%; margin-top:8px;">↻ Jugar otra vez</button>
+    <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
+    <div class="tomorrow">Mañana, otro duelo de cifras.<br>{{ bar.tomorrow_message or 'Vuelve a tomar un café.' }}</div>
+  </div>
+</div>
+
+<script>
+const BAR_SLUG = "{{ bar.slug }}";
+const BAR_NAME = "{{ bar.name }}";
+const CODE = new URLSearchParams(window.location.search).get('code') || '';
+
+let players = [{name:'Jugador 1', score:0}, {name:'Jugador 2', score:0}];
+let rondas = [];
+let ronda = 0;       // índice 0..5
+let turno = 0;
+let eleccion = null;
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+async function init() {
+  try {
+    const res = await fetch('/api/masomenos', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG })
+    });
+    const data = await res.json();
+    rondas = (data.rondas || []).slice(0, 6);
+    if (rondas.length < 2) throw new Error('pocas rondas');
+    showScreen('s-intro');
+  } catch(e) {
+    document.getElementById('s-loading').innerHTML = `
+      <div class="error-msg">No se pudo cargar el duelo.<br>
+      <button class="btn-secondary" onclick="location.reload()">Reintentar</button></div>`;
+  }
+}
+
+function empezar() {
+  players[0].name = document.getElementById('mm-n1').value.trim() || 'Jugador 1';
+  players[1].name = document.getElementById('mm-n2').value.trim() || 'Jugador 2';
+  players[0].score = 0; players[1].score = 0;
+  ronda = 0; turno = 0;
+  irRelevo();
+}
+
+function irRelevo() {
+  document.getElementById('ho-title').textContent = `Turno de ${players[turno].name}`;
+  document.getElementById('ho-sub').innerHTML = `Ronda ${ronda + 1} de ${rondas.length}.<br>${players[turno].name}, coge el móvil.`;
+  showScreen('s-handoff');
+}
+
+function comenzarTurno() {
+  const r = rondas[ronda];
+  eleccion = null;
+  document.getElementById('g-turno').textContent = `${players[turno].name}, elige:`;
+  document.getElementById('g-pregunta').textContent = r.pregunta || '¿Cuál es mayor?';
+  const op0 = document.getElementById('op-0');
+  const op1 = document.getElementById('op-1');
+  op0.className = 'mm-op'; op1.className = 'mm-op';
+  op0.innerHTML = r.a.nombre;
+  op1.innerHTML = r.b.nombre;
+  showScreen('s-game');
+}
+
+function elegir(i) {
+  if (eleccion !== null) return;
+  eleccion = i;
+  const r = rondas[ronda];
+  const acerto = (i === r.mayor);
+  if (acerto) players[turno].score++;
+
+  // Revelar valores
+  const banner = document.getElementById('r-resultado');
+  if (acerto) {
+    banner.className = 'mm-resultado acierto';
+    banner.textContent = `✅ ¡Acierto de ${players[turno].name}!`;
+  } else {
+    banner.className = 'mm-resultado fallo';
+    banner.textContent = `❌ Falló ${players[turno].name}`;
+  }
+
+  document.getElementById('r-opciones').innerHTML = [r.a, r.b].map((el, idx) => {
+    let cls = 'mm-op disabled';
+    if (idx === r.mayor) cls += ' ganadora';
+    else if (idx === eleccion) cls += ' elegida-mal';
+    else cls += ' perdedora';
+    return `<div class="${cls}">${el.nombre}<span class="mm-valor">${el.valor}</span></div>`;
+  }).join('<div class="mm-vs">VS</div>');
+
+  document.getElementById('r-dato').textContent = r.dato || '';
+  document.getElementById('r-p1').textContent = players[0].score;
+  document.getElementById('r-p2').textContent = players[1].score;
+  document.getElementById('r-n1').textContent = players[0].name;
+  document.getElementById('r-n2').textContent = players[1].name;
+  document.getElementById('r-progreso').textContent = `Ronda ${ronda + 1} de ${rondas.length}`;
+  document.getElementById('r-next-btn').textContent = (ronda + 1 >= rondas.length) ? 'Ver resultado final' : 'Siguiente';
+  showScreen('s-round');
+
+  if (ronda + 1 >= rondas.length) {
+    fetch('/api/play', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG, correct: true, game_type: 'masomenos', choice: -1, elapsed: 0 })
+    }).catch(() => {});
+  }
+}
+
+function siguienteRonda() {
+  if (ronda + 1 >= rondas.length) { mostrarFinal(); return; }
+  ronda++;
+  turno = 1 - turno;
+  irRelevo();
+}
+
+function mostrarFinal() {
+  const f = document.getElementById('f-resultado');
+  if (players[0].score > players[1].score) {
+    f.className = 'mm-resultado acierto'; f.textContent = `🏆 ¡Gana ${players[0].name}!`;
+  } else if (players[1].score > players[0].score) {
+    f.className = 'mm-resultado acierto'; f.textContent = `🏆 ¡Gana ${players[1].name}!`;
+  } else {
+    f.className = 'mm-resultado fallo'; f.textContent = `🤝 ¡Empate!`;
+  }
+  document.getElementById('f-p1').textContent = players[0].score;
+  document.getElementById('f-p2').textContent = players[1].score;
+  document.getElementById('f-n1').textContent = players[0].name;
+  document.getElementById('f-n2').textContent = players[1].name;
+  showScreen('s-final');
+}
+
+init();
+</script>
+{% endblock %}

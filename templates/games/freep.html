@@ -65,6 +65,18 @@ html, body { overscroll-behavior: none; }
 .fp-rules ul { margin: 8px 0 0; padding-left: 18px; }
 .fp-rules li { margin-bottom: 5px; }
 
+.fp-promo {
+  display: flex; gap: 12px; align-items: flex-start;
+  background: var(--bar-bg-subtle); border: 1px solid var(--border);
+  border-left: 4px solid var(--bar-primary);
+  border-radius: var(--radius-md); padding: 14px; margin: 14px 0 18px;
+}
+.fp-promo-ico { font-size: 26px; line-height: 1; flex-shrink: 0; }
+.fp-promo-txt { font-size: 13px; line-height: 1.5; color: var(--text-secondary); }
+.fp-promo-txt b { color: var(--text); }
+.fp-promo-link { display: inline-block; margin-top: 6px; font-weight: 700; color: var(--bar-accent-dark); text-decoration: none; }
+.fp-promo-link:hover { text-decoration: underline; }
+
 .fp-names { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
 .fp-name-row { display: flex; align-items: center; gap: 10px; }
 .fp-name-row label { font-size: 13px; font-weight: 700; color: var(--text-muted); width: 78px; text-align: left; flex-shrink: 0; }
@@ -306,6 +318,14 @@ html, body { overscroll-behavior: none; }
         <li><b>¡Empate!</b> → aseguras ese par al instante y la referencia retrocede.</li>
         <li>Las cartas falladas vuelven a jugarse <b>sin barajar</b>. Quien recuerde el orden, manda.</li>
       </ul>
+    </div>
+
+    <div class="fp-promo">
+      <div class="fp-promo-ico">🃏</div>
+      <div class="fp-promo-txt">
+        Esta es la versión digital de Freep. El <b>juego de mesa original</b> incluye <b>cartas especiales</b> (comodines, robos y giros) que lo hacen mucho más estratégico y divertido.
+        <a href="https://www.amazon.es/dp/B0XXXXXXX" target="_blank" rel="noopener" class="fp-promo-link">Consíguelo aquí →</a>
+      </div>
     </div>
 
     <div class="fp-names">

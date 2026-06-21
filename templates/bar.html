@@ -47,6 +47,19 @@
   .demo-wall-card .demo-wall-foot { font-weight: 700; color: var(--text); }
   .demo-wall-card .btn-primary { width: 100%; margin-top: 6px; }
 
+  /* Separador de grupo en el menú (juegos a dobles) */
+  .grid-divider {
+    grid-column: 1 / -1;
+    display: flex; align-items: center; gap: 12px;
+    margin: 6px 2px 0;
+    font-size: 12px; font-weight: 700; letter-spacing: 0.3px;
+    color: var(--text-secondary);
+  }
+  .grid-divider::before, .grid-divider::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+  .grid-divider span { flex-shrink: 0; }
+
   /* Banner de racha de visitas (fidelización, datos solo en el navegador) */
   .streak-banner {
     background: var(--bar-bg-subtle);
@@ -464,9 +477,19 @@ async function showMenu() {
   const activeGames = IS_DEMO ? ACTIVITIES.slice() : ACTIVITIES.filter(a => a.active);
   const hasHidden = !IS_DEMO && ACTIVITIES.length > activeGames.length;
 
+  // Juegos a dobles (2 jugadores, 1 móvil). Van agrupados al final con un separador.
+  const DOBLES = ['freep', 'dosverdades', 'masomenos'];
+  let dividerInsertado = false;
+
   list.innerHTML = activeGames.map(a => {
     const locked = IS_DEMO && !a.active;
-    return `
+    let divider = '';
+    // Insertar el separador justo antes del primer juego a dobles
+    if (!dividerInsertado && DOBLES.includes(a.slug)) {
+      dividerInsertado = true;
+      divider = `<div class="grid-divider"><span>👥 Para jugar en pareja</span></div>`;
+    }
+    return divider + `
     <div class="activity-card-grid${locked ? ' locked' : ''}" onclick="${locked ? 'showDemoWall()' : `startActivity('${a.slug}')`}">
       ${locked ? '<div class="lock-badge">🔒</div>' : ''}
       <div class="activity-img-wrap">

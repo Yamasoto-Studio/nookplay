@@ -1458,6 +1458,48 @@ Devuelve SOLO un objeto JSON valido, sin markdown:
 
 
 
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Más o Menos (a dobles) — duelo de cifras: ¿cuál es mayor?
+# ─────────────────────────────────────────────────────────────────────────────
+
+def generate_masomenos(bar_slug, evitar=None):
+    today = str(date.today())
+    api_key = os.environ.get('ANTHROPIC_API_KEY')
+    seed = get_day_seed(bar_slug)
+
+    prompt = """Eres el creador de un juego para bares llamado "Mas o Menos", a dobles. En cada ronda se muestran DOS cosas reales con una cifra oculta (poblacion, precio, ano, distancia, peso, duracion...) y el jugador apuesta cual tiene la cifra MAYOR.
+
+FECHA: """ + today + """
+SEED: """ + str(seed) + """
+
+INSTRUCCIONES:
+- Genera 6 rondas. Cada ronda son dos elementos comparables por una misma magnitud real y verificable.
+- Varia las magnitudes entre rondas (no todas de poblacion): poblacion de ciudades, ano de un invento/pelicula, altura de edificios/montanas, numero de algo, distancia, etc.
+- Que sean de cultura general y curiosas, ni demasiado obvias ni imposibles. Cero ambiguedad: la cifra real debe ser objetiva.
+- Indica el valor real de cada elemento y cual es el mayor (0 = el primero, 1 = el segundo).
+- Incluye una breve explicacion con el dato curioso de la ronda.
+- Todo en espanol. Nada ofensivo ni politico-partidista.
+
+Devuelve SOLO un objeto JSON valido, sin markdown:
+{
+  "rondas": [
+    {
+      "pregunta": "Que tiene MAS habitantes?",
+      "magnitud": "habitantes",
+      "a": {"nombre": "Sevilla", "valor": "688.000"},
+      "b": {"nombre": "Zaragoza", "valor": "675.000"},
+      "mayor": 0,
+      "dato": "Sevilla supera por poco a Zaragoza como cuarta ciudad de Espana."
+    }
+  ]
+}
+Genera exactamente 6 rondas variadas.""" + _bloque_evitar(evitar)
+
+    return _post_ia(prompt, 1500, api_key)
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Muertes Absurdas generator
 # ─────────────────────────────────────────────────────────────────────────────

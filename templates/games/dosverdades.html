@@ -1,0 +1,323 @@
+{% extends "game_base.html" %}
+{% block title %}Dos Verdades, Una Mentira — {{ bar.name }}{% endblock %}
+{% block og_title %}Dos Verdades, Una Mentira · a dobles — {{ bar.name }}{% endblock %}
+{% block og_description %}Reta a quien tengas enfrente: escribe dos verdades y una mentira sobre ti. ¿Sabrá pillar el farol? Un juego para dos en {{ bar.name }} con Nookplay.{% endblock %}
+{% block og_url %}/{{ bar.slug }}/dosverdades{% endblock %}
+
+{% block game_content %}
+<style>
+html, body { overscroll-behavior: none; }
+.nook { touch-action: manipulation; }
+
+.dv-wrap { text-align: center; }
+.dv-lead { font-size: 14px; color: var(--text-secondary); line-height: 1.55; margin-bottom: 18px; }
+.dv-badge-dobles { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; background: var(--bar-bg-subtle); color: var(--bar-accent-dark); border: 1px solid var(--border); border-radius: 20px; padding: 4px 12px; margin-bottom: 14px; }
+
+.dv-rules { text-align: left; background: var(--bar-bg-subtle); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 14px 16px; font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 18px; }
+.dv-rules b { color: var(--text); }
+.dv-rules ol { margin: 8px 0 0; padding-left: 20px; }
+.dv-rules li { margin-bottom: 5px; }
+
+.dv-names { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
+.dv-name-row { display: flex; align-items: center; gap: 10px; text-align: left; }
+.dv-name-row label { font-size: 13px; font-weight: 600; color: var(--text-secondary); width: 80px; flex-shrink: 0; }
+.dv-name-row input { flex: 1; padding: 11px 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 15px; font-family: inherit; background: var(--bar-bg-subtle); color: var(--text); }
+
+.dv-handoff { text-align: center; }
+.dv-handoff-ico { font-size: 48px; margin-bottom: 12px; }
+.dv-handoff h2 { font-size: 22px; font-weight: 800; color: var(--text); margin-bottom: 8px; }
+.dv-handoff p { font-size: 14px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 20px; }
+
+.dv-field { text-align: left; margin-bottom: 14px; }
+.dv-field label { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+.dv-field .dv-tag { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+.dv-field .dv-tag.verdad { background: #E6F4EA; color: #1E7E34; }
+.dv-field .dv-tag.mentira { background: #FDECEA; color: #C0392B; }
+.dv-field input { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 15px; font-family: inherit; background: var(--bar-bg-subtle); color: var(--text); box-sizing: border-box; }
+.dv-hint-secreto { font-size: 12px; color: var(--text-muted); text-align: center; margin: 4px 0 16px; font-style: italic; }
+
+.dv-statement { width: 100%; padding: 16px; margin-bottom: 10px; border-radius: var(--radius-md); border: 2px solid var(--border); background: var(--bar-bg-subtle); font-size: 15px; font-weight: 500; color: var(--text); cursor: pointer; font-family: inherit; text-align: left; line-height: 1.4; transition: all 0.15s; }
+.dv-statement:hover { border-color: var(--bar-primary); }
+.dv-statement.selected { border-color: var(--bar-primary); border-width: 2.5px; background: var(--bar-bg); }
+.dv-statement.es-mentira { border-color: #C0392B; background: #FFF0EE; }
+.dv-statement.es-verdad { border-color: #2E7D32; background: #F0FFF4; }
+.dv-statement.disabled { pointer-events: none; }
+.dv-statement .dv-st-label { display: block; font-size: 10px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; margin-top: 6px; }
+.dv-statement.es-mentira .dv-st-label { color: #C0392B; }
+.dv-statement.es-verdad .dv-st-label { color: #2E7D32; }
+
+.dv-resultado { text-align: center; padding: 20px 16px; border-radius: var(--radius-md); margin-bottom: 16px; font-size: 20px; font-weight: 800; }
+.dv-resultado.acierto { background: #F0FFF4; color: #2E7D32; border: 2px solid #81C784; }
+.dv-resultado.fallo { background: #FFF0EE; color: #C0392B; border: 2px solid #F1948A; }
+.dv-resultado .dv-res-sub { font-size: 13px; font-weight: 500; opacity: 0.85; margin-top: 4px; }
+
+.dv-marcador { display: flex; justify-content: center; gap: 24px; margin-bottom: 18px; }
+.dv-marcador-col { text-align: center; }
+.dv-marcador-num { font-size: 32px; font-weight: 800; color: var(--bar-accent-dark); }
+.dv-marcador-nom { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+.dv-progreso { font-size: 12px; color: var(--text-muted); margin-bottom: 16px; }
+</style>
+
+<!-- INTRO -->
+<div class="screen active" id="s-intro">
+  <div class="dv-wrap">
+    <div class="dv-badge-dobles">👥 Para dos jugadores</div>
+    <div class="game-tag" style="display:block;text-align:center;width:fit-content;margin:0 auto 12px;">Dos Verdades, Una Mentira</div>
+    <h2 class="headline" style="margin-bottom:6px;">¿Sabrás pillar el farol?</h2>
+    <p class="dv-lead">Un móvil, dos jugadores, por turnos.<br>Escribe cosas sobre ti... y una mentira. El otro tendrá que adivinarla.</p>
+
+    <div class="dv-rules">
+      <b>Cómo se juega:</b>
+      <ol>
+        <li>En tu turno, escribe <b>dos verdades y una mentira</b> sobre ti (sin que el otro mire).</li>
+        <li>Pasas el móvil. El rival lee las tres y señala <b>cuál cree que es la mentira</b>.</li>
+        <li>Si la pilla, punto para él. Si se equivoca, punto para ti.</li>
+        <li>Os turnáis. Gana quien tenga más puntos tras <b>6 rondas</b>.</li>
+      </ol>
+    </div>
+
+    <div class="dv-names">
+      <div class="dv-name-row"><label>Jugador 1</label><input id="dv-n1" maxlength="14" placeholder="Jugador 1"></div>
+      <div class="dv-name-row"><label>Jugador 2</label><input id="dv-n2" maxlength="14" placeholder="Jugador 2"></div>
+    </div>
+
+    <button class="btn-primary" onclick="empezar()" style="width:100%;">Empezar</button>
+    <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
+  </div>
+</div>
+
+<!-- RELEVO -->
+<div class="screen" id="s-handoff">
+  <div class="dv-handoff">
+    <div class="dv-handoff-ico">🤝</div>
+    <h2 id="ho-title">Pásale el móvil a...</h2>
+    <p id="ho-sub"></p>
+    <button class="btn-primary" id="ho-btn" onclick="comenzarTurno()" style="width:100%;">Estoy listo</button>
+  </div>
+</div>
+
+<!-- ESCRIBIR (jugador en turno escribe sus 3 frases) -->
+<div class="screen" id="s-write">
+  <div class="dv-wrap">
+    <div class="game-tag" style="display:block;text-align:center;width:fit-content;margin:0 auto 14px;">Tu turno, <span id="w-nombre"></span></div>
+    <p class="dv-lead" style="margin-bottom:14px;">Escribe <b>dos cosas verdaderas</b> y <b>una mentira</b> sobre ti. ¡Que cueste distinguirlas!</p>
+
+    <div class="dv-field">
+      <label><span class="dv-tag verdad">Verdad</span> Algo cierto sobre ti</label>
+      <input id="w-v1" maxlength="120" placeholder="Ej: Una vez vi a un famoso en el metro">
+    </div>
+    <div class="dv-field">
+      <label><span class="dv-tag verdad">Verdad</span> Otra cosa cierta</label>
+      <input id="w-v2" maxlength="120" placeholder="Ej: Sé tocar la guitarra">
+    </div>
+    <div class="dv-field">
+      <label><span class="dv-tag mentira">Mentira</span> Algo falso pero creíble</label>
+      <input id="w-m1" maxlength="120" placeholder="Ej: He corrido un maratón">
+    </div>
+    <p class="dv-hint-secreto">🔒 Que el otro jugador no mire la pantalla.</p>
+
+    <button class="btn-primary" onclick="confirmarEscritura()" style="width:100%;">Listo, pasar el móvil</button>
+  </div>
+</div>
+
+<!-- ADIVINAR (el otro jugador elige la mentira) -->
+<div class="screen" id="s-guess">
+  <div class="dv-wrap">
+    <div class="game-tag" style="display:block;text-align:center;width:fit-content;margin:0 auto 14px;"><span id="g-nombre"></span>, ¿cuál es la mentira?</div>
+    <p class="dv-lead" style="margin-bottom:16px;">Una de estas tres es falsa. Señala cuál crees que es <b>la mentira</b>.</p>
+
+    <div id="g-statements"></div>
+
+    <button class="btn-primary" id="g-confirmar" onclick="confirmarAdivinanza()" style="display:none; width:100%; margin-top:6px;">Esta es la mentira</button>
+  </div>
+</div>
+
+<!-- RESULTADO DE RONDA -->
+<div class="screen" id="s-round">
+  <div class="dv-wrap">
+    <div class="dv-resultado" id="r-resultado"></div>
+    <div id="r-statements" style="margin-bottom:18px;"></div>
+    <div class="dv-marcador">
+      <div class="dv-marcador-col"><div class="dv-marcador-num" id="r-p1">0</div><div class="dv-marcador-nom" id="r-n1"></div></div>
+      <div class="dv-marcador-col"><div class="dv-marcador-num" id="r-p2">0</div><div class="dv-marcador-nom" id="r-n2"></div></div>
+    </div>
+    <div class="dv-progreso" id="r-progreso"></div>
+    <button class="btn-primary" onclick="siguienteRonda()" style="width:100%;" id="r-next-btn">Siguiente ronda</button>
+  </div>
+</div>
+
+<!-- FINAL -->
+<div class="screen" id="s-final">
+  <div class="dv-wrap">
+    <div class="dv-resultado acierto" id="f-resultado" style="font-size:24px;"></div>
+    <div class="dv-marcador" style="margin-top:8px;">
+      <div class="dv-marcador-col"><div class="dv-marcador-num" id="f-p1">0</div><div class="dv-marcador-nom" id="f-n1"></div></div>
+      <div class="dv-marcador-col"><div class="dv-marcador-num" id="f-p2">0</div><div class="dv-marcador-nom" id="f-n2"></div></div>
+    </div>
+    <button class="btn-primary" onclick="location.reload()" style="width:100%; margin-top:8px;">↻ Jugar otra vez</button>
+    <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
+    <div class="tomorrow">{{ bar.tomorrow_message or 'Vuelve a tomar un café.' }}</div>
+  </div>
+</div>
+
+<script>
+const BAR_SLUG = "{{ bar.slug }}";
+const BAR_NAME = "{{ bar.name }}";
+const CODE = new URLSearchParams(window.location.search).get('code') || '';
+const TOTAL_RONDAS = 6;
+
+let players = [{name:'Jugador 1', score:0}, {name:'Jugador 2', score:0}];
+let ronda = 1;
+let turno = 0;          // quién ESCRIBE este turno (0 ó 1)
+let frases = [];        // [{texto, esMentira}] en orden mostrado
+let idxMentira = -1;    // posición de la mentira tras barajar
+let eleccion = null;
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function empezar() {
+  const n1 = document.getElementById('dv-n1').value.trim();
+  const n2 = document.getElementById('dv-n2').value.trim();
+  players[0].name = n1 || 'Jugador 1';
+  players[1].name = n2 || 'Jugador 2';
+  ronda = 1; turno = 0;
+  players[0].score = 0; players[1].score = 0;
+  irRelevo();
+}
+
+function irRelevo() {
+  // Quien ESCRIBE es 'turno'; quien ADIVINA es el otro
+  document.getElementById('ho-title').textContent = `Le toca a ${players[turno].name}`;
+  document.getElementById('ho-sub').innerHTML = `Ronda ${ronda} de ${TOTAL_RONDAS}.<br>${players[turno].name}, coge el móvil. El otro, ¡sin mirar!`;
+  showScreen('s-handoff');
+}
+
+function comenzarTurno() {
+  document.getElementById('w-nombre').textContent = players[turno].name;
+  document.getElementById('w-v1').value = '';
+  document.getElementById('w-v2').value = '';
+  document.getElementById('w-m1').value = '';
+  showScreen('s-write');
+}
+
+function confirmarEscritura() {
+  const v1 = document.getElementById('w-v1').value.trim();
+  const v2 = document.getElementById('w-v2').value.trim();
+  const m1 = document.getElementById('w-m1').value.trim();
+  if (!v1 || !v2 || !m1) {
+    alert('Rellena las dos verdades y la mentira.');
+    return;
+  }
+  // Construir y barajar
+  frases = [
+    {texto: v1, esMentira: false},
+    {texto: v2, esMentira: false},
+    {texto: m1, esMentira: true},
+  ];
+  for (let i = frases.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [frases[i], frases[j]] = [frases[j], frases[i]];
+  }
+  idxMentira = frases.findIndex(f => f.esMentira);
+  eleccion = null;
+  // Pantalla puente para que el que escribió no enseñe nada al pasar
+  const adivina = players[1 - turno].name;
+  document.getElementById('ho-title').textContent = `Ahora, ${adivina}`;
+  document.getElementById('ho-sub').innerHTML = `${players[turno].name} ya ha escrito.<br>Pásale el móvil a ${adivina} para que adivine la mentira.`;
+  document.getElementById('ho-btn').setAttribute('onclick', 'mostrarAdivinar()');
+  showScreen('s-handoff');
+}
+
+function mostrarAdivinar() {
+  document.getElementById('ho-btn').setAttribute('onclick', 'comenzarTurno()'); // restaurar
+  const adivina = players[1 - turno].name;
+  document.getElementById('g-nombre').textContent = adivina;
+  document.getElementById('g-statements').innerHTML = frases.map((f, i) => `
+    <button class="dv-statement" id="st-${i}" onclick="elegir(${i})">${f.texto}</button>
+  `).join('');
+  document.getElementById('g-confirmar').style.display = 'none';
+  showScreen('s-guess');
+}
+
+function elegir(i) {
+  eleccion = i;
+  document.querySelectorAll('.dv-statement').forEach((el, idx) => {
+    el.classList.toggle('selected', idx === i);
+  });
+  document.getElementById('g-confirmar').style.display = 'block';
+}
+
+function confirmarAdivinanza() {
+  if (eleccion === null) return;
+  const adivinador = 1 - turno;
+  const acerto = (eleccion === idxMentira);
+  // Puntuación: si el adivinador pilla la mentira, punto para él; si no, para quien escribió
+  if (acerto) players[adivinador].score++;
+  else players[turno].score++;
+
+  // Revelar
+  const banner = document.getElementById('r-resultado');
+  if (acerto) {
+    banner.className = 'dv-resultado acierto';
+    banner.innerHTML = `🎯 ¡${players[adivinador].name} pilló la mentira!<div class="dv-res-sub">Punto para ${players[adivinador].name}</div>`;
+  } else {
+    banner.className = 'dv-resultado fallo';
+    banner.innerHTML = `🃏 ¡${players[turno].name} la coló!<div class="dv-res-sub">Punto para ${players[turno].name}</div>`;
+  }
+
+  document.getElementById('r-statements').innerHTML = frases.map((f, i) => {
+    const cls = f.esMentira ? 'es-mentira' : 'es-verdad';
+    const label = f.esMentira ? '✗ Era la mentira' : '✓ Verdad';
+    return `<div class="dv-statement disabled ${cls}">${f.texto}<span class="dv-st-label">${label}</span></div>`;
+  }).join('');
+
+  document.getElementById('r-p1').textContent = players[0].score;
+  document.getElementById('r-p2').textContent = players[1].score;
+  document.getElementById('r-n1').textContent = players[0].name;
+  document.getElementById('r-n2').textContent = players[1].name;
+  document.getElementById('r-progreso').textContent = `Ronda ${ronda} de ${TOTAL_RONDAS}`;
+
+  // ¿Última ronda?
+  document.getElementById('r-next-btn').textContent = (ronda >= TOTAL_RONDAS) ? 'Ver resultado final' : 'Siguiente ronda';
+  showScreen('s-round');
+
+  // Registrar la partida una sola vez (en la última ronda)
+  if (ronda >= TOTAL_RONDAS) {
+    fetch('/api/play', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG, correct: true, game_type: 'dosverdades', choice: -1, elapsed: 0 })
+    }).catch(() => {});
+  }
+}
+
+function siguienteRonda() {
+  if (ronda >= TOTAL_RONDAS) {
+    mostrarFinal();
+    return;
+  }
+  ronda++;
+  turno = 1 - turno;   // alternar quién escribe
+  irRelevo();
+}
+
+function mostrarFinal() {
+  const f = document.getElementById('f-resultado');
+  if (players[0].score > players[1].score) {
+    f.className = 'dv-resultado acierto'; f.textContent = `🏆 ¡Gana ${players[0].name}!`;
+  } else if (players[1].score > players[0].score) {
+    f.className = 'dv-resultado acierto'; f.textContent = `🏆 ¡Gana ${players[1].name}!`;
+  } else {
+    f.className = 'dv-resultado fallo'; f.textContent = `🤝 ¡Empate!`;
+  }
+  document.getElementById('f-p1').textContent = players[0].score;
+  document.getElementById('f-p2').textContent = players[1].score;
+  document.getElementById('f-n1').textContent = players[0].name;
+  document.getElementById('f-n2').textContent = players[1].name;
+  showScreen('s-final');
+}
+</script>
+{% endblock %}

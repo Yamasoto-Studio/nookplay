@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 from datetime import date, datetime, timedelta
 import sqlite3
-from ai import generate_game, generate_impostor, generate_dilema, generate_conexiones, generate_oraculo, generate_donde, generate_carta, generate_reinas, generate_conexion_local, generate_equilibrio, generate_veredicto, generate_perfil, generate_vestuario, generate_sinopsis, generate_muertes, generate_letra, generate_pensamiento, generate_poema, generate_menteagil, generate_constitucion, generate_orden, generate_titular, generate_definicion, build_bar_context, get_day_seed
+from ai import generate_game, generate_impostor, generate_dilema, generate_conexiones, generate_oraculo, generate_donde, generate_carta, generate_reinas, generate_conexion_local, generate_equilibrio, generate_veredicto, generate_perfil, generate_vestuario, generate_sinopsis, generate_muertes, generate_letra, generate_pensamiento, generate_poema, generate_menteagil, generate_constitucion, generate_orden, generate_titular, generate_definicion, generate_masomenos, build_bar_context, get_day_seed
 import os
 import smtplib
 from email.mime.text import MIMEText
@@ -557,7 +557,7 @@ def pregen_daily_games():
     """Ejecuta cada día a las 6am — pre-genera los juegos del día para todos los bares."""
     today = str(date.today())
     resumen = {'ok': [], 'error': []}
-    GAME_TYPES = ['crimen', 'impostor', 'dilema', 'conexiones', 'oraculo', 'donde', 'local', 'veredicto', 'perfil', 'vestuario', 'sinopsis', 'muertes', 'letra', 'pensamiento', 'menteagil', 'constitucion', 'titular', 'definicion']
+    GAME_TYPES = ['crimen', 'impostor', 'dilema', 'conexiones', 'oraculo', 'donde', 'local', 'veredicto', 'perfil', 'vestuario', 'sinopsis', 'muertes', 'letra', 'pensamiento', 'menteagil', 'constitucion', 'titular', 'definicion', 'masomenos']
 
     db = get_db()
     bars = db.execute("SELECT * FROM bars WHERE active = 1").fetchall()
@@ -690,6 +690,14 @@ def pregen_daily_games():
                             continue
                         ev = get_historial_reciente(db, 'definicion', None, campo='palabra')
                         game_data = generate_definicion(bar['slug'], evitar=ev)
+                    elif game_type == 'masomenos':
+                        existing = db.execute(
+                            "SELECT id FROM generated_games WHERE game_type = 'masomenos' AND game_date = ?",
+                            (today,)
+                        ).fetchone()
+                        if existing:
+                            continue
+                        game_data = generate_masomenos(bar['slug'])
                     
                     import json as _json
                     db.execute(
@@ -1023,6 +1031,7 @@ GAME_NOMBRES = {
     'freep': 'Freep', 'reinas': 'Las Reinas', 'equilibrio': 'Equilibrio',
     'carta': 'La Carta', 'orden': 'En Orden',
     'titular': 'El Titular Imposible', 'definicion': 'La Definición Falsa',
+    'dosverdades': 'Dos Verdades, Una Mentira', 'masomenos': 'Más o Menos',
 }
 
 
@@ -2080,6 +2089,85 @@ def definicion_stats(bar_slug):
     avg_elapsed = round(sum(elapsed_vals) / len(elapsed_vals)) if elapsed_vals else 0
     pct_acierto = round((acertaron / total) * 100) if total > 0 else 0
     return jsonify({'total': total, 'acertaron': acertaron, 'pct_acierto': pct_acierto, 'avg_elapsed': avg_elapsed})
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Dos Verdades, Una Mentira (a dobles · sin IA, dirigido por jugadores)
+# ─────────────────────────────────────────────────────────────────────────────
+
+@app.route('/<bar_slug>/dosverdades')
+def dosverdades_page(bar_slug):
+    db = get_db()
+    bar = db.execute("SELECT * FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
+    if not bar:
+        db.close()
+        return render_template('404.html'), 404
+    products = db.execute("SELECT * FROM bar_products WHERE bar_id = ? AND active = 1 ORDER BY position", (bar['id'],)).fetchall()
+    db.close()
+    return render_template('games/dosverdades.html', bar=bar, products=products)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Más o Menos (a dobles · global con IA)
+# ─────────────────────────────────────────────────────────────────────────────
+
+@app.route('/<bar_slug>/masomenos')
+def masomenos_page(bar_slug):
+    db = get_db()
+    bar = db.execute("SELECT * FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
+    if not bar:
+        db.close()
+        return render_template('404.html'), 404
+    products = db.execute("SELECT * FROM bar_products WHERE bar_id = ? AND active = 1 ORDER BY position", (bar['id'],)).fetchall()
+    db.close()
+    return render_template('games/masomenos.html', bar=bar, products=products)
+
+
+@app.route('/api/masomenos', methods=['POST'])
+def masomenos_api():
+    data = request.get_json()
+    code = data.get('code', '').strip().upper()
+    bar_slug = data.get('bar_slug', '').strip()
+    today = str(date.today())
+
+    db = get_db()
+    bar = db.execute("SELECT * FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
+    if not bar:
+        db.close()
+        return jsonify({'error': 'Invalid code'}), 403
+
+    valid_code = db.execute(
+        "SELECT code FROM access_codes WHERE bar_id = ? AND valid_from <= ? AND valid_until >= ?",
+        (bar['id'], today, today)
+    ).fetchone()
+    if not valid_code or valid_code['code'] != code:
+        db.close()
+        return jsonify({'error': 'Invalid code'}), 403
+
+    cache_key = f"global_masomenos_{today}"
+    if cache_key in _game_cache:
+        db.close()
+        return jsonify(_game_cache[cache_key])
+
+    pregenerated = db.execute(
+        "SELECT content FROM generated_games WHERE game_type = 'masomenos' AND game_date = ?",
+        (today,)
+    ).fetchone()
+    if pregenerated:
+        import json as _json
+        game_data = _json.loads(pregenerated['content'])
+        _game_cache[cache_key] = game_data
+        db.close()
+        return jsonify(game_data)
+
+    db.close()
+    try:
+        game_data = generate_masomenos(bar_slug)
+        _persistir_generado(bar['id'], 'masomenos', game_data, es_global=True)
+        _game_cache[cache_key] = game_data
+        return jsonify(game_data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/<bar_slug>/muertes')
@@ -3157,12 +3245,12 @@ Mensaje:
 # Slugs de todos los juegos del catálogo, en orden de posición
 ALL_GAMES = [
     "crimen", "dilema", "reinas", "conexiones",
-    "oraculo", "donde", "carta", "equilibrio", "impostor", "local", "veredicto", "perfil", "vestuario", "sinopsis", "muertes", "letra", "pensamiento", "poema", "menteagil", "constitucion", "orden", "freep", "titular", "definicion",
+    "oraculo", "donde", "carta", "equilibrio", "impostor", "local", "veredicto", "perfil", "vestuario", "sinopsis", "muertes", "letra", "pensamiento", "poema", "menteagil", "constitucion", "orden", "freep", "titular", "definicion", "dosverdades", "masomenos",
 ]
 
 # Starter: 4 fijos siempre activos + 1 elegible a elegir entre STARTER_FREE_GAMES
 STARTER_FIXED      = ["crimen", "dilema", "reinas", "conexiones"]
-STARTER_FREE_GAMES = ["oraculo", "donde", "carta", "equilibrio", "impostor", "local", "veredicto", "perfil", "vestuario", "sinopsis", "muertes", "letra", "pensamiento", "poema", "menteagil", "constitucion", "orden", "freep", "titular", "definicion"]
+STARTER_FREE_GAMES = ["oraculo", "donde", "carta", "equilibrio", "impostor", "local", "veredicto", "perfil", "vestuario", "sinopsis", "muertes", "letra", "pensamiento", "poema", "menteagil", "constitucion", "orden", "freep", "titular", "definicion", "dosverdades", "masomenos"]
 STARTER_MAX_FREE   = 2  # juegos libres simultáneos permitidos
 
 # Pro: hasta PRO_MAX_GAMES a elegir libremente del catálogo completo
