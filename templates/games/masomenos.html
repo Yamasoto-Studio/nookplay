@@ -9,6 +9,11 @@
 html, body { overscroll-behavior: none; }
 .nook { touch-action: manipulation; }
 
+/* Blindaje contra desbordamiento horizontal: todo cuenta padding/borde dentro del ancho */
+#s-loading *, #s-intro *, #s-handoff *, #s-game *, #s-round *, #s-final * { box-sizing: border-box; }
+.mm-op, .mm-name-row input, .btn-primary, .btn-back-game, .btn-menu { box-sizing: border-box; max-width: 100%; }
+.mm-opciones { width: 100%; }
+
 .mm-wrap { text-align: center; }
 .mm-lead { font-size: 14px; color: var(--text-secondary); line-height: 1.55; margin-bottom: 18px; }
 .mm-badge-dobles { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; background: var(--bar-bg-subtle); color: var(--bar-accent-dark); border: 1px solid var(--border); border-radius: 20px; padding: 4px 12px; margin-bottom: 14px; }
@@ -24,8 +29,8 @@ html, body { overscroll-behavior: none; }
 .mm-name-row input { flex: 1; padding: 11px 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 15px; font-family: inherit; background: var(--bar-bg-subtle); color: var(--text); }
 
 .mm-handoff-ico { font-size: 48px; margin-bottom: 14px; }
-.mm-handoff h2 { font-size: 22px; font-weight: 800; color: var(--text); margin-bottom: 10px; }
-.mm-handoff p { font-size: 14px; color: var(--text-secondary); line-height: 1.55; margin-bottom: 28px; }
+#s-handoff #ho-title { font-size: 22px; font-weight: 800; color: var(--text); margin: 0 0 10px; }
+#s-handoff #ho-sub { font-size: 14px; color: var(--text-secondary); line-height: 1.55; margin: 0 0 28px; }
 
 .mm-turno-tag {
   display: inline-block;
