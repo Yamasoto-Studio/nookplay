@@ -6,11 +6,9 @@
 
 {% block game_content %}
 <style>
-html, body { overscroll-behavior: none; }
-.nook { touch-action: manipulation; }
-
-/* Blindaje contra desbordamiento horizontal (cubre todas las pantallas del juego) */
-.nook-card { overflow-x: clip; }
+html, body { overscroll-behavior: none; max-width: 100%; overflow-x: hidden; }
+.nook { touch-action: manipulation; max-width: 100%; overflow-x: hidden; }
+.nook-content, .nook-card { max-width: 100%; overflow-x: clip; }
 .screen { max-width: 100%; }
 .mm-wrap { text-align: center; max-width: 100%; }
 .mm-wrap > * { max-width: 100%; }
@@ -41,10 +39,11 @@ html, body { overscroll-behavior: none; }
 
 .mm-turno-tag {
   display: inline-block;
-  font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  font-size: 12px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
   padding: 4px 14px; border-radius: 20px;
   background: var(--bar-primary); color: var(--bar-primary-text);
   margin: 0 auto 16px;
+  max-width: 100%; box-sizing: border-box; white-space: normal; word-break: break-word;
 }
 .mm-pregunta { font-size: 17px; font-weight: 700; color: var(--text); margin-bottom: 18px; line-height: 1.35; }
 
