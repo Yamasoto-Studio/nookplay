@@ -34,7 +34,7 @@ body { overscroll-behavior: none; width: 100%; max-width: 100%; overflow-x: hidd
 .mm-names { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
 .mm-name-row { display: flex; align-items: center; gap: 10px; text-align: left; }
 .mm-name-row label { font-size: 13px; font-weight: 600; color: var(--text-secondary); width: 80px; flex-shrink: 0; }
-.mm-name-row input { flex: 1; padding: 11px 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 15px; font-family: inherit; background: var(--bar-bg-subtle); color: var(--text); }
+.mm-name-row input { flex: 1; padding: 11px 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 16px; font-family: inherit; background: var(--bar-bg-subtle); color: var(--text); }
 
 .mm-handoff-ico { font-size: 48px; margin-bottom: 14px; }
 #s-handoff #ho-title { font-size: 22px; font-weight: 800; color: var(--text); margin: 0 0 10px; }
@@ -171,6 +171,19 @@ body { overscroll-behavior: none; width: 100%; max-width: 100%; overflow-x: hidd
 const BAR_SLUG = "{{ bar.slug }}";
 const BAR_NAME = "{{ bar.name }}";
 const CODE = new URLSearchParams(window.location.search).get('code') || '';
+
+// ── Comodidad táctil: bloquear zoom de iOS al enfocar inputs y pinch accidental ──
+(function lockViewport() {
+  let vp = document.querySelector('meta[name="viewport"]');
+  if (!vp) { vp = document.createElement('meta'); vp.name = 'viewport'; document.head.appendChild(vp); }
+  vp.setAttribute('content',
+    'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover');
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(ev =>
+    document.addEventListener(ev, e => e.preventDefault(), { passive: false }));
+  document.addEventListener('touchmove', e => {
+    if (e.touches && e.touches.length > 1) e.preventDefault();
+  }, { passive: false });
+})();
 
 let players = [{name:'Jugador 1', score:0}, {name:'Jugador 2', score:0}];
 let rondas = [];
