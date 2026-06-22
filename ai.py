@@ -102,11 +102,25 @@ def _reparar_json_truncado(t):
         return None
 
 
+_SISTEMA_NOOKPLAY = (
+    "Eres el generador de contenido de Nookplay, juegos para clientes de bares y cafeterias. "
+    "Reglas transversales que cumples SIEMPRE, en todos los juegos: "
+    "(1) Contenido NEUTRO e inclusivo respecto al genero: no asumas el genero del jugador ni de los protagonistas; "
+    "evita estereotipos de hombre/mujer; cuando puedas, usa lugares, objetos, animales, naturaleza, inventos y obras en vez de personas concretas marcadas por genero; "
+    "usa lenguaje que valga para cualquier persona. "
+    "(2) Nada ofensivo, ni politico-partidista, ni morboso, ni sexual; tono divertido y de sobremesa. "
+    "(3) Responde SIEMPRE en espanol. "
+    "(4) Devuelve EXACTAMENTE el formato que se te pida (JSON valido sin markdown cuando se solicite)."
+)
+
+
 def _post_ia(prompt, max_tokens, api_key, reintentos=2, modelo='claude-sonnet-4-6'):
     """Llama a la API de Anthropic y devuelve el JSON parseado de forma robusta.
 
     Reintenta ante fallos de red, errores de API o JSON no parseable.
     Lanza Exception con detalle si agota los reintentos.
+    Aplica un mensaje de sistema comun (_SISTEMA_NOOKPLAY) con reglas
+    transversales (contenido neutro/inclusivo, español, sin contenido sensible).
     """
     ultimo_error = None
     for intento in range(reintentos + 1):
@@ -121,6 +135,7 @@ def _post_ia(prompt, max_tokens, api_key, reintentos=2, modelo='claude-sonnet-4-
                 json={
                     'model': modelo,
                     'max_tokens': max_tokens,
+                    'system': _SISTEMA_NOOKPLAY,
                     'messages': [{'role': 'user', 'content': prompt}]
                 },
                 timeout=60
@@ -1469,24 +1484,32 @@ def generate_masomenos(bar_slug, evitar=None):
     api_key = os.environ.get('ANTHROPIC_API_KEY')
     seed = get_day_seed(bar_slug)
 
-    prompt = """Eres el creador de un juego para bares llamado "Mas o Menos", a dobles. En cada ronda se muestran DOS cosas reales con una cifra oculta (poblacion, precio, ano, distancia, peso, duracion...) y el jugador apuesta cual tiene la cifra MAYOR.
+    prompt = """Eres el creador de un juego para bares llamado "Mas o Menos", a dobles. En cada ronda se muestran DOS cosas reales y el jugador apuesta cual tiene la cifra MAYOR de una magnitud.
 
 FECHA: """ + today + """
 SEED: """ + str(seed) + """
 
+REGLA DE ORO (CRITICA): la pregunta SIEMPRE pregunta por el valor MAYOR ("¿Que tiene MAS...?", "¿Cual es MAS...?", "¿Cual pesa MAS?", "¿Cual es MAS alto?"). NUNCA preguntes por el menor, el mas antiguo, el primero, el mas corto ni nada que invierta la logica. El campo "mayor" SIEMPRE indica el elemento cuyo VALOR NUMERICO es mas alto. Esto evita confusiones: mas magnitud = la respuesta correcta, sin excepciones.
+
 INSTRUCCIONES:
-- Genera 6 rondas. Cada ronda son dos elementos comparables por una misma magnitud real y verificable.
-- Varia las magnitudes entre rondas (no todas de poblacion): poblacion de ciudades, ano de un invento/pelicula, altura de edificios/montanas, numero de algo, distancia, etc.
-- Que sean de cultura general y curiosas, ni demasiado obvias ni imposibles. Cero ambiguedad: la cifra real debe ser objetiva.
-- Indica el valor real de cada elemento y cual es el mayor (0 = el primero, 1 = el segundo).
-- Incluye una breve explicacion con el dato curioso de la ronda.
+- Genera 6 rondas. Cada ronda compara dos elementos por una misma magnitud real y verificable.
+- Varia las magnitudes entre rondas: habitantes de ciudades, altura de edificios o montanas, peso de animales, duracion de algo, distancia, numero de algo, temperatura, etc.
+- IMPORTANTE sobre los anos: si usas fechas, pregunta "¿Cual es MAS RECIENTE?" (ano mayor = mas reciente = respuesta correcta). NUNCA "cual fue antes" (invertiria la logica).
+- La pregunta debe ser una frase corta, clara y autoexplicativa que empiece por "¿Que..." o "¿Cual..." y contenga la palabra MAS.
+- Que sean de cultura general y curiosas, ni demasiado obvias ni imposibles. La cifra real debe ser objetiva y verificable.
+- Contenido NEUTRO e inclusivo: evita ejemplos que dependan del genero (ni "el mas..." referido a hombres/mujeres concretos de forma sesgada). Usa lugares, objetos, animales, naturaleza, inventos, obras.
+- "valor": incluye la cifra con su unidad si ayuda (ej. "8.848 m", "688.000", "1994").
+- "mayor": 0 si el primero (a) tiene el valor numerico mayor, 1 si el segundo (b).
+- "dato": una frase con la curiosidad de la ronda.
 - Todo en espanol. Nada ofensivo ni politico-partidista.
+
+Antes de cerrar cada ronda, VERIFICA: el elemento marcado en "mayor" es realmente el de cifra mas alta, y la pregunta pide el MAS (no el menos). Si no, corrigelo.
 
 Devuelve SOLO un objeto JSON valido, sin markdown:
 {
   "rondas": [
     {
-      "pregunta": "Que tiene MAS habitantes?",
+      "pregunta": "¿Que ciudad tiene MAS habitantes?",
       "magnitud": "habitantes",
       "a": {"nombre": "Sevilla", "valor": "688.000"},
       "b": {"nombre": "Zaragoza", "valor": "675.000"},
@@ -1495,7 +1518,7 @@ Devuelve SOLO un objeto JSON valido, sin markdown:
     }
   ]
 }
-Genera exactamente 6 rondas variadas.""" + _bloque_evitar(evitar)
+Genera exactamente 6 rondas variadas, todas preguntando por el MAS.""" + _bloque_evitar(evitar)
 
     return _post_ia(prompt, 1500, api_key)
 

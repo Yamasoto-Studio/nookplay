@@ -50,10 +50,10 @@
   /* Separador de grupo en el menú (juegos a dobles) */
   .grid-divider {
     grid-column: 1 / -1;
-    display: flex; align-items: center; gap: 12px;
-    margin: 6px 2px 0;
-    font-size: 12px; font-weight: 700; letter-spacing: 0.3px;
-    color: var(--text-secondary);
+    display: flex; align-items: center; gap: 14px;
+    margin: 24px 2px 14px;
+    font-size: 15px; font-weight: 700; letter-spacing: 0.2px;
+    color: var(--text);
   }
   .grid-divider::before, .grid-divider::after {
     content: ''; flex: 1; height: 1px; background: var(--border);
@@ -487,7 +487,7 @@ async function showMenu() {
     // Insertar el separador justo antes del primer juego a dobles
     if (!dividerInsertado && DOBLES.includes(a.slug)) {
       dividerInsertado = true;
-      divider = `<div class="grid-divider"><span>👥 Para jugar en pareja</span></div>`;
+      divider = `<div class="grid-divider"><span>👥 Juegos para dos jugadores</span></div>`;
     }
     return divider + `
     <div class="activity-card-grid${locked ? ' locked' : ''}" onclick="${locked ? 'showDemoWall()' : `startActivity('${a.slug}')`}">
