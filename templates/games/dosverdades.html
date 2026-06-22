@@ -6,10 +6,13 @@
 
 {% block game_content %}
 <style>
-html, body { overscroll-behavior: none; max-width: 100%; overflow-x: hidden; }
-.nook { touch-action: manipulation; max-width: 100%; overflow-x: hidden; }
+html { overflow-x: hidden; }
+body { overscroll-behavior: none; width: 100%; max-width: 100%; overflow-x: hidden; position: relative; margin: 0; }
+.nook { touch-action: manipulation; width: 100%; max-width: 100%; overflow-x: hidden; }
 .nook-content, .nook-card { max-width: 100%; overflow-x: clip; }
-.screen { max-width: 100%; }
+.screen { max-width: 100%; overflow-x: clip; }
+.dv-wrap { max-width: 100%; }
+.dv-wrap * { max-width: 100%; }
 /* La etiqueta-píldora con texto dinámico largo (nombre + pregunta) debe poder
    ajustarse y nunca exceder el ancho: letter-spacing + uppercase la ensanchaban. */
 .game-tag { max-width: 100%; white-space: normal; word-break: break-word; letter-spacing: 0.5px; box-sizing: border-box; }

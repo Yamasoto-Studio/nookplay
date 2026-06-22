@@ -331,11 +331,11 @@ for slug, name, desc, pos in [
     ('menteagil', 'Mente Ágil', 'Test psicotécnico', 19),
     ('constitucion', '¿Tú la has leído?', 'Test sobre la Constitución', 20),
     ('orden', 'El Orden', 'Ordena 5 cosas sin fallar', 21),
-    ('freep', 'Freep', 'Duelo de más o menos · 2 jugadores', 22),
+    ('freep', 'Freep', 'Duelo de memoria veloz', 22),
     ('titular', 'El Titular Imposible', '¿Noticia real o inventada?', 23),
     ('definicion', 'La Definición Falsa', 'Aprende una palabra nueva', 24),
-    ('dosverdades', 'Dos Verdades, Una Mentira', 'A dobles · descubre el farol', 51),
-    ('masomenos', 'Más o Menos', 'A dobles · duelo de cifras', 52),
+    ('dosverdades', 'Dos Verdades, Una Mentira', 'Descubre el farol', 51),
+    ('masomenos', 'Más o Menos', 'Duelo de cifras', 52),
 ]:
     if not db.execute("SELECT id FROM games WHERE slug = ?", (slug,)).fetchone():
         db.execute(
@@ -370,6 +370,18 @@ for slug, pos in ORDEN_JUEGOS.items():
     db.execute("UPDATE games SET position = ? WHERE slug = ?", (pos, slug))
 db.commit()
 print('Orden de juegos actualizado.')
+
+# Actualizar descripciones de los juegos a dobles (quitar "2 jugadores"/"A dobles",
+# ya que están agrupados bajo la sección "Juegos para dos jugadores" en el menú).
+DESC_ACTUALIZADAS = {
+    'freep': 'Duelo de memoria veloz',
+    'dosverdades': 'Descubre el farol',
+    'masomenos': 'Duelo de cifras',
+}
+for slug, desc in DESC_ACTUALIZADAS.items():
+    db.execute("UPDATE games SET description = ? WHERE slug = ?", (desc, slug))
+db.commit()
+print('Descripciones de juegos a dobles actualizadas.')
 
 print('Catálogo de juegos listo.')
 
