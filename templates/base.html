@@ -25,30 +25,22 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/css/main.css">
   <style>
-    /* Font size accessibility */
+    /* ── Accesibilidad: tamaño de texto ──────────────────────────────
+       El escalado usa `zoom` sobre el contenido, que amplía TODO de forma
+       proporcional (texto en px o rem, botones, espaciados) sin depender de
+       que cada juego use rem. Antes solo escalaban unas pocas clases en rem
+       de una lista blanca, y los juegos (con font-size en px) no respondían.
+       Con zoom, cualquier juego presente o futuro escala automáticamente. */
     html { font-size: 16px; }
-    html.text-lg { font-size: 19px; }
-    html.text-xl { font-size: 22px; }
-
-    /* Rem-based scaling for key elements */
-    .nook-card, .nook-card * { font-size: inherit; }
-    .nook-title { font-size: 1.5rem !important; }
-    .nook-sub { font-size: 1rem !important; }
-    .menu-welcome { font-size: 1.1rem !important; }
-    .body-text { font-size: 1rem !important; }
-    .headline { font-size: 1.3rem !important; }
-    .suspect-name { font-size: 1rem !important; }
-    .suspect-role { font-size: 0.9rem !important; }
-    .clue-btn { font-size: 1rem !important; }
-    .activity-name { font-size: 1.05rem !important; }
-    .activity-desc { font-size: 0.9rem !important; }
-    .code-input { font-size: 1.2rem !important; }
-    .code-hint { font-size: 0.88rem !important; }
-    .btn-primary { font-size: 0.94rem !important; }
-    .result-big { font-size: 1.9rem !important; }
-    .result-sub { font-size: 1rem !important; }
-    .reveal-name { font-size: 1.25rem !important; }
-    .tomorrow { font-size: 0.88rem !important; }
+    .nook-content { zoom: 1; }
+    html.text-lg .nook-content  { zoom: 1.18; }
+    html.text-xl .nook-content  { zoom: 1.38; }
+    /* Refuerzo para navegadores sin `zoom` (Firefox antiguo): escala la raíz,
+       que al menos amplía todo lo que esté en rem/em. */
+    @supports not (zoom: 1) {
+      html.text-lg { font-size: 19px; }
+      html.text-xl { font-size: 22px; }
+    }
 
     .a11y-toggle {
       position: fixed; bottom: 20px; right: 16px; z-index: 999;
