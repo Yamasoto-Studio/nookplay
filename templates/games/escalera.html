@@ -1,0 +1,261 @@
+{% extends "game_base.html" %}
+{% block title %}La Escalera — {{ bar.name }}{% endblock %}
+{% block og_title %}La Escalera · ¿hasta dónde llegas? — {{ bar.name }}{% endblock %}
+{% block og_description %}Preguntas cada vez más difíciles. Acierta y sube, pero plántate a tiempo o lo pierdes todo. Juega en {{ bar.name }} con Nookplay.{% endblock %}
+{% block og_url %}/{{ bar.slug }}/escalera{% endblock %}
+
+{% block game_content %}
+<style>
+.esc-wrap { text-align: center; }
+.esc-lead { font-size: 14px; color: var(--text-secondary); line-height: 1.55; margin-bottom: 18px; }
+
+/* Escalera visual de peldaños */
+.esc-ladder { display: flex; flex-direction: column-reverse; gap: 4px; margin: 0 auto 18px; max-width: 240px; }
+.esc-step { display: flex; align-items: center; gap: 10px; padding: 7px 12px; border-radius: 8px; background: var(--bar-bg-subtle); border: 1px solid var(--border); font-size: 13px; color: var(--text-muted); transition: all 0.3s; }
+.esc-step .esc-step-n { width: 22px; height: 22px; border-radius: 50%; background: var(--border); color: var(--text-secondary); font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.esc-step.done { background: #F0FFF4; border-color: #81C784; color: #2E7D32; }
+.esc-step.done .esc-step-n { background: #2E7D32; color: #fff; }
+.esc-step.current { background: var(--bar-bg); border-color: var(--bar-primary); border-width: 2px; color: var(--text); font-weight: 700; }
+.esc-step.current .esc-step-n { background: var(--bar-primary); color: var(--bar-primary-text); }
+
+.esc-nivel-tag { display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; padding: 4px 14px; border-radius: 20px; background: var(--bar-primary); color: var(--bar-primary-text); margin-bottom: 14px; }
+.esc-tema { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+.esc-pregunta { font-size: 18px; font-weight: 700; color: var(--text); line-height: 1.4; margin-bottom: 20px; }
+
+.esc-opciones { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+.esc-op { padding: 14px 16px; border-radius: var(--radius-md); border: 2px solid var(--border); background: var(--bar-bg-subtle); font-size: 15px; font-weight: 500; color: var(--text); cursor: pointer; font-family: inherit; text-align: left; display: flex; align-items: center; gap: 10px; transition: all 0.15s; box-sizing: border-box; }
+.esc-op .esc-letra { width: 26px; height: 26px; border-radius: 6px; background: var(--border); color: var(--text-secondary); font-size: 12px; font-weight: 700; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+.esc-op:hover { border-color: var(--bar-primary); }
+.esc-op.correcta { border-color: #2E7D32; background: #F0FFF4; }
+.esc-op.correcta .esc-letra { background: #2E7D32; color: #fff; }
+.esc-op.incorrecta { border-color: #C0392B; background: #FFF0EE; }
+.esc-op.incorrecta .esc-letra { background: #C0392B; color: #fff; }
+.esc-op.disabled { pointer-events: none; opacity: 0.6; }
+
+.esc-decision { background: var(--bar-bg-subtle); border: 2px solid var(--bar-primary); border-radius: var(--radius-md); padding: 18px; margin-bottom: 14px; }
+.esc-decision-bote { font-size: 14px; color: var(--text-secondary); margin-bottom: 4px; }
+.esc-decision-num { font-size: 34px; font-weight: 800; color: var(--bar-accent-dark); line-height: 1; margin-bottom: 12px; }
+.esc-decision-q { font-size: 14px; color: var(--text); font-weight: 600; margin-bottom: 14px; }
+.esc-botones-2 { display: flex; gap: 10px; }
+.esc-botones-2 button { flex: 1; box-sizing: border-box; }
+
+.esc-explica { font-size: 13px; color: var(--text-secondary); line-height: 1.5; background: var(--bar-bg-subtle); border-radius: var(--radius-md); padding: 12px; margin-bottom: 14px; }
+
+.esc-resultado { text-align: center; padding: 22px 16px; border-radius: var(--radius-md); margin-bottom: 16px; }
+.esc-resultado.gana { background: #F0FFF4; border: 2px solid #81C784; }
+.esc-resultado.pierde { background: #FFF0EE; border: 2px solid #F1948A; }
+.esc-resultado-ico { font-size: 40px; margin-bottom: 8px; }
+.esc-resultado-tit { font-size: 22px; font-weight: 800; margin-bottom: 6px; }
+.esc-resultado.gana .esc-resultado-tit { color: #2E7D32; }
+.esc-resultado.pierde .esc-resultado-tit { color: #C0392B; }
+.esc-resultado-sub { font-size: 14px; color: var(--text-secondary); line-height: 1.5; }
+</style>
+
+<!-- LOADING -->
+<div class="screen active" id="s-loading">
+  <div class="loading"><div class="loading-spinner"></div><p>Montando la escalera de hoy...</p></div>
+</div>
+
+<!-- INTRO -->
+<div class="screen" id="s-intro">
+  <div class="esc-wrap">
+    <div class="game-tag" style="display:block;text-align:center;width:fit-content;margin:0 auto 12px;">La Escalera</div>
+    <h2 class="headline" style="margin-bottom:6px;">¿Hasta dónde llegas?</h2>
+    <p class="esc-lead">6 preguntas, cada una más difícil que la anterior. Acierta y subes un peldaño. Pero cuidado: si fallas, lo pierdes todo. ¿Te plantas a tiempo o arriesgas?</p>
+    <button class="btn-primary" onclick="empezar()" style="width:100%;">Empezar a subir</button>
+    <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
+  </div>
+</div>
+
+<!-- PREGUNTA -->
+<div class="screen" id="s-game">
+  <div class="esc-wrap">
+    <div class="esc-nivel-tag" id="g-nivel">Peldaño 1 de 6</div>
+    <div class="esc-tema" id="g-tema"></div>
+    <div class="esc-pregunta" id="g-pregunta"></div>
+    <div class="esc-opciones" id="g-opciones"></div>
+    <button class="btn-back-game" onclick="abandonar()">Plantarme y salir</button>
+  </div>
+</div>
+
+<!-- DECISIÓN (tras acertar) -->
+<div class="screen" id="s-decision">
+  <div class="esc-wrap">
+    <div class="esc-explica" id="d-explica"></div>
+    <div class="esc-decision">
+      <div class="esc-decision-bote">Llevas conquistados</div>
+      <div class="esc-decision-num" id="d-bote">0</div>
+      <div class="esc-decision-q" id="d-q">¿Sigues subiendo o te plantas?</div>
+      <div class="esc-botones-2">
+        <button class="btn-back-game" onclick="plantarse()" style="margin:0;">Me planto</button>
+        <button class="btn-primary" onclick="seguir()" style="margin:0;">¡Sigo!</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- RESULTADO FINAL -->
+<div class="screen" id="s-result">
+  <div class="esc-wrap">
+    <div class="esc-resultado" id="r-banner">
+      <div class="esc-resultado-ico" id="r-ico"></div>
+      <div class="esc-resultado-tit" id="r-tit"></div>
+      <div class="esc-resultado-sub" id="r-sub"></div>
+    </div>
+    <div class="esc-ladder" id="r-ladder"></div>
+    <div id="r-pct" style="display:none; text-align:center; padding:10px; background:var(--bar-bg-subtle); border-radius:var(--radius-md); border:1px solid var(--border); font-size:13px; color:var(--text-secondary); margin-bottom:12px;"></div>
+    <button class="btn-primary" onclick="location.reload()" style="width:100%;">↻ Intentar de nuevo</button>
+    <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
+    <div class="tomorrow">Mañana, otra escalera nueva.<br>{{ bar.tomorrow_message or 'Vuelve a tomar un café.' }}</div>
+  </div>
+</div>
+
+<script>
+const BAR_SLUG = "{{ bar.slug }}";
+const BAR_NAME = "{{ bar.name }}";
+const CODE = new URLSearchParams(window.location.search).get('code') || '';
+let preguntas = [];
+let nivel = 0;          // índice 0..5
+let conquistados = 0;   // peldaños superados
+let startTime = null;
+const LETRAS = ['A', 'B', 'C', 'D'];
+
+async function init() {
+  try {
+    const res = await fetch('/api/escalera', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG })
+    });
+    const data = await res.json();
+    preguntas = (data.preguntas || []).slice(0, 6);
+    if (preguntas.length < 2) throw new Error('pocas');
+    showScreen('s-intro');
+  } catch(e) {
+    document.getElementById('s-loading').innerHTML = `
+      <div class="error-msg">No se pudo cargar la escalera.<br>
+      <button class="btn-secondary" onclick="location.reload()">Reintentar</button></div>`;
+  }
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function empezar() {
+  nivel = 0; conquistados = 0;
+  startTime = Date.now();
+  mostrarPregunta();
+}
+
+function mostrarPregunta() {
+  const p = preguntas[nivel];
+  document.getElementById('g-nivel').textContent = `Peldaño ${nivel + 1} de ${preguntas.length}`;
+  document.getElementById('g-tema').textContent = p.tema || '';
+  document.getElementById('g-pregunta').textContent = p.enunciado;
+  document.getElementById('g-opciones').innerHTML = p.opciones.map((op, i) => `
+    <button class="esc-op" id="op-${i}" onclick="responder(${i})">
+      <span class="esc-letra">${LETRAS[i]}</span><span>${op}</span>
+    </button>`).join('');
+  showScreen('s-game');
+}
+
+function responder(i) {
+  const p = preguntas[nivel];
+  const correcto = (i === p.correcta);
+  document.querySelectorAll('.esc-op').forEach((el, idx) => {
+    el.classList.add('disabled');
+    if (idx === p.correcta) el.classList.add('correcta');
+    else if (idx === i) el.classList.add('incorrecta');
+  });
+
+  setTimeout(() => {
+    if (correcto) {
+      conquistados = nivel + 1;
+      if (nivel + 1 >= preguntas.length) {
+        // Ha completado toda la escalera
+        finJuego(true, true);
+      } else {
+        // Mostrar decisión
+        document.getElementById('d-explica').textContent = '✅ ' + (p.explicacion || '¡Correcto!');
+        document.getElementById('d-bote').textContent = `${conquistados} ${conquistados === 1 ? 'peldaño' : 'peldaños'}`;
+        document.getElementById('d-q').textContent = `Peldaño ${nivel + 2} a la vista. ¿Sigues o te plantas?`;
+        showScreen('s-decision');
+      }
+    } else {
+      // Falla: pierde lo conquistado en esta partida
+      finJuego(false, false);
+    }
+  }, 1100);
+}
+
+function seguir() {
+  nivel++;
+  mostrarPregunta();
+}
+
+function plantarse() {
+  finJuego(true, false);
+}
+
+function abandonar() {
+  // Plantarse desde la propia pregunta (sin responder): conserva lo ya conquistado
+  finJuego(true, false);
+}
+
+async function finJuego(conservaBote, escaleraCompleta) {
+  const elapsed = startTime ? Math.round((Date.now() - startTime) / 1000) : 0;
+  const banner = document.getElementById('r-banner');
+  const ico = document.getElementById('r-ico');
+  const tit = document.getElementById('r-tit');
+  const sub = document.getElementById('r-sub');
+
+  if (escaleraCompleta) {
+    banner.className = 'esc-resultado gana';
+    ico.textContent = '🏆';
+    tit.textContent = '¡Escalera completa!';
+    sub.innerHTML = `Has subido los ${preguntas.length} peldaños. Eres una enciclopedia andante.`;
+  } else if (conservaBote) {
+    banner.className = 'esc-resultado gana';
+    ico.textContent = '🎯';
+    tit.textContent = `Te plantas con ${conquistados}`;
+    sub.innerHTML = conquistados > 0
+      ? `Sabiduría es saber cuándo parar. Conservas ${conquistados} ${conquistados === 1 ? 'peldaño' : 'peldaños'}.`
+      : 'Esta vez no subiste ninguno. ¡A por la próxima!';
+  } else {
+    banner.className = 'esc-resultado pierde';
+    ico.textContent = '💥';
+    tit.textContent = '¡Te has caído!';
+    sub.innerHTML = `Fallaste en el peldaño ${nivel + 1} y perdiste lo acumulado. La codicia tiene estos riesgos...`;
+  }
+
+  // Escalera visual
+  document.getElementById('r-ladder').innerHTML = preguntas.map((p, i) => {
+    let cls = 'esc-step';
+    if (i < conquistados) cls += ' done';
+    return `<div class="${cls}"><span class="esc-step-n">${i + 1}</span><span>${p.tema || 'Peldaño ' + (i+1)}</span></div>`;
+  }).join('');
+
+  // Registrar: choice = peldaños conquistados
+  await fetch('/api/play', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG, correct: conservaBote, game_type: 'escalera', choice: conquistados, elapsed })
+  }).catch(() => {});
+
+  // Stats
+  try {
+    const sr = await fetch(`/api/escalera-stats/${BAR_SLUG}`);
+    const stats = await sr.json();
+    if (stats.total >= 3) {
+      document.getElementById('r-pct').style.display = 'block';
+      document.getElementById('r-pct').innerHTML = `Hoy en este local, la media es <strong>${stats.avg_peldano}</strong> peldaños. Lo máximo alcanzado: <strong>${stats.max_peldano}</strong>.`;
+    }
+  } catch(e) {}
+
+  showScreen('s-result');
+}
+
+init();
+</script>
+{% endblock %}

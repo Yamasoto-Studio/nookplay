@@ -1523,6 +1523,83 @@ Genera exactamente 6 rondas variadas, todas preguntando por el MAS.""" + _bloque
     return _post_ia(prompt, 1500, api_key)
 
 
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# La Escalera — preguntas de dificultad creciente, ¿plantas o sigues?
+# ─────────────────────────────────────────────────────────────────────────────
+
+def generate_escalera(bar_slug, evitar=None):
+    today = str(date.today())
+    api_key = os.environ.get('ANTHROPIC_API_KEY')
+    seed = get_day_seed(bar_slug)
+
+    prompt = """Eres el creador de un concurso para bares llamado "La Escalera". El jugador responde preguntas de cultura general de dificultad CRECIENTE. Tras cada acierto decide si se planta (y conserva lo ganado) o sigue arriesgando. Un fallo y pierde el bote de esa partida.
+
+FECHA: """ + today + """
+SEED: """ + str(seed) + """
+
+Crea 6 preguntas de cultura general con dificultad ESTRICTAMENTE CRECIENTE (peldano 1 = muy facil; peldano 6 = muy dificil):
+1. Peldano 1: facilisima, casi todo el mundo la sabe.
+2. Peldano 2: facil.
+3. Peldano 3: media.
+4. Peldano 4: dificil.
+5. Peldano 5: muy dificil.
+6. Peldano 6: experta, solo aciertan los que saben mucho.
+
+REGLAS:
+- Variedad de temas entre peldanos: historia, ciencia, geografia, arte, cine, musica, deporte, naturaleza, lengua... NO repitas tema dos peldanos seguidos.
+- Cada pregunta con 4 opciones; solo una correcta. Los distractores, plausibles.
+- Cultura general amena y universal (que valga para cualquier publico de bar). Nada de politica partidista ni temas sensibles.
+- Una explicacion breve por pregunta (1 frase), para aprender algo al revelar.
+- Rigor absoluto: verifica que la opcion correcta es realmente correcta y unica.
+
+Devuelve SOLO un objeto JSON valido, sin markdown:
+{
+  "preguntas": [
+    {"nivel": 1, "tema": "Geografia", "enunciado": "...", "opciones": ["A","B","C","D"], "correcta": 0, "explicacion": "..."},
+    {"nivel": 2, "tema": "Cine", "enunciado": "...", "opciones": ["A","B","C","D"], "correcta": 2, "explicacion": "..."}
+  ]
+}
+Genera exactamente 6 preguntas, una por peldano, en orden de dificultad creciente.""" + _bloque_evitar(evitar)
+
+    return _post_ia(prompt, 1800, api_key)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Quién es más probable — afirmaciones para señalar a uno de los dos (a dobles)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def generate_quienmas(bar_slug, evitar=None):
+    today = str(date.today())
+    api_key = os.environ.get('ANTHROPIC_API_KEY')
+    seed = get_day_seed(bar_slug)
+
+    prompt = """Eres el animador de un juego para bares llamado "Quien es mas probable que...", para dos personas. Se muestra una afirmacion divertida y cada jugador, en secreto, senala a quien de los dos le pega mas. Luego se compara si coinciden.
+
+FECHA: """ + today + """
+SEED: """ + str(seed) + """
+
+Crea 8 afirmaciones del tipo "Quien es mas probable que..." con estas reglas:
+- Cotidianas, divertidas, que generen risas y piques sanos entre dos personas (amigos, pareja, companeros).
+- Variadas: algunas tiernas, otras gamberras, otras absurdas. Mezcla situaciones de la vida diaria, manias, reacciones, habitos.
+- Cortas y con gancho (una frase). Empiezan implicitamente por "Quien es mas probable que..." (NO repitas esa coletilla en cada frase; escribe solo el complemento, ej: "se quede dormido en el cine").
+- NEUTRAS respecto al genero: validas para cualquier persona, sin estereotipos de hombre/mujer.
+- Nada ofensivo, ni sexual, ni politico, ni que humille. Tono de buen rollo.
+
+Devuelve SOLO un objeto JSON valido, sin markdown:
+{
+  "afirmaciones": [
+    "se quede dormido en el cine",
+    "se ria en un momento serio",
+    "olvide donde ha aparcado el coche"
+  ]
+}
+Genera exactamente 8 afirmaciones variadas.""" + _bloque_evitar(evitar)
+
+    return _post_ia(prompt, 1000, api_key)
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Muertes Absurdas generator
 # ─────────────────────────────────────────────────────────────────────────────

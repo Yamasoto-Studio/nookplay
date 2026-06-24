@@ -334,8 +334,10 @@ for slug, name, desc, pos in [
     ('freep', 'Freep', 'Duelo de memoria veloz', 22),
     ('titular', 'El Titular Imposible', '¿Noticia real o inventada?', 23),
     ('definicion', 'La Definición Falsa', 'Aprende una palabra nueva', 24),
+    ('escalera', 'La Escalera', '¿Hasta dónde llegas?', 25),
     ('dosverdades', 'Dos Verdades, Una Mentira', 'Descubre el farol', 51),
     ('masomenos', 'Más o Menos', 'Duelo de cifras', 52),
+    ('quienmas', '¿Quién es más probable?', 'Reto entre dos', 53),
 ]:
     if not db.execute("SELECT id FROM games WHERE slug = ?", (slug,)).fetchone():
         db.execute(
@@ -358,13 +360,13 @@ ORDEN_JUEGOS = {
     # Curiosidad / lectura
     'impostor': 15, 'muertes': 16, 'oraculo': 17, 'local': 18,
     # Reto mental / conocimiento
-    'menteagil': 19, 'constitucion': 20,
+    'menteagil': 19, 'constitucion': 20, 'escalera': 24,
     # Curiosidad / cultura general
     'titular': 21, 'definicion': 22,
     # Creativo / generativo
     'poema': 23,
     # ── A DOBLES (2 jugadores, 1 móvil) — siempre al final, agrupados ──
-    'freep': 50, 'dosverdades': 51, 'masomenos': 52,
+    'freep': 50, 'dosverdades': 51, 'masomenos': 52, 'quienmas': 53,
 }
 for slug, pos in ORDEN_JUEGOS.items():
     db.execute("UPDATE games SET position = ? WHERE slug = ?", (pos, slug))
