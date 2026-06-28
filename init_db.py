@@ -43,6 +43,10 @@ db.executescript('''
         access_code         TEXT DEFAULT \'\',
         access_code_updated_at TEXT DEFAULT \'\',
         whatsapp_phone      TEXT DEFAULT \'\',
+        social_instagram    TEXT DEFAULT \'\',
+        social_facebook     TEXT DEFAULT \'\',
+        social_tiktok       TEXT DEFAULT \'\',
+        menu_url            TEXT DEFAULT \'\',
         color_primary       TEXT DEFAULT \'#C4622D\',
         color_primary_text  TEXT DEFAULT \'#FFFFFF\',
         color_bg            TEXT DEFAULT \'#F7F2EB\',
@@ -158,6 +162,10 @@ migrations = [
     "ALTER TABLE bars ADD COLUMN plan_expires_at TEXT DEFAULT ''",
     "ALTER TABLE bars ADD COLUMN stripe_customer_id TEXT DEFAULT ''",
     "ALTER TABLE bars ADD COLUMN stripe_subscription_id TEXT DEFAULT ''",
+    "ALTER TABLE bars ADD COLUMN social_instagram TEXT DEFAULT ''",
+    "ALTER TABLE bars ADD COLUMN social_facebook TEXT DEFAULT ''",
+    "ALTER TABLE bars ADD COLUMN social_tiktok TEXT DEFAULT ''",
+    "ALTER TABLE bars ADD COLUMN menu_url TEXT DEFAULT ''",
 ]
 for sql in migrations:
     try:

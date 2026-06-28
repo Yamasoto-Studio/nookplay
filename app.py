@@ -1127,6 +1127,34 @@ def admin_bar(bar_slug):
                            analytics=analytics,
                            admin_role=session.get('admin_role','bar_admin'))
 
+def _normalizar_handle(valor, dominio):
+    """Normaliza un usuario de red social. Acepta '@usuario', 'usuario',
+    o una URL completa pegada, y devuelve solo el handle limpio (sin @, sin URL).
+    Si está vacío devuelve ''."""
+    v = (valor or '').strip()
+    if not v:
+        return ''
+    low = v.lower()
+    if 'http' in low or dominio in low:
+        if dominio in low:
+            v = v[low.index(dominio) + len(dominio):]
+        v = v.lstrip('/')
+        v = v.split('?')[0].split('/')[0]
+    v = v.lstrip('@').strip()
+    return v[:80]
+
+
+def _normalizar_url(valor):
+    """Normaliza una URL de carta/menú. Si tiene valor y no lleva esquema,
+    antepone https://. Si está vacío devuelve ''."""
+    v = (valor or '').strip()
+    if not v:
+        return ''
+    if not v.lower().startswith(('http://', 'https://')):
+        v = 'https://' + v
+    return v[:300]
+
+
 @app.route('/admin/api/save', methods=['POST'])
 @admin_required
 def admin_save():
@@ -1151,14 +1179,19 @@ def admin_save():
         db.execute("UPDATE bars SET plan=? WHERE slug=?", (data['plan'], bar_slug))
 
     db.execute(
-        "UPDATE bars SET welcome_message=?, tomorrow_message=?, promo_active=?, description=?, owner_name=?, staff_names=?, color_primary=?, color_primary_text=?, color_bg=?, color_bg_subtle=?, address=?, city=?, province=?, zip_code=?, country=?, latitude=?, longitude=? WHERE slug=?",
+        "UPDATE bars SET welcome_message=?, tomorrow_message=?, promo_active=?, description=?, owner_name=?, staff_names=?, color_primary=?, color_primary_text=?, color_bg=?, color_bg_subtle=?, address=?, city=?, province=?, zip_code=?, country=?, latitude=?, longitude=?, social_instagram=?, social_facebook=?, social_tiktok=?, menu_url=? WHERE slug=?",
         (data.get('welcome_message',''), data.get('tomorrow_message',''), data.get('promo_active',0),
          data.get('description',''), data.get('owner_name',''),
          data.get('staff_names',''), data.get('color_primary','#C4622D'),
          data.get('color_primary_text','#FFFFFF'), data.get('color_bg','#F7F2EB'),
          data.get('color_bg_subtle','#F0EBE3'), data.get('address',''),
          data.get('city',''), data.get('province',''), data.get('zip_code',''),
-         data.get('country','España'), lat, lng, bar_slug)
+         data.get('country','España'), lat, lng,
+         _normalizar_handle(data.get('social_instagram',''), 'instagram.com'),
+         _normalizar_handle(data.get('social_facebook',''), 'facebook.com'),
+         _normalizar_handle(data.get('social_tiktok',''), 'tiktok.com'),
+         _normalizar_url(data.get('menu_url','')),
+         bar_slug)
     )
     db.execute("DELETE FROM bar_products WHERE bar_id = ?", (bar['id'],))
     for p in data.get('products', []):

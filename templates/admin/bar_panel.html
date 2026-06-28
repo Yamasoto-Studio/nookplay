@@ -336,6 +336,29 @@
       </div>
     </div>
 
+    <!-- Enlaces del local -->
+    <div class="form-card">
+      <h3>Enlaces de tu local</h3>
+      <div class="field-hint" style="margin-bottom:14px;">Lo que rellenes aparecerá como botón en la pantalla de tus clientes. Lo que dejes vacío, no se mostrará.</div>
+      <div class="field">
+        <label for="social_instagram">Instagram</label>
+        <input type="text" id="social_instagram" name="social_instagram" value="{{ bar.social_instagram or '' }}" placeholder="tu_usuario (sin @)">
+      </div>
+      <div class="field">
+        <label for="social_facebook">Facebook</label>
+        <input type="text" id="social_facebook" name="social_facebook" value="{{ bar.social_facebook or '' }}" placeholder="tu_pagina">
+      </div>
+      <div class="field">
+        <label for="social_tiktok">TikTok</label>
+        <input type="text" id="social_tiktok" name="social_tiktok" value="{{ bar.social_tiktok or '' }}" placeholder="tu_usuario (sin @)">
+      </div>
+      <div class="field">
+        <label for="menu_url">Carta / Menú</label>
+        <input type="text" id="menu_url" name="menu_url" value="{{ bar.menu_url or '' }}" placeholder="https://... (el enlace de tu carta digital)">
+        <div class="field-hint">El mismo enlace al que apunta el QR de tu carta, si tienes.</div>
+      </div>
+    </div>
+
     <!-- Productos -->
     <div class="form-card">
       <h3>Productos destacados</h3>
@@ -916,6 +939,10 @@ async function saveChanges() {
     country: form.country ? form.country.value : '',
     latitude: form.latitude ? (form.latitude.value || null) : null,
     longitude: form.longitude ? (form.longitude.value || null) : null,
+    social_instagram: form.social_instagram ? form.social_instagram.value : '',
+    social_facebook: form.social_facebook ? form.social_facebook.value : '',
+    social_tiktok: form.social_tiktok ? form.social_tiktok.value : '',
+    menu_url: form.menu_url ? form.menu_url.value : '',
     products: []
   };
 
