@@ -13,6 +13,40 @@
 </style>
 
 <link rel="stylesheet" href="/static/css/games.css">
+<script>
+(function(){
+  // Identificador anónimo de dispositivo (un valor aleatorio en el navegador, SIN datos
+  // personales). Sirve para contar alcance real: personas/mesas distintas que juegan.
+  function nookDeviceId(){
+    try {
+      var k='nook_did', v=localStorage.getItem(k);
+      if(!v){
+        v = (window.crypto && crypto.randomUUID) ? crypto.randomUUID()
+            : 'd-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);
+        localStorage.setItem(k, v);
+      }
+      return v;
+    } catch(e){ return ''; }  // si el navegador bloquea el almacenamiento, no rompemos nada
+  }
+  window.nookDeviceId = nookDeviceId;
+
+  // Inyecta device_id en las llamadas de registro de partidas, sin tocar cada juego.
+  var _fetch = window.fetch;
+  window.fetch = function(url, opts){
+    try {
+      if (typeof url === 'string' && opts && opts.body &&
+          (url.indexOf('/api/play') !== -1 || url.indexOf('/api/pensamiento-responder') !== -1)) {
+        var b = JSON.parse(opts.body);
+        if (b && typeof b === 'object' && !b.device_id) {
+          b.device_id = nookDeviceId();
+          opts = Object.assign({}, opts, { body: JSON.stringify(b) });
+        }
+      }
+    } catch(e){}
+    return _fetch.call(this, url, opts);
+  };
+})();
+</script>
 <script src="/static/js/stats.js"></script>
 <script src="/static/js/share.js"></script>
 <script>

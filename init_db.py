@@ -108,7 +108,9 @@ db.executescript('''
         correct     INTEGER DEFAULT 0,
         game_type   TEXT DEFAULT \'crimen\',
         choice      INTEGER DEFAULT -1,
-        elapsed     INTEGER DEFAULT 0
+        elapsed     INTEGER DEFAULT 0,
+        played_at   TEXT DEFAULT \'\',
+        device_id   TEXT DEFAULT \'\'
     );
 
     CREATE TABLE IF NOT EXISTS admin_users (
@@ -156,6 +158,7 @@ migrations = [
     "ALTER TABLE plays ADD COLUMN elapsed INTEGER DEFAULT 0",
     "ALTER TABLE plays ADD COLUMN answer_text TEXT DEFAULT ''",
     "ALTER TABLE plays ADD COLUMN played_at TEXT DEFAULT ''",
+    "ALTER TABLE plays ADD COLUMN device_id TEXT DEFAULT ''",
     "ALTER TABLE admin_users ADD COLUMN bar_slug TEXT DEFAULT ''",
     "ALTER TABLE bars ADD COLUMN plan TEXT DEFAULT 'gift'",
     "ALTER TABLE bars ADD COLUMN plan_status TEXT DEFAULT 'active'",

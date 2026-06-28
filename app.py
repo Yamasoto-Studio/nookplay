@@ -994,6 +994,10 @@ def calcular_analytics_bar(db, bar_slug):
         'top_game': None, 'top_game_count': 0,
         'active_days': 0, 'has_data': False, 'has_hour_data': False,
         'daily': [],  # lista de {dia, count} de la semana actual para mini-gráfico
+        'people_week': 0, 'has_device_data': False,  # alcance real (dispositivos únicos)
+        'total_historico': 0, 'people_historico': 0,  # acumulado desde el inicio
+        'avg_day': 0,  # media de partidas por día activo
+        'top_games': [],  # top 3 juegos de la semana [{name, count}]
     }
 
     # Volumen semana actual y hoy
@@ -1004,9 +1008,22 @@ def calcular_analytics_bar(db, bar_slug):
         "SELECT COUNT(*) n FROM plays WHERE bar_slug=? AND played_on=?",
         (bar_slug, str(hoy))).fetchone()['n']
 
+    # Acumulado histórico (se muestra siempre, da sensación de valor acumulado)
+    a['total_historico'] = db.execute(
+        "SELECT COUNT(*) n FROM plays WHERE bar_slug=?", (bar_slug,)).fetchone()['n']
+    a['people_historico'] = db.execute(
+        "SELECT COUNT(DISTINCT device_id) n FROM plays WHERE bar_slug=? AND device_id!=''",
+        (bar_slug,)).fetchone()['n']
+
     if a['week'] == 0:
         return a
     a['has_data'] = True
+
+    # Alcance real de la semana: dispositivos (personas/mesas) distintos
+    a['people_week'] = db.execute(
+        "SELECT COUNT(DISTINCT device_id) n FROM plays WHERE bar_slug=? AND played_on>=? AND device_id!=''",
+        (bar_slug, str(monday))).fetchone()['n']
+    a['has_device_data'] = a['people_week'] > 0
 
     # Semana anterior (para tendencia)
     a['prev_week'] = db.execute(
@@ -1053,13 +1070,21 @@ def calcular_analytics_bar(db, bar_slug):
             a['best_hour'] = f"{top_h:02d}:00–{(top_h+1)%24:02d}:00"
             a['best_hour_count'] = top_c
 
-    # Juego favorito de la semana
-    top_juego = db.execute(
-        "SELECT game_type, COUNT(*) n FROM plays WHERE bar_slug=? AND played_on>=? GROUP BY game_type ORDER BY n DESC LIMIT 1",
-        (bar_slug, str(monday))).fetchone()
-    if top_juego:
-        a['top_game'] = top_juego['game_type']
-        a['top_game_count'] = top_juego['n']
+    # Top juegos de la semana (favorito + top 3)
+    top_juegos = db.execute(
+        "SELECT game_type, COUNT(*) n FROM plays WHERE bar_slug=? AND played_on>=? GROUP BY game_type ORDER BY n DESC LIMIT 3",
+        (bar_slug, str(monday))).fetchall()
+    if top_juegos:
+        a['top_game'] = top_juegos[0]['game_type']
+        a['top_game_count'] = top_juegos[0]['n']
+        a['top_games'] = [
+            {'name': GAME_NOMBRES.get(r['game_type'], r['game_type']), 'count': r['n']}
+            for r in top_juegos
+        ]
+
+    # Media de partidas por día activo
+    if a['active_days'] > 0:
+        a['avg_day'] = round(a['week'] / a['active_days'], 1)
 
     return a
 
@@ -1531,18 +1556,29 @@ def register_play():
     game_type = data.get('game_type', 'crimen')
     choice = data.get('choice', -1)
     elapsed = data.get('elapsed', 0)
+    device_id = (data.get('device_id') or '').strip()[:40]
     today = str(date.today())
 
     db = get_db()
-    played = db.execute(
-        "SELECT id FROM plays WHERE code = ? AND played_on = ? AND game_type = ?",
-        (code, today, game_type)
-    ).fetchone()
+    # Anti-duplicado: si tenemos identificador de dispositivo, contamos UNA vez por
+    # (dispositivo, día, juego) -> así personas distintas suman por separado pero la
+    # misma persona repitiendo el mismo juego ese día no infla. Sin device_id (cliente
+    # antiguo), caemos al comportamiento previo por (código, día, juego).
+    if device_id:
+        played = db.execute(
+            "SELECT id FROM plays WHERE device_id = ? AND played_on = ? AND game_type = ?",
+            (device_id, today, game_type)
+        ).fetchone()
+    else:
+        played = db.execute(
+            "SELECT id FROM plays WHERE code = ? AND played_on = ? AND game_type = ? AND (device_id IS NULL OR device_id = '')",
+            (code, today, game_type)
+        ).fetchone()
 
     if not played:
         db.execute(
-            "INSERT INTO plays (code, bar_slug, played_on, correct, game_type, choice, elapsed, played_at) VALUES (?,?,?,?,?,?,?,?)",
-            (code, bar_slug, today, 1 if correct else 0, game_type, choice, elapsed, now_madrid_iso())
+            "INSERT INTO plays (code, bar_slug, played_on, correct, game_type, choice, elapsed, played_at, device_id) VALUES (?,?,?,?,?,?,?,?,?)",
+            (code, bar_slug, today, 1 if correct else 0, game_type, choice, elapsed, now_madrid_iso(), device_id)
         )
         db.commit()
     db.close()
@@ -2637,6 +2673,7 @@ def pensamiento_responder():
     code = data.get('code', '').strip().upper()
     respuesta = data.get('respuesta', '').strip()[:40]
     elapsed = data.get('elapsed', 0)
+    device_id = (data.get('device_id') or '').strip()[:40]
     today = str(date.today())
     if not respuesta:
         return jsonify({'error': 'Respuesta vacía'}), 400
@@ -2645,8 +2682,8 @@ def pensamiento_responder():
         db = get_db()
         norm = _normalizar_respuesta(respuesta)
         db.execute(
-            "INSERT INTO plays (code, bar_slug, game_type, played_on, correct, elapsed, answer_text, played_at) VALUES (?,?,?,?,?,?,?,?)",
-            (code, bar_slug, 'pensamiento', today, 1, elapsed, norm, now_madrid_iso())
+            "INSERT INTO plays (code, bar_slug, game_type, played_on, correct, elapsed, answer_text, played_at, device_id) VALUES (?,?,?,?,?,?,?,?,?)",
+            (code, bar_slug, 'pensamiento', today, 1, elapsed, norm, now_madrid_iso(), device_id)
         )
         db.commit()
 
