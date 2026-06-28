@@ -439,6 +439,27 @@ def get_historial_reciente(db, game_type, bar_slug=None, dias=10, campo='titulo'
                 idx = data.get('correcta', 0)
                 if isinstance(data['opciones'], list) and idx < len(data['opciones']):
                     items.append(data['opciones'][idx])
+            elif campo == 'masomenos_preguntas' and 'rondas' in data:
+                # masomenos: la pregunta de cada ronda
+                for r in data['rondas']:
+                    if isinstance(r, dict) and r.get('pregunta'):
+                        items.append(r['pregunta'][:90])
+            elif campo == 'afirmaciones' and 'afirmaciones' in data:
+                # quienmas: cada afirmación
+                for a in data['afirmaciones']:
+                    if isinstance(a, str) and a.strip():
+                        items.append(a[:90])
+            elif campo == 'conexiones_grupos':
+                # conexiones: los nombres de los 4 grupos temáticos
+                for k in ('grupo_a', 'grupo_b', 'grupo_c', 'grupo_d'):
+                    g = data.get(k)
+                    if isinstance(g, dict) and g.get('nombre'):
+                        items.append(g['nombre'][:60])
+            elif campo == 'escalera_enunciados' and 'preguntas' in data:
+                # escalera: el enunciado de cada pregunta
+                for p in data['preguntas']:
+                    if isinstance(p, dict) and p.get('enunciado'):
+                        items.append(p['enunciado'][:90])
             elif campo in data and data[campo]:
                 items.append(str(data[campo]))
         except Exception:
@@ -581,12 +602,14 @@ def pregen_daily_games():
                         ctx['productos'] = [p['title'] for p in products]
                         game_data = generate_game(ctx, bar['slug'])
                     elif game_type == 'impostor':
-                        game_data = generate_impostor(bar['name'], bar['slug'])
+                        ev = get_historial_reciente(db, 'impostor', bar['slug'], campo='tema')
+                        game_data = generate_impostor(bar['name'], bar['slug'], evitar=ev)
                     elif game_type == 'dilema':
                         ev = get_historial_reciente(db, 'dilema', bar['slug'], campo='situacion')
                         game_data = generate_dilema(bar['name'], bar['slug'], evitar=ev)
                     elif game_type == 'conexiones':
-                        game_data = generate_conexiones(bar['name'], bar['slug'])
+                        ev = get_historial_reciente(db, 'conexiones', bar['slug'], campo='conexiones_grupos')
+                        game_data = generate_conexiones(bar['name'], bar['slug'], evitar=ev)
                     elif game_type == 'oraculo':
                         # Oráculo es único para todos los bares — solo generar una vez
                         existing_oraculo = db.execute(
@@ -604,7 +627,8 @@ def pregen_daily_games():
                         ).fetchone()
                         if existing_donde:
                             continue
-                        game_data = generate_donde(bar['slug'])
+                        ev = get_historial_reciente(db, 'donde', None, campo='lugar')
+                        game_data = generate_donde(bar['slug'], evitar=ev)
                     elif game_type == 'local':
                         city = bar['city'] or ''
                         province = bar['province'] or city
@@ -655,7 +679,8 @@ def pregen_daily_games():
                         ).fetchone()
                         if existing:
                             continue
-                        game_data = generate_pensamiento(bar['slug'])
+                        ev = get_historial_reciente(db, 'pensamiento', None, campo='categoria')
+                        game_data = generate_pensamiento(bar['slug'], evitar=ev)
                     elif game_type == 'menteagil':
                         existing = db.execute(
                             "SELECT id FROM generated_games WHERE game_type = 'menteagil' AND game_date = ?",
@@ -697,7 +722,8 @@ def pregen_daily_games():
                         ).fetchone()
                         if existing:
                             continue
-                        game_data = generate_masomenos(bar['slug'])
+                        ev = get_historial_reciente(db, 'masomenos', None, campo='masomenos_preguntas')
+                        game_data = generate_masomenos(bar['slug'], evitar=ev)
                     elif game_type == 'escalera':
                         existing = db.execute(
                             "SELECT id FROM generated_games WHERE game_type = 'escalera' AND game_date = ?",
@@ -705,7 +731,8 @@ def pregen_daily_games():
                         ).fetchone()
                         if existing:
                             continue
-                        game_data = generate_escalera(bar['slug'])
+                        ev = get_historial_reciente(db, 'escalera', None, campo='escalera_enunciados')
+                        game_data = generate_escalera(bar['slug'], evitar=ev)
                     elif game_type == 'quienmas':
                         existing = db.execute(
                             "SELECT id FROM generated_games WHERE game_type = 'quienmas' AND game_date = ?",
@@ -713,7 +740,8 @@ def pregen_daily_games():
                         ).fetchone()
                         if existing:
                             continue
-                        game_data = generate_quienmas(bar['slug'])
+                        ev = get_historial_reciente(db, 'quienmas', None, campo='afirmaciones')
+                        game_data = generate_quienmas(bar['slug'], evitar=ev)
                     
                     import json as _json
                     db.execute(
@@ -1438,7 +1466,10 @@ def impostor():
     db.close()
 
     try:
-        game_data = generate_impostor(bar_context['nombre'], bar_slug)
+        _dbev = get_db()
+        _ev = get_historial_reciente(_dbev, 'impostor', bar_slug, campo='tema')
+        _dbev.close()
+        game_data = generate_impostor(bar_context['nombre'], bar_slug, evitar=_ev)
         db2 = get_db()
         bar2 = db2.execute("SELECT id FROM bars WHERE slug = ?", (bar_slug,)).fetchone()
         try:
@@ -2179,7 +2210,10 @@ def masomenos_api():
 
     db.close()
     try:
-        game_data = generate_masomenos(bar_slug)
+        _dbev = get_db()
+        _ev = get_historial_reciente(_dbev, 'masomenos', None, campo='masomenos_preguntas')
+        _dbev.close()
+        game_data = generate_masomenos(bar_slug, evitar=_ev)
         _persistir_generado(bar['id'], 'masomenos', game_data, es_global=True)
         _game_cache[cache_key] = game_data
         return jsonify(game_data)
@@ -2241,7 +2275,10 @@ def escalera_api():
 
     db.close()
     try:
-        game_data = generate_escalera(bar_slug)
+        _dbev = get_db()
+        _ev = get_historial_reciente(_dbev, 'escalera', None, campo='escalera_enunciados')
+        _dbev.close()
+        game_data = generate_escalera(bar_slug, evitar=_ev)
         _persistir_generado(bar['id'], 'escalera', game_data, es_global=True)
         _game_cache[cache_key] = game_data
         return jsonify(game_data)
@@ -2320,7 +2357,10 @@ def quienmas_api():
 
     db.close()
     try:
-        game_data = generate_quienmas(bar_slug)
+        _dbev = get_db()
+        _ev = get_historial_reciente(_dbev, 'quienmas', None, campo='afirmaciones')
+        _dbev.close()
+        game_data = generate_quienmas(bar_slug, evitar=_ev)
         _persistir_generado(bar['id'], 'quienmas', game_data, es_global=True)
         _game_cache[cache_key] = game_data
         return jsonify(game_data)
@@ -2534,7 +2574,10 @@ def pensamiento_api():
         return jsonify(game_data)
     db.close()
     try:
-        game_data = generate_pensamiento(bar_slug)
+        _dbev = get_db()
+        _ev = get_historial_reciente(_dbev, 'pensamiento', None, campo='categoria')
+        _dbev.close()
+        game_data = generate_pensamiento(bar_slug, evitar=_ev)
         _bid = bar['id']
         _persistir_generado(_bid, 'pensamiento', game_data, es_global=True)
         _game_cache[cache_key] = game_data
@@ -2886,7 +2929,10 @@ def conexiones_api():
 
     db.close()
     try:
-        game_data = generate_conexiones(bar['name'], bar_slug)
+        _dbev = get_db()
+        _ev = get_historial_reciente(_dbev, 'conexiones', bar_slug, campo='conexiones_grupos')
+        _dbev.close()
+        game_data = generate_conexiones(bar['name'], bar_slug, evitar=_ev)
         _bid = bar['id']
         _persistir_generado(_bid, 'conexiones', game_data, es_global=False)
         _game_cache[cache_key] = game_data
@@ -3016,7 +3062,10 @@ def donde_api():
 
     db.close()
     try:
-        game_data = generate_donde(bar_slug)
+        _dbev = get_db()
+        _ev = get_historial_reciente(_dbev, 'donde', None, campo='lugar')
+        _dbev.close()
+        game_data = generate_donde(bar_slug, evitar=_ev)
         _bid = bar['id']
         _persistir_generado(_bid, 'donde', game_data, es_global=True)
         _game_cache[cache_key] = game_data

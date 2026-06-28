@@ -317,7 +317,7 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
 # El Impostor generator
 # ─────────────────────────────────────────────────────────────────────────────
 
-def generate_impostor(bar_name, bar_slug):
+def generate_impostor(bar_name, bar_slug, evitar=None):
     today = str(date.today())
     api_key = os.environ.get('ANTHROPIC_API_KEY')
     seed = get_day_seed(bar_slug)
@@ -357,7 +357,7 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
 
 La afirmación en la posición """ + str(falsa_idx) + """ (índice 0-3) debe ser la FALSA."""
 
-    return _post_ia(prompt, 1000, api_key)
+    return _post_ia(prompt + _bloque_evitar(evitar), 1000, api_key)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -427,7 +427,7 @@ CATEGORIAS_CONEXIONES = [
     "objetos cotidianos",
 ]
 
-def generate_conexiones(bar_name, bar_slug):
+def generate_conexiones(bar_name, bar_slug, evitar=None):
     today = str(date.today())
     api_key = os.environ.get('ANTHROPIC_API_KEY')
     seed = get_day_seed(bar_slug)
@@ -474,7 +474,7 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
 
 IMPORTANTE: Las palabras deben estar en MAYÚSCULAS."""
 
-    result = _post_ia(prompt, 800, api_key)
+    result = _post_ia(prompt + _bloque_evitar(evitar), 800, api_key)
     
     # Mezclar las 8 palabras aleatoriamente
     import random as _random
@@ -567,7 +567,7 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
 # ¿Dónde en el mundo? generator
 # ─────────────────────────────────────────────────────────────────────────────
 
-def generate_donde(bar_slug):
+def generate_donde(bar_slug, evitar=None):
     today = str(date.today())
     api_key = os.environ.get('ANTHROPIC_API_KEY')
     seed = get_day_seed(bar_slug)
@@ -615,7 +615,7 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
 
 IMPORTANTE: El lugar correcto debe estar en la posición 0 del array opciones."""
 
-    result = _post_ia(prompt, 1000, api_key)
+    result = _post_ia(prompt + _bloque_evitar(evitar), 1000, api_key)
 
     # Mezclar opciones manteniendo referencia al correcto
     import random as _random
@@ -1691,7 +1691,7 @@ CATEGORIAS_PENSAMIENTO_FALLBACK = [
     "algo que encuentras en una cocina", "un superhéroe", "una ciudad con playa",
 ]
 
-def generate_pensamiento(bar_slug):
+def generate_pensamiento(bar_slug, evitar=None):
     today = str(date.today())
     api_key = os.environ.get('ANTHROPIC_API_KEY')
     seed = get_day_seed(bar_slug)
@@ -1716,7 +1716,7 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
 }"""
 
     try:
-        return _post_ia(prompt, 400, api_key)
+        return _post_ia(prompt + _bloque_evitar(evitar), 400, api_key)
     except Exception:
         cat = CATEGORIAS_PENSAMIENTO_FALLBACK[seed % len(CATEGORIAS_PENSAMIENTO_FALLBACK)]
         return {"categoria": cat, "instruccion": "Escribe lo primero que se te ocurra. Ganas si coincides con la mayoría.", "pista": "Piensa rápido, piensa como los demás."}
