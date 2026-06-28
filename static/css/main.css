@@ -256,7 +256,7 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 2px;
 }
 
 .nook-footer-brand img {
@@ -272,6 +272,7 @@ body {
   letter-spacing: 0.5px;
   text-decoration: none;
   font-weight: 500;
+  margin-top: -2px;
 }
 
 .nook-footer-by:hover { color: var(--text); }
