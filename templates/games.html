@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Los juegos de Nookplay — Entretenimiento diario para tu local{% endblock %}
+{% block title %}Los juegos de Nookplay — Entretenimiento diario para tu espacio{% endblock %}
 {% block a11y %}{% endblock %}
 {% block content %}
 
@@ -239,22 +239,22 @@
 <nav class="nav">
   <a href="/"><img src="/static/logo.svg" alt="Nookplay"></a>
   <a href="/" class="nav-back">← Volver</a>
-  <button class="nav-cta" onclick="openContactModal()">¡Lo quiero para mi local!</button>
+  <button class="nav-cta" onclick="openContactModal()">¡Lo quiero para mí!</button>
 </nav>
 
 <!-- HERO -->
 <section class="hero">
   <div class="hero-eyebrow">Catálogo de juegos</div>
   <h1>{{ games|length }} juegos.<br>Cada día, contenido nuevo.</h1>
-  <p>Sin instalar nada. Sin registros. Sin datos. Juegos únicos cada mañana, adaptados a tu local y a tu ciudad.</p>
-  <button class="hero-cta" onclick="openContactModal()">¡Quiero Nookplay en mi local!</button>
+  <p>Sin instalar nada. Sin registros. Sin datos. Juegos únicos cada mañana, adaptados a tu local, tu ciudad o tu evento.</p>
+  <button class="hero-cta" onclick="openContactModal()">¡Quiero Nookplay!</button>
 </section>
 
 <!-- GAMES GRID -->
 <section class="section">
   <div class="section-label">Los juegos</div>
-  <h2 class="section-title">Cada local elige los suyos</h2>
-  <p class="section-sub">Según el plan, el propietario activa los juegos que mejor encajan con su clientela. Todos se renuevan cada mañana.</p>
+  <h2 class="section-title">Cada espacio elige los suyos</h2>
+  <p class="section-sub">Según el plan, el propietario activa los juegos que mejor encajan con su espacio y su público. Todos se renuevan cada mañana.</p>
 
   <div class="games-grid">
     {% for g in games %}
@@ -279,7 +279,7 @@
   <div class="plans-inner">
     <div class="section-label">Los planes</div>
     <h2 class="section-title">Elige el que mejor encaja</h2>
-    <p class="section-sub">Sin permanencia. Sin complicaciones. El local activa los juegos que quiere y puede cambiarlos cuando quiera.</p>
+    <p class="section-sub">Sin permanencia. Sin complicaciones. Activa los juegos que quieres y cámbialos cuando quieras.</p>
 
     <div class="plans-grid">
 
@@ -329,7 +329,7 @@
 
 <!-- CTA FINAL -->
 <section class="cta-section">
-  <h2>¿Lo quieres en tu local?</h2>
+  <h2>¿Lo quieres para tu espacio?</h2>
   <p>Escríbenos y en menos de 24 horas lo tienes funcionando.<br>Sin instalaciones, sin complicaciones.</p>
   <button class="cta-btn" onclick="openContactModal()">¡Quiero Nookplay!</button>
 </section>
@@ -344,13 +344,13 @@
 <div class="contact-modal-overlay" id="contact-modal" onclick="closeContactModal(event)">
   <div class="contact-modal">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-      <div style="font-size:18px;font-weight:700;">¿Quieres Nookplay en tu local?</div>
+      <div style="font-size:18px;font-weight:700;">¿Quieres Nookplay?</div>
       <button onclick="closeContactModal()" style="background:transparent;border:none;font-size:22px;cursor:pointer;color:#A89B91;padding:0;">✕</button>
     </div>
     <div id="contact-form-wrap">
-      <p style="font-size:14px;color:#6B6059;margin-bottom:20px;line-height:1.5;">Cuéntanos un poco sobre tu local y nos ponemos en contacto contigo.</p>
+      <p style="font-size:14px;color:#6B6059;margin-bottom:20px;line-height:1.5;">Cuéntanos un poco sobre tu negocio o evento y nos ponemos en contacto contigo.</p>
       <div class="contact-field"><label>Tu nombre *</label><input type="text" id="cf-nombre" placeholder="Nombre y apellido"></div>
-      <div class="contact-field"><label>Nombre del negocio *</label><input type="text" id="cf-negocio" placeholder="Bar, cafetería, clínica..."></div>
+      <div class="contact-field"><label>Nombre del negocio o evento *</label><input type="text" id="cf-negocio" placeholder="Bar, cafetería, evento..."></div>
       <div class="contact-field"><label>Ubicación *</label><input type="text" id="cf-ubicacion" placeholder="Ciudad o municipio"></div>
       <div class="contact-field"><label>Teléfono</label><input type="tel" id="cf-telefono" placeholder="+34 600 000 000"></div>
       <div class="contact-field"><label>Email de contacto *</label><input type="email" id="cf-email" placeholder="tu@email.com"></div>
