@@ -5,6 +5,42 @@ import time
 from datetime import date
 import os
 import hashlib
+import contextvars
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Contexto temático de evento (transversal a todos los generadores)
+#
+# Permite que un evento (space_kind='evento' con event_theme) ambiente TODOS sus
+# juegos IA sin tocar las 21 firmas de generate_X(). Se establece antes de generar
+# para un espacio y _post_ia() lo lee automáticamente. Para un bar normal queda
+# vacío y el comportamiento es idéntico al de siempre.
+#
+# Uso:
+#   token = set_event_theme("Manga y anime, público otaku")
+#   try:
+#       ... generar juegos ...
+#   finally:
+#       reset_event_theme(token)
+# ─────────────────────────────────────────────────────────────────────────────
+
+_event_theme_ctx = contextvars.ContextVar('event_theme', default='')
+
+def set_event_theme(theme):
+    """Establece el tema de evento activo para las generaciones siguientes en este
+    contexto. Devuelve un token para restaurar el valor anterior con reset_event_theme."""
+    return _event_theme_ctx.set(theme or '')
+
+def reset_event_theme(token):
+    """Restaura el tema de evento al valor previo. Llamar SIEMPRE en un finally
+    para no filtrar el tema de un evento a la generación de otro espacio."""
+    try:
+        _event_theme_ctx.reset(token)
+    except Exception:
+        pass
+
+def get_event_theme():
+    """Devuelve el tema de evento activo en este contexto (o '' si no hay)."""
+    return _event_theme_ctx.get()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -114,7 +150,7 @@ _SISTEMA_NOOKPLAY = (
 )
 
 
-def _post_ia(prompt, max_tokens, api_key, reintentos=2, modelo='claude-sonnet-4-6', event_theme=''):
+def _post_ia(prompt, max_tokens, api_key, reintentos=2, modelo='claude-sonnet-4-6', event_theme=None):
     """Llama a la API de Anthropic y devuelve el JSON parseado de forma robusta.
 
     Reintenta ante fallos de red, errores de API o JSON no parseable.
@@ -122,10 +158,13 @@ def _post_ia(prompt, max_tokens, api_key, reintentos=2, modelo='claude-sonnet-4-
     Aplica un mensaje de sistema comun (_SISTEMA_NOOKPLAY) con reglas
     transversales (contenido neutro/inclusivo, español, sin contenido sensible).
 
-    Si event_theme está definido (espacios con space_kind='evento'), antepone un
-    bloque de contexto temático al prompt para ambientar el contenido en el evento.
-    Es opcional y por defecto vacío: cualquier generador que no lo pase se comporta igual.
+    Tema de evento: si event_theme es None (lo normal), lo toma automáticamente del
+    contexto (set_event_theme). Así los espacios con space_kind='evento' ambientan
+    TODOS sus juegos sin que cada generador tenga que reenviar el tema. Para un bar
+    normal el contexto está vacío y el prompt no se altera.
     """
+    if event_theme is None:
+        event_theme = get_event_theme()
     if event_theme:
         prompt = _bloque_tematico(event_theme) + "\n" + prompt
     ultimo_error = None

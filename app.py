@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 from datetime import date, datetime, timedelta
 import sqlite3
-from ai import generate_game, generate_impostor, generate_dilema, generate_conexiones, generate_oraculo, generate_donde, generate_carta, generate_reinas, generate_conexion_local, generate_equilibrio, generate_veredicto, generate_perfil, generate_vestuario, generate_sinopsis, generate_muertes, generate_letra, generate_pensamiento, generate_poema, generate_menteagil, generate_constitucion, generate_orden, generate_titular, generate_definicion, generate_masomenos, generate_escalera, generate_quienmas, build_bar_context, get_day_seed
+from ai import generate_game, generate_impostor, generate_dilema, generate_conexiones, generate_oraculo, generate_donde, generate_carta, generate_reinas, generate_conexion_local, generate_equilibrio, generate_veredicto, generate_perfil, generate_vestuario, generate_sinopsis, generate_muertes, generate_letra, generate_pensamiento, generate_poema, generate_menteagil, generate_constitucion, generate_orden, generate_titular, generate_definicion, generate_masomenos, generate_escalera, generate_quienmas, build_bar_context, get_day_seed, set_event_theme, reset_event_theme
 import os
 import smtplib
 from email.mime.text import MIMEText
@@ -467,6 +467,19 @@ def get_historial_reciente(db, game_type, bar_slug=None, dias=10, campo='titulo'
     return items[:30]
 
 
+def _theme_de(bar):
+    """Devuelve el tema temático de un espacio si es un evento con tema, o '' si no.
+    Acepta una fila sqlite3.Row o un dict. Centraliza la lógica para no repetirla
+    en pregen y en los fallbacks de los endpoints."""
+    try:
+        b = dict(bar)
+    except Exception:
+        return ''
+    if (b.get('space_kind') or 'local') != 'evento':
+        return ''
+    return b.get('event_theme', '') or ''
+
+
 def _persistir_generado(bar_id, game_type, game_data, es_global=False):
     """Guarda un juego generado bajo demanda en generated_games (idempotente).
 
@@ -586,6 +599,12 @@ def pregen_daily_games():
     _pregen_estado['total'] = len(bars) * len(GAME_TYPES)
     _pregen_estado['hechos'] = 0
     for bar in bars:
+        # ── Evento: activar tema temático para todos sus juegos ────────────
+        # Cada bar sobrescribe el tema al entrar (evento→su tema, local→''),
+        # así ningún espacio hereda el tema del anterior. Los bares normales
+        # quedan con tema vacío y su generación es idéntica a la de siempre.
+        _bar_d = dict(bar)
+        set_event_theme(_theme_de(_bar_d))
         for game_type in GAME_TYPES:
             existing = db.execute(
                 "SELECT id FROM generated_games WHERE bar_id = ? AND game_type = ? AND game_date = ?",
@@ -1472,7 +1491,11 @@ def game():
     db.close()
 
     try:
-        game_data = generate_game(bar_context, bar_slug)
+        _tok = set_event_theme(_theme_de(bar))
+        try:
+            game_data = generate_game(bar_context, bar_slug)
+        finally:
+            reset_event_theme(_tok)
         # Guardar en caché BD
         db2 = get_db()
         bar2 = db2.execute("SELECT id FROM bars WHERE slug = ?", (bar_slug,)).fetchone()
@@ -1527,7 +1550,11 @@ def impostor():
         _dbev = get_db()
         _ev = get_historial_reciente(_dbev, 'impostor', bar_slug, campo='tema')
         _dbev.close()
-        game_data = generate_impostor(bar_context['nombre'], bar_slug, evitar=_ev)
+        _tok = set_event_theme(_theme_de(bar))
+        try:
+            game_data = generate_impostor(bar_context['nombre'], bar_slug, evitar=_ev)
+        finally:
+            reset_event_theme(_tok)
         db2 = get_db()
         bar2 = db2.execute("SELECT id FROM bars WHERE slug = ?", (bar_slug,)).fetchone()
         try:
@@ -1701,7 +1728,11 @@ def dilema_api():
         _dbev = get_db()
         _ev = get_historial_reciente(_dbev, 'dilema', bar_slug, campo='situacion')
         _dbev.close()
-        game_data = generate_dilema(bar_name, bar_slug, evitar=_ev)
+        _tok = set_event_theme(_theme_de(bar))
+        try:
+            game_data = generate_dilema(bar_name, bar_slug, evitar=_ev)
+        finally:
+            reset_event_theme(_tok)
         _bid = bar['id']
         _persistir_generado(_bid, 'dilema', game_data, es_global=False)
         _game_cache[cache_key] = game_data
@@ -1767,7 +1798,11 @@ def veredicto_api():
         _dbev = get_db()
         _ev = get_historial_reciente(_dbev, 'veredicto', bar_slug, campo='titulo')
         _dbev.close()
-        game_data = generate_veredicto(bar_name, bar_slug, evitar=_ev)
+        _tok = set_event_theme(_theme_de(bar))
+        try:
+            game_data = generate_veredicto(bar_name, bar_slug, evitar=_ev)
+        finally:
+            reset_event_theme(_tok)
         _bid = bar['id']
         _persistir_generado(_bid, 'veredicto', game_data, es_global=False)
         _game_cache[cache_key] = game_data
@@ -1853,7 +1888,11 @@ def perfil_api():
         _dbev = get_db()
         _ev = get_historial_reciente(_dbev, 'perfil', bar_slug, campo='nombre')
         _dbev.close()
-        game_data = generate_perfil(bar_slug, evitar=_ev)
+        _tok = set_event_theme(_theme_de(bar))
+        try:
+            game_data = generate_perfil(bar_slug, evitar=_ev)
+        finally:
+            reset_event_theme(_tok)
         _bid = bar['id']
         _persistir_generado(_bid, 'perfil', game_data, es_global=False)
         _game_cache[cache_key] = game_data
@@ -1935,7 +1974,11 @@ def vestuario_api():
         _dbev = get_db()
         _ev = get_historial_reciente(_dbev, 'vestuario', bar_slug, campo='preguntas')
         _dbev.close()
-        game_data = generate_vestuario(bar_slug, evitar=_ev)
+        _tok = set_event_theme(_theme_de(bar))
+        try:
+            game_data = generate_vestuario(bar_slug, evitar=_ev)
+        finally:
+            reset_event_theme(_tok)
         _bid = bar['id']
         _persistir_generado(_bid, 'vestuario', game_data, es_global=False)
         _game_cache[cache_key] = game_data
@@ -3002,7 +3045,11 @@ def conexiones_api():
         _dbev = get_db()
         _ev = get_historial_reciente(_dbev, 'conexiones', bar_slug, campo='conexiones_grupos')
         _dbev.close()
-        game_data = generate_conexiones(bar['name'], bar_slug, evitar=_ev)
+        _tok = set_event_theme(_theme_de(bar))
+        try:
+            game_data = generate_conexiones(bar['name'], bar_slug, evitar=_ev)
+        finally:
+            reset_event_theme(_tok)
         _bid = bar['id']
         _persistir_generado(_bid, 'conexiones', game_data, es_global=False)
         _game_cache[cache_key] = game_data
