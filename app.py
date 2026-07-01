@@ -1222,6 +1222,20 @@ def admin_save():
     if 'plan' in data and session.get('admin_role') == 'superadmin':
         db.execute("UPDATE bars SET plan=? WHERE slug=?", (data['plan'], bar_slug))
 
+    # Config de evento: solo superadmin puede cambiar tipo de espacio y su config
+    if session.get('admin_role') == 'superadmin' and 'space_kind' in data:
+        _sk = 'evento' if data.get('space_kind') == 'evento' else 'local'
+        try:
+            _pool = int(data.get('event_pool_size', 1) or 1)
+        except (TypeError, ValueError):
+            _pool = 1
+        _pool = max(1, min(20, _pool))
+        db.execute(
+            "UPDATE bars SET space_kind=?, event_theme=?, event_start=?, event_end=?, event_pool_size=? WHERE slug=?",
+            (_sk, data.get('event_theme', '') or '', data.get('event_start', '') or '',
+             data.get('event_end', '') or '', _pool, bar_slug)
+        )
+
     db.execute(
         "UPDATE bars SET welcome_message=?, tomorrow_message=?, promo_active=?, description=?, owner_name=?, staff_names=?, color_primary=?, color_primary_text=?, color_bg=?, color_bg_subtle=?, address=?, city=?, province=?, zip_code=?, country=?, latitude=?, longitude=?, social_instagram=?, social_facebook=?, social_tiktok=?, menu_url=? WHERE slug=?",
         (data.get('welcome_message',''), data.get('tomorrow_message',''), data.get('promo_active',0),

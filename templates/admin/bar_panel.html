@@ -163,6 +163,46 @@
     </div>
   </div>
 
+  {% if admin_role == 'superadmin' %}
+  <!-- Tipo de espacio + configuración de evento (solo superadmin) -->
+  <div class="code-card" style="border:1.5px solid var(--border);">
+    <div class="card-title">Tipo de espacio</div>
+    <div style="display:flex; gap:10px; margin:10px 0 4px;">
+      <label style="flex:1; display:flex; align-items:center; gap:8px; padding:12px 14px; border:1.5px solid var(--border); border-radius:10px; cursor:pointer; font-size:14px;">
+        <input type="radio" name="space_kind" value="local" onchange="onSpaceKindChange()" {% if (bar.space_kind or 'local') != 'evento' %}checked{% endif %}>
+        <span>🏠 Local <span style="color:var(--text-muted); font-size:12px;">(bar, cafetería)</span></span>
+      </label>
+      <label style="flex:1; display:flex; align-items:center; gap:8px; padding:12px 14px; border:1.5px solid var(--border); border-radius:10px; cursor:pointer; font-size:14px;">
+        <input type="radio" name="space_kind" value="evento" onchange="onSpaceKindChange()" {% if (bar.space_kind or 'local') == 'evento' %}checked{% endif %}>
+        <span>🎪 Evento <span style="color:var(--text-muted); font-size:12px;">(festival, feria)</span></span>
+      </label>
+    </div>
+
+    <div id="event-config" style="display:none; margin-top:16px; padding-top:16px; border-top:1px solid var(--border);">
+      <div style="margin-bottom:14px;">
+        <label for="event_theme" style="display:block; font-size:13px; font-weight:600; margin-bottom:5px;">Temática del evento</label>
+        <textarea id="event_theme" name="event_theme" rows="3" placeholder="Ej: Evento de manga, anime y cómic. Público friki, otaku y gamer. Referencias a series de anime, videojuegos, cultura japonesa y superhéroes. Tono desenfadado y cómplice." style="width:100%; box-sizing:border-box; font-family:inherit; font-size:14px; padding:10px; border:1.5px solid var(--border); border-radius:10px; resize:vertical;">{{ bar.event_theme or '' }}</textarea>
+        <div style="font-size:12px; color:var(--text-muted); margin-top:5px; line-height:1.5;">Describe el <strong>público, las referencias y el tono</strong>, no solo el nombre. Cuanto más rico, mejor ambienta la IA todos los juegos del evento.</div>
+      </div>
+      <div style="display:flex; gap:12px; flex-wrap:wrap;">
+        <div style="flex:1; min-width:140px;">
+          <label for="event_start" style="display:block; font-size:13px; font-weight:600; margin-bottom:5px;">Fecha inicio</label>
+          <input type="date" id="event_start" name="event_start" value="{{ bar.event_start or '' }}" style="width:100%; box-sizing:border-box; font-family:inherit; font-size:14px; padding:9px 10px; border:1.5px solid var(--border); border-radius:10px;">
+        </div>
+        <div style="flex:1; min-width:140px;">
+          <label for="event_end" style="display:block; font-size:13px; font-weight:600; margin-bottom:5px;">Fecha fin</label>
+          <input type="date" id="event_end" name="event_end" value="{{ bar.event_end or '' }}" style="width:100%; box-sizing:border-box; font-family:inherit; font-size:14px; padding:9px 10px; border:1.5px solid var(--border); border-radius:10px;">
+        </div>
+        <div style="flex:1; min-width:140px;">
+          <label for="event_pool_size" style="display:block; font-size:13px; font-weight:600; margin-bottom:5px;">Piezas por juego</label>
+          <input type="number" id="event_pool_size" name="event_pool_size" min="1" max="20" value="{{ bar.event_pool_size or 1 }}" style="width:100%; box-sizing:border-box; font-family:inherit; font-size:14px; padding:9px 10px; border:1.5px solid var(--border); border-radius:10px;">
+          <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Cuántas variantes se generan (rotación).</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
   <!-- Código semanal -->
   <div class="code-card">
     <div class="card-title">Código de esta semana</div>
@@ -839,6 +879,14 @@
       alert('Error: ' + (data.error || 'No se pudo eliminar'));
     }
   }
+  // Mostrar/ocultar configuración de evento según el tipo de espacio
+  function onSpaceKindChange() {
+    const sel = document.querySelector('input[name="space_kind"]:checked');
+    const cfg = document.getElementById('event-config');
+    if (!cfg) return;
+    cfg.style.display = (sel && sel.value === 'evento') ? 'block' : 'none';
+  }
+  document.addEventListener('DOMContentLoaded', onSpaceKindChange);
   </script>
   {% endif %}
 
@@ -990,6 +1038,20 @@ async function saveChanges() {
     menu_url: form.menu_url ? form.menu_url.value : '',
     products: []
   };
+
+  // Campos de evento (solo presentes en el DOM si eres superadmin)
+  const _sk = document.querySelector('input[name="space_kind"]:checked');
+  if (_sk) {
+    data.space_kind = _sk.value;
+    const _theme = document.getElementById('event_theme');
+    const _start = document.getElementById('event_start');
+    const _end = document.getElementById('event_end');
+    const _pool = document.getElementById('event_pool_size');
+    data.event_theme = _theme ? _theme.value : '';
+    data.event_start = _start ? _start.value : '';
+    data.event_end = _end ? _end.value : '';
+    data.event_pool_size = _pool ? (parseInt(_pool.value, 10) || 1) : 1;
+  }
 
   for (let i = 0; i < 3; i++) {
     const active = form[`product_active_${i}`] && form[`product_active_${i}`].checked;
