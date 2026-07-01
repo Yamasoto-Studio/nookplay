@@ -52,6 +52,11 @@ db.executescript('''
         color_bg            TEXT DEFAULT \'#F7F2EB\',
         color_bg_subtle     TEXT DEFAULT \'#F0EBE3\',
         color_accent_dark   TEXT DEFAULT \'#1A1A1A\',
+        space_kind          TEXT DEFAULT \'local\',
+        event_theme         TEXT DEFAULT \'\',
+        event_start         TEXT DEFAULT \'\',
+        event_end           TEXT DEFAULT \'\',
+        event_pool_size     INTEGER DEFAULT 1,
         active              INTEGER DEFAULT 1,
         created_at          TEXT DEFAULT (datetime(\'now\')),
         updated_at          TEXT DEFAULT (datetime(\'now\'))
@@ -169,6 +174,12 @@ migrations = [
     "ALTER TABLE bars ADD COLUMN social_facebook TEXT DEFAULT ''",
     "ALTER TABLE bars ADD COLUMN social_tiktok TEXT DEFAULT ''",
     "ALTER TABLE bars ADD COLUMN menu_url TEXT DEFAULT ''",
+    # ── Eventos (space_kind='evento'): configuración propia ──────────────
+    "ALTER TABLE bars ADD COLUMN space_kind TEXT DEFAULT 'local'",
+    "ALTER TABLE bars ADD COLUMN event_theme TEXT DEFAULT ''",
+    "ALTER TABLE bars ADD COLUMN event_start TEXT DEFAULT ''",
+    "ALTER TABLE bars ADD COLUMN event_end TEXT DEFAULT ''",
+    "ALTER TABLE bars ADD COLUMN event_pool_size INTEGER DEFAULT 1",
 ]
 for sql in migrations:
     try:

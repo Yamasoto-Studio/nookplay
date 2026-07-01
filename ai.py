@@ -114,14 +114,20 @@ _SISTEMA_NOOKPLAY = (
 )
 
 
-def _post_ia(prompt, max_tokens, api_key, reintentos=2, modelo='claude-sonnet-4-6'):
+def _post_ia(prompt, max_tokens, api_key, reintentos=2, modelo='claude-sonnet-4-6', event_theme=''):
     """Llama a la API de Anthropic y devuelve el JSON parseado de forma robusta.
 
     Reintenta ante fallos de red, errores de API o JSON no parseable.
     Lanza Exception con detalle si agota los reintentos.
     Aplica un mensaje de sistema comun (_SISTEMA_NOOKPLAY) con reglas
     transversales (contenido neutro/inclusivo, español, sin contenido sensible).
+
+    Si event_theme está definido (espacios con space_kind='evento'), antepone un
+    bloque de contexto temático al prompt para ambientar el contenido en el evento.
+    Es opcional y por defecto vacío: cualquier generador que no lo pase se comporta igual.
     """
+    if event_theme:
+        prompt = _bloque_tematico(event_theme) + "\n" + prompt
     ultimo_error = None
     for intento in range(reintentos + 1):
         try:
@@ -171,7 +177,21 @@ def build_bar_context(bar_row):
         'equipo':       [n.strip() for n in bar_row.get('staff_names', '').split(',') if n.strip()],
         'vibe':         bar_row.get('bar_vibe', ''),
         'productos':    [],  # Se rellena desde bar_products en app.py
+        'space_kind':   bar_row.get('space_kind', 'local'),
+        'event_theme':  bar_row.get('event_theme', ''),
     }
+
+
+def _bloque_tematico(event_theme):
+    """Bloque de contexto temático para eventos. Se antepone al prompt de cualquier
+    juego IA cuando el espacio es un evento con temática definida. Devuelve '' si no hay tema."""
+    if not event_theme or not event_theme.strip():
+        return ""
+    return f"""
+CONTEXTO TEMÁTICO DEL EVENTO (MUY IMPORTANTE): Este contenido se juega en un evento con esta temática:
+«{event_theme.strip()}»
+Ambienta el juego en ese universo: usa sus referencias, su público y su tono. El contenido debe sentirse hecho a medida para ese evento, no genérico. Mantén el rigor y la jugabilidad; solo cambia la ambientación.
+"""
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Ambiente rotation — ensures variety across days
