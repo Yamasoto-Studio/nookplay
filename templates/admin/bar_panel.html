@@ -421,10 +421,11 @@
       </div>
     </div>
 
-    <!-- Enlaces del local -->
+    <!-- Enlaces del local/evento -->
+    {% set es_evento = (bar.space_kind or 'local') == 'evento' %}
     <div class="form-card">
-      <h3>Enlaces de tu local</h3>
-      <div class="field-hint" style="margin-bottom:14px;">Lo que rellenes aparecerá como botón en la pantalla de tus clientes. Lo que dejes vacío, no se mostrará.</div>
+      <h3 id="lbl-links-title">{{ 'Enlaces del evento' if es_evento else 'Enlaces de tu local' }}</h3>
+      <div class="field-hint" style="margin-bottom:14px;"><span id="lbl-links-hint">{{ 'Lo que rellenes aparecerá como botón en la pantalla de los asistentes. Lo que dejes vacío, no se mostrará.' if es_evento else 'Lo que rellenes aparecerá como botón en la pantalla de tus clientes. Lo que dejes vacío, no se mostrará.' }}</span></div>
       <div class="field">
         <label for="social_instagram">Instagram</label>
         <input type="text" id="social_instagram" name="social_instagram" value="{{ bar.social_instagram or '' }}" placeholder="tu_usuario (sin @)">
@@ -438,30 +439,30 @@
         <input type="text" id="social_tiktok" name="social_tiktok" value="{{ bar.social_tiktok or '' }}" placeholder="tu_usuario (sin @)">
       </div>
       <div class="field">
-        <label for="menu_url">Carta / Menú</label>
-        <input type="text" id="menu_url" name="menu_url" value="{{ bar.menu_url or '' }}" placeholder="https://... (el enlace de tu carta digital)">
-        <div class="field-hint">El mismo enlace al que apunta el QR de tu carta, si tienes.</div>
+        <label for="menu_url" id="lbl-menu">{{ 'Web / Programa del evento' if es_evento else 'Carta / Menú' }}</label>
+        <input type="text" id="menu_url" name="menu_url" value="{{ bar.menu_url or '' }}" placeholder="https://...">
+        <div class="field-hint" id="lbl-menu-hint">{{ 'Enlace a la web del evento, su programa o su ficha de actividades.' if es_evento else 'El mismo enlace al que apunta el QR de tu carta, si tienes.' }}</div>
       </div>
     </div>
 
-    <!-- Productos -->
+    <!-- Productos / Actividades destacadas -->
     <div class="form-card">
-      <h3>Productos destacados</h3>
+      <h3 id="lbl-prod-title">{{ 'Actividades destacadas' if es_evento else 'Productos destacados' }}</h3>
       <div class="field">
         <div class="toggle-row">
-          <label>Mostrar productos en el juego</label>
+          <label id="lbl-prod-toggle">{{ 'Mostrar actividades en el juego' if es_evento else 'Mostrar productos en el juego' }}</label>
           <label class="toggle">
             <input type="checkbox" id="promo_active" name="promo_active" {% if bar.promo_active %}checked{% endif %}>
             <span class="toggle-slider"></span>
           </label>
         </div>
-        <div class="field-hint">Los productos aparecen antes de los juegos y al terminar.</div>
+        <div class="field-hint" id="lbl-prod-hint">{{ 'Las actividades aparecen antes de los juegos y al terminar.' if es_evento else 'Los productos aparecen antes de los juegos y al terminar.' }}</div>
       </div>
       {% for i in range(3) %}
       {% set p = products[i] if i < products|length else None %}
       <div class="product-item" id="product-item-{{ i }}">
         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
-          <h4 style="margin:0;">Producto {{ i + 1 }}</h4>
+          <h4 style="margin:0;" class="lbl-prod-item">{{ ('Actividad ' if es_evento else 'Producto ') }}{{ i + 1 }}</h4>
           <label class="toggle" title="Activar/desactivar este producto">
             <input type="checkbox" name="product_active_{{ i }}" id="product_active_{{ i }}"
               {% if p and p.title %}checked{% endif %}
@@ -472,18 +473,18 @@
         <div id="product-fields-{{ i }}" style="{% if not p or not p.title %}display:none;{% endif %}">
           <div class="field">
             <label>Nombre</label>
-            <input type="text" name="product_title_{{ i }}" value="{{ p.title if p else '' }}" placeholder="Ej: Café de finca etíope">
+            <input type="text" name="product_title_{{ i }}" value="{{ p.title if p else '' }}" class="ph-prod-title" placeholder="{{ 'Ej: Charla con el autor de...' if es_evento else 'Ej: Café de finca etíope' }}">
           </div>
           <div class="field">
             <label>Descripción</label>
             <input type="text" name="product_desc_{{ i }}" value="{{ p.description if p else '' }}" placeholder="Una frase breve">
           </div>
           <div class="field">
-            <label>Precio</label>
-            <input type="text" name="product_price_{{ i }}" value="{{ p.price if p else '' }}" placeholder="2,50 €">
+            <label id="lbl-price-{{ i }}">{{ 'Horario / Lugar' if es_evento else 'Precio' }}</label>
+            <input type="text" name="product_price_{{ i }}" value="{{ p.price if p else '' }}" class="ph-prod-price" placeholder="{{ 'Sáb 17:00 · Sala B' if es_evento else '2,50 €' }}">
           </div>
           <div class="field">
-            <label>Imagen del producto</label>
+            <label class="lbl-prod-img">{{ 'Imagen de la actividad' if es_evento else 'Imagen del producto' }}</label>
             {% set img_path = '/static/clientes/' + bar.slug + '/product_' + i|string + '.webp' %}
             <div id="product-img-wrap-{{ i }}" style="margin-bottom:8px;">
               {% if p and p.image_path %}
@@ -614,7 +615,7 @@
         </div>
       </div>
       <div style="margin-top:12px; padding:12px; background:#F7F2EB; border-radius:8px; font-size:12px; color:#6B6059; line-height:1.5;">
-        <strong>Yellow Specialty Koffee:</strong> Principal #FEE25A · Texto #1A1A1A · Fondo #FFFDF0 · Sutil #FFF8D0
+        Estos colores se aplican en toda la experiencia del cliente. <strong>Principal</strong> tiñe cabeceras y botones; <strong>Texto</strong> es el color que va sobre el principal (asegura buen contraste); <strong>Fondo</strong> y <strong>Sutil</strong> son las bases claras de la página.
       </div>
     </div>
     {% endif %}
@@ -880,11 +881,44 @@
     }
   }
   // Mostrar/ocultar configuración de evento según el tipo de espacio
+  // y adaptar las etiquetas del formulario (local ↔ evento) en vivo.
   function onSpaceKindChange() {
     const sel = document.querySelector('input[name="space_kind"]:checked');
     const cfg = document.getElementById('event-config');
-    if (!cfg) return;
-    cfg.style.display = (sel && sel.value === 'evento') ? 'block' : 'none';
+    const esEvento = !!(sel && sel.value === 'evento');
+    if (cfg) cfg.style.display = esEvento ? 'block' : 'none';
+
+    const T = {
+      linksTitle:  esEvento ? 'Enlaces del evento' : 'Enlaces de tu local',
+      linksHint:   esEvento ? 'Lo que rellenes aparecerá como botón en la pantalla de los asistentes. Lo que dejes vacío, no se mostrará.'
+                            : 'Lo que rellenes aparecerá como botón en la pantalla de tus clientes. Lo que dejes vacío, no se mostrará.',
+      menu:        esEvento ? 'Web / Programa del evento' : 'Carta / Menú',
+      menuHint:    esEvento ? 'Enlace a la web del evento, su programa o su ficha de actividades.'
+                            : 'El mismo enlace al que apunta el QR de tu carta, si tienes.',
+      prodTitle:   esEvento ? 'Actividades destacadas' : 'Productos destacados',
+      prodToggle:  esEvento ? 'Mostrar actividades en el juego' : 'Mostrar productos en el juego',
+      prodHint:    esEvento ? 'Las actividades aparecen antes de los juegos y al terminar.'
+                            : 'Los productos aparecen antes de los juegos y al terminar.',
+      itemWord:    esEvento ? 'Actividad ' : 'Producto ',
+      phTitle:     esEvento ? 'Ej: Charla con el autor de...' : 'Ej: Café de finca etíope',
+      priceLabel:  esEvento ? 'Horario / Lugar' : 'Precio',
+      phPrice:     esEvento ? 'Sáb 17:00 · Sala B' : '2,50 €',
+      imgLabel:    esEvento ? 'Imagen de la actividad' : 'Imagen del producto',
+    };
+    const setTxt = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
+    setTxt('lbl-links-title', T.linksTitle);
+    setTxt('lbl-links-hint', T.linksHint);
+    setTxt('lbl-menu', T.menu);
+    setTxt('lbl-menu-hint', T.menuHint);
+    setTxt('lbl-prod-title', T.prodTitle);
+    setTxt('lbl-prod-toggle', T.prodToggle);
+    setTxt('lbl-prod-hint', T.prodHint);
+    // Elementos repetidos (por índice de producto)
+    document.querySelectorAll('.lbl-prod-item').forEach((el, i) => { el.textContent = T.itemWord + (i + 1); });
+    document.querySelectorAll('.lbl-prod-img').forEach(el => { el.textContent = T.imgLabel; });
+    document.querySelectorAll('.ph-prod-title').forEach(el => { el.placeholder = T.phTitle; });
+    document.querySelectorAll('.ph-prod-price').forEach(el => { el.placeholder = T.phPrice; });
+    for (let i = 0; i < 3; i++) setTxt('lbl-price-' + i, T.priceLabel);
   }
   document.addEventListener('DOMContentLoaded', onSpaceKindChange);
   </script>
