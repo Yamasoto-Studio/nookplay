@@ -337,6 +337,15 @@ if not db.execute("SELECT id FROM games WHERE slug = 'vestuario'").fetchone():
     db.commit()
     print('Juego El Vestuario añadido.')
 
+# Añadir trivia si no existe
+if not db.execute("SELECT id FROM games WHERE slug = 'trivia'").fetchone():
+    db.execute(
+        "INSERT INTO games (slug, name, description, icon, plan_min, position) VALUES (?,?,?,?,?,?)",
+        ('trivia', 'La Trivia', 'Quiz de cultura general', '/static/games/trivia.webp', 'starter_free', 25)
+    )
+    db.commit()
+    print('Juego La Trivia añadido.')
+
 # Añadir sinopsis si no existe
 if not db.execute("SELECT id FROM games WHERE slug = 'sinopsis'").fetchone():
     db.execute(
@@ -376,7 +385,7 @@ ORDEN_JUEGOS = {
     # Lógica / puzzle / riesgo (4 fijos starter primero)
     'crimen': 1, 'reinas': 2, 'equilibrio': 3, 'carta': 4, 'orden': 5,
     # Adivinanza / cultura
-    'conexiones': 6, 'donde': 7, 'sinopsis': 8, 'letra': 9, 'vestuario': 10,
+    'conexiones': 6, 'donde': 7, 'sinopsis': 8, 'letra': 9, 'vestuario': 10, 'trivia': 25,
     # Opinión / social
     'dilema': 11, 'veredicto': 12, 'perfil': 13,
     # Opinión / social (pensamiento es muy social)

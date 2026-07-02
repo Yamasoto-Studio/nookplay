@@ -1403,6 +1403,69 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# La Trivia generator (cultura general; en eventos se ambienta con event_theme)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def generate_trivia(bar_slug, evitar=None):
+    """La Trivia: quiz de cultura general de 5 preguntas con 4 opciones.
+    Por-bar con seed (contenido distinto por espacio). En un evento con
+    event_theme, _post_ia lo ambienta automáticamente en esa temática."""
+    today = str(date.today())
+    api_key = os.environ.get('ANTHROPIC_API_KEY')
+    seed = get_day_seed(bar_slug)
+
+    prompt = """Eres el creador de una trivia diaria de cultura general para jugar con el móvil mientras se espera. Preguntas interesantes, con gancho, que hacen aprender algo.
+
+FECHA: """ + today + """
+SEED: """ + str(seed) + """
+
+Crea exactamente 5 preguntas con estas reglas:
+
+PREGUNTAS:
+1. Datos 100% reales y verificables — nada inventado ni discutible
+2. Variedad de categorías: ciencia, historia, arte, geografía, gastronomía, cine, música, naturaleza, tecnología... (usa 5 categorías distintas)
+3. El gancho es clave: preguntas con respuestas sorprendentes o poco intuitivas, no de manual escolar
+4. Nada de fechas exactas aburridas ni cifras de memoria pura; mejor "¿cuál de estos...?" o "¿qué animal/país/invento...?"
+5. Formula la pregunta en máximo 2 frases
+
+OPCIONES (4 por pregunta):
+- Una correcta
+- Dos plausibles que hagan dudar de verdad
+- Una descartable con lógica (para dar una alegría al que razona)
+- Todas del mismo tipo y longitud similar (que la correcta no destaque)
+
+DIFICULTAD: progresiva — empieza accesible, acaba desafiante.
+
+Devuelve SOLO un objeto JSON válido, sin markdown:
+{
+  "preguntas": [
+    {
+      "pregunta": "Texto de la pregunta",
+      "emoji": "🔬",
+      "opciones": ["Opción A", "Opción B", "Opción C", "Opción D"],
+      "correcta": 0,
+      "explicacion": "Por qué es esa la respuesta, con un dato extra curioso. 1-2 frases."
+    },
+    {"pregunta": "...", "emoji": "🏛️", "opciones": ["...","...","...","..."], "correcta": 2, "explicacion": "..."},
+    {"pregunta": "...", "emoji": "🌍", "opciones": ["...","...","...","..."], "correcta": 1, "explicacion": "..."},
+    {"pregunta": "...", "emoji": "🎬", "opciones": ["...","...","...","..."], "correcta": 3, "explicacion": "..."},
+    {"pregunta": "...", "emoji": "🎵", "opciones": ["...","...","...","..."], "correcta": 0, "explicacion": "..."}
+  ],
+  "mensajes": {
+    "0": "0 de 5 — Día de descanso mental. Mañana remontas. 😅",
+    "1": "1 de 5 — Bueno, al menos una. Algo es algo. 🙃",
+    "2": "2 de 5 — A medio camino. Te falta un empujón. 💪",
+    "3": "3 de 5 — Aprobado con solvencia. Nada mal. 👏",
+    "4": "4 de 5 — Casi perfecto. Rozando la gloria. 🌟",
+    "5": "5 de 5 — Pleno absoluto. Hoy invitas tú. 🏆"
+  }
+}
+IMPORTANTE: los índices "correcta" deben variar entre preguntas (no siempre la misma posición).""" + _bloque_evitar(evitar)
+
+    return _post_ia(prompt, 1800, api_key)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # La Sinopsis Rara generator
 # ─────────────────────────────────────────────────────────────────────────────
 

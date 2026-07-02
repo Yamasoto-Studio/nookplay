@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 from datetime import date, datetime, timedelta
 import sqlite3
-from ai import generate_game, generate_impostor, generate_dilema, generate_conexiones, generate_oraculo, generate_donde, generate_carta, generate_reinas, generate_conexion_local, generate_equilibrio, generate_veredicto, generate_perfil, generate_vestuario, generate_sinopsis, generate_muertes, generate_letra, generate_pensamiento, generate_poema, generate_menteagil, generate_constitucion, generate_orden, generate_titular, generate_definicion, generate_masomenos, generate_escalera, generate_quienmas, build_bar_context, get_day_seed, set_event_theme, reset_event_theme
+from ai import generate_game, generate_impostor, generate_dilema, generate_conexiones, generate_oraculo, generate_donde, generate_carta, generate_reinas, generate_conexion_local, generate_equilibrio, generate_veredicto, generate_perfil, generate_vestuario, generate_trivia, generate_sinopsis, generate_muertes, generate_letra, generate_pensamiento, generate_poema, generate_menteagil, generate_constitucion, generate_orden, generate_titular, generate_definicion, generate_masomenos, generate_escalera, generate_quienmas, build_bar_context, get_day_seed, set_event_theme, reset_event_theme
 import os
 import smtplib
 from email.mime.text import MIMEText
@@ -439,6 +439,11 @@ def get_historial_reciente(db, game_type, bar_slug=None, dias=10, campo='titulo'
                 for p in data['preguntas']:
                     if isinstance(p, dict) and p.get('curiosidad'):
                         items.append(p['curiosidad'][:80])
+            elif campo == 'trivia_preguntas' and 'preguntas' in data:
+                # trivia: el enunciado de cada pregunta
+                for p in data['preguntas']:
+                    if isinstance(p, dict) and p.get('pregunta'):
+                        items.append(p['pregunta'][:90])
             elif campo == 'opciones' and 'opciones' in data:
                 # sinopsis/letra: la respuesta correcta
                 idx = data.get('correcta', 0)
@@ -596,7 +601,7 @@ def pregen_daily_games():
     """Ejecuta cada día a las 6am — pre-genera los juegos del día para todos los bares."""
     today = str(date.today())
     resumen = {'ok': [], 'error': []}
-    GAME_TYPES = ['crimen', 'impostor', 'dilema', 'conexiones', 'oraculo', 'donde', 'local', 'veredicto', 'perfil', 'vestuario', 'sinopsis', 'muertes', 'letra', 'pensamiento', 'menteagil', 'constitucion', 'titular', 'definicion', 'masomenos', 'escalera', 'quienmas']
+    GAME_TYPES = ['crimen', 'impostor', 'dilema', 'conexiones', 'oraculo', 'donde', 'local', 'veredicto', 'perfil', 'vestuario', 'trivia', 'sinopsis', 'muertes', 'letra', 'pensamiento', 'menteagil', 'constitucion', 'titular', 'definicion', 'masomenos', 'escalera', 'quienmas']
 
     db = get_db()
     bars = db.execute("SELECT * FROM bars WHERE active = 1").fetchall()
@@ -678,6 +683,9 @@ def pregen_daily_games():
                     elif game_type == 'vestuario':
                         ev = get_historial_reciente(db, 'vestuario', bar['slug'], campo='preguntas')
                         game_data = generate_vestuario(bar['slug'], evitar=ev)
+                    elif game_type == 'trivia':
+                        ev = get_historial_reciente(db, 'trivia', bar['slug'], campo='trivia_preguntas')
+                        game_data = generate_trivia(bar['slug'], evitar=ev)
                     elif game_type == 'sinopsis':
                         # Única para todos los bares — solo generar una vez
                         existing = db.execute(
@@ -1128,7 +1136,7 @@ GAME_NOMBRES = {
     'crimen': 'El Crimen del Día', 'impostor': 'El Impostor', 'dilema': 'El Dilema',
     'conexiones': 'Conexiones', 'oraculo': 'El Oráculo', 'donde': '¿Dónde está?',
     'local': 'Conexión Local', 'veredicto': 'El Veredicto', 'perfil': 'El Perfil',
-    'vestuario': 'El Vestuario', 'sinopsis': 'La Sinopsis', 'muertes': 'Muertes Célebres',
+    'vestuario': 'El Vestuario', 'trivia': 'La Trivia', 'sinopsis': 'La Sinopsis', 'muertes': 'Muertes Célebres',
     'letra': 'Adivina la Letra', 'pensamiento': 'El Mismo Pensamiento',
     'menteagil': 'Mente Ágil', 'constitucion': '¿Tú la has leído?', 'poema': 'El Poema',
     'freep': 'Freep', 'reinas': 'Las Reinas', 'equilibrio': 'Equilibrio',
@@ -2128,6 +2136,91 @@ def vestuario_stats(bar_slug):
     db = get_db()
     plays = db.execute(
         "SELECT choice, elapsed FROM plays WHERE bar_slug = ? AND game_type = 'vestuario' AND played_on = ?",
+        (bar_slug, today)
+    ).fetchall()
+    db.close()
+    total = len(plays)
+    avg_score = round(sum(p['choice'] for p in plays) / total, 1) if total > 0 else 0
+    elapsed_vals = [p['elapsed'] for p in plays if p['elapsed'] and p['elapsed'] > 0]
+    avg_elapsed = round(sum(elapsed_vals) / len(elapsed_vals)) if elapsed_vals else 0
+    return jsonify({'total': total, 'avg_score': avg_score, 'avg_elapsed': avg_elapsed})
+
+
+@app.route('/<bar_slug>/trivia')
+def trivia_page(bar_slug):
+    db = get_db()
+    bar = db.execute("SELECT * FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
+    if not bar:
+        db.close()
+        return render_template('404.html'), 404
+    products = db.execute("SELECT * FROM bar_products WHERE bar_id = ? AND active = 1 ORDER BY position", (bar['id'],)).fetchall()
+    db.close()
+    return render_template('games/trivia.html', bar=bar, products=products)
+
+
+@app.route('/api/trivia', methods=['POST'])
+def trivia_api():
+    data = request.get_json()
+    code = data.get('code', '').strip().upper()
+    bar_slug = data.get('bar_slug', '').strip()
+    today = str(date.today())
+
+    db = get_db()
+    bar = db.execute("SELECT * FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
+    if not bar:
+        db.close()
+        return jsonify({'error': 'Invalid code'}), 403
+
+    valid_code = db.execute(
+        "SELECT code FROM access_codes WHERE bar_id = ? AND valid_from <= ? AND valid_until >= ?",
+        (bar['id'], today, today)
+    ).fetchone()
+    if not valid_code or valid_code['code'] != code:
+        db.close()
+        return jsonify({'error': 'Invalid code'}), 403
+
+    bar_id = bar['id']
+    cache_key = f"{bar_slug}_trivia_{today}"
+    if cache_key in _game_cache:
+        db.close()
+        return jsonify(_game_cache[cache_key])
+
+    pregenerated = db.execute(
+        "SELECT content FROM generated_games WHERE bar_id = ? AND game_type = 'trivia' AND game_date = ?",
+        (bar_id, today)
+    ).fetchone()
+    if pregenerated:
+        import json as _json
+        game_data = _json.loads(pregenerated['content'])
+        _game_cache[cache_key] = game_data
+        db.close()
+        return jsonify(game_data)
+
+    db.close()
+
+    try:
+        _dbev = get_db()
+        _ev = get_historial_reciente(_dbev, 'trivia', bar_slug, campo='trivia_preguntas')
+        _dbev.close()
+        _tok = set_event_theme(_theme_de(bar))
+        try:
+            game_data = generate_trivia(bar_slug, evitar=_ev)
+        finally:
+            reset_event_theme(_tok)
+        _bid = bar['id']
+        _persistir_generado(_bid, 'trivia', game_data, es_global=False)
+        _game_cache[cache_key] = game_data
+        return jsonify(game_data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/trivia-stats/<bar_slug>')
+def trivia_stats(bar_slug):
+    today = str(date.today())
+    db = get_db()
+    plays = db.execute(
+        "SELECT choice, elapsed FROM plays WHERE bar_slug = ? AND game_type = 'trivia' AND played_on = ?",
         (bar_slug, today)
     ).fetchall()
     db.close()
@@ -3705,7 +3798,7 @@ Mensaje:
 # Slugs de todos los juegos del catálogo, en orden de posición
 ALL_GAMES = [
     "crimen", "dilema", "reinas", "conexiones",
-    "oraculo", "donde", "carta", "equilibrio", "impostor", "local", "veredicto", "perfil", "vestuario", "sinopsis", "muertes", "letra", "pensamiento", "poema", "menteagil", "constitucion", "orden", "freep", "titular", "definicion", "dosverdades", "masomenos", "escalera", "quienmas",
+    "oraculo", "donde", "carta", "equilibrio", "impostor", "local", "veredicto", "perfil", "vestuario", "trivia", "sinopsis", "muertes", "letra", "pensamiento", "poema", "menteagil", "constitucion", "orden", "freep", "titular", "definicion", "dosverdades", "masomenos", "escalera", "quienmas",
 ]
 
 # Starter: 4 fijos siempre activos + 1 elegible a elegir entre STARTER_FREE_GAMES
