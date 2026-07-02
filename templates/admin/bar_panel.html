@@ -368,17 +368,17 @@
       <div class="insights-hero-duo">
         <div class="insights-hero-item">
           <div class="n">{{ analytics.week }}</div>
-          <div class="l">partidas<br>esta semana</div>
+          <div class="l">{{ 'partidas<br>durante el evento'|safe if analytics.ventana_evento else 'partidas<br>esta semana'|safe }}</div>
         </div>
         <div class="insights-hero-item">
           <div class="n">{{ analytics.people_week }}</div>
-          <div class="l">personas<br>distintas</div>
+          <div class="l">{{ 'asistentes<br>distintos'|safe if analytics.ventana_evento else 'personas<br>distintas'|safe }}</div>
         </div>
       </div>
       {% else %}
       <div class="insights-hero">
         <div class="insights-hero-num">{{ analytics.week }}</div>
-        <div class="insights-hero-lbl">partidas esta semana · {{ analytics.today }} hoy</div>
+        <div class="insights-hero-lbl">{{ 'partidas durante el evento' if analytics.ventana_evento else 'partidas esta semana' }} · {{ analytics.today }} hoy</div>
       </div>
       {% endif %}
 
@@ -413,7 +413,7 @@
         <div class="insight-tile">
           <div class="insight-tile-ico">🎯</div>
           <div class="insight-tile-val">{{ analytics.top_game_name }}</div>
-          <div class="insight-tile-lbl">el favorito de tus clientes</div>
+          <div class="insight-tile-lbl">{{ 'el favorito de los asistentes' if analytics.ventana_evento else 'el favorito de tus clientes' }}</div>
         </div>
         {% endif %}
         <div class="insight-tile">
@@ -425,7 +425,7 @@
 
       {% if analytics.top_games and analytics.top_games|length > 1 %}
       <div class="insights-top3">
-        <div class="insights-top3-h">Juegos más jugados esta semana</div>
+        <div class="insights-top3-h">{{ 'Juegos más jugados del evento' if analytics.ventana_evento else 'Juegos más jugados esta semana' }}</div>
         {% for g in analytics.top_games %}
         <div class="insights-top3-row">
           <span class="insights-top3-rank">{{ loop.index }}</span>
@@ -442,8 +442,13 @@
     {% else %}
       <div class="insights-empty">
         <span class="big">🌱</span>
+        {% if analytics.ventana_evento %}
+        Aún no hay partidas del evento.<br>
+        En cuanto los asistentes empiecen a jugar, aquí verás la actividad por día, las horas punta y qué juego engancha más.
+        {% else %}
         Aún no hay partidas esta semana.<br>
         En cuanto tus clientes empiecen a jugar, aquí verás qué días y horas funcionan mejor y qué juego engancha más.
+        {% endif %}
       </div>
     {% endif %}
 

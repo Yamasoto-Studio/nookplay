@@ -1012,22 +1012,33 @@ def admin_logout():
     session.clear()
     return redirect('/admin/login')
 
-def calcular_analytics_bar(db, bar_slug):
-    """Calcula métricas de valor para el dueño del local.
+def calcular_analytics_bar(db, bar_slug, ventana=None):
+    """Calcula métricas de valor para el dueño del local o el organizador del evento.
 
-    Devuelve un dict con la "historia" de la semana: volumen, tendencia,
-    día y franja horaria más activos, y juego favorito. Pensado para
-    justificar la suscripción mostrando uso real, no datos vacíos.
+    ventana=None (bares): ventana semanal lunes-hoy con tendencia vs semana anterior.
+    ventana=(desde, hasta) (eventos): todas las métricas se calculan dentro de esa
+    ventana (strings YYYY-MM-DD), sin tendencia (no hay "periodo anterior" comparable).
+    El comportamiento sin ventana es EXACTAMENTE el de siempre: los bares no cambian.
 
-    Nota sobre los datos: la tabla `plays` deduplica por (código, día, juego),
-    así que cada registro = "un juego distinto jugado por una mesa ese día".
+    Nota sobre los datos: la tabla `plays` deduplica por (device_id, día, juego),
+    así que cada registro = "un juego distinto jugado por un dispositivo ese día".
     Es una medida de actividad/cobertura, no de pulsaciones brutas.
     """
     from datetime import timedelta
     hoy = date.today()
-    monday = hoy - timedelta(days=hoy.weekday())
-    monday_prev = monday - timedelta(days=7)
-    sunday_prev = monday - timedelta(days=1)
+    es_ventana = ventana is not None and ventana[0] and ventana[1]
+    if es_ventana:
+        # Evento: la ventana es event_start→min(event_end, hoy). Días futuros no cuentan.
+        try:
+            v_desde = datetime.strptime(ventana[0], '%Y-%m-%d').date()
+            v_hasta = min(datetime.strptime(ventana[1], '%Y-%m-%d').date(), hoy)
+        except (ValueError, TypeError):
+            es_ventana = False
+    if not es_ventana:
+        monday = hoy - timedelta(days=hoy.weekday())
+        monday_prev = monday - timedelta(days=7)
+        sunday_prev = monday - timedelta(days=1)
+        v_desde, v_hasta = monday, hoy
 
     a = {
         'week': 0, 'today': 0, 'prev_week': 0, 'trend_pct': None, 'trend_dir': 'flat',
@@ -1040,12 +1051,14 @@ def calcular_analytics_bar(db, bar_slug):
         'total_historico': 0, 'people_historico': 0,  # acumulado desde el inicio
         'avg_day': 0,  # media de partidas por día activo
         'top_games': [],  # top 3 juegos de la semana [{name, count}]
+        'ventana_evento': False,  # True si las métricas son de la ventana del evento
     }
+    a['ventana_evento'] = bool(es_ventana)
 
     # Volumen semana actual y hoy
     a['week'] = db.execute(
-        "SELECT COUNT(*) n FROM plays WHERE bar_slug=? AND played_on>=?",
-        (bar_slug, str(monday))).fetchone()['n']
+        "SELECT COUNT(*) n FROM plays WHERE bar_slug=? AND played_on>=? AND played_on<=?",
+        (bar_slug, str(v_desde), str(v_hasta))).fetchone()['n']
     a['today'] = db.execute(
         "SELECT COUNT(*) n FROM plays WHERE bar_slug=? AND played_on=?",
         (bar_slug, str(hoy))).fetchone()['n']
@@ -1061,42 +1074,46 @@ def calcular_analytics_bar(db, bar_slug):
         return a
     a['has_data'] = True
 
-    # Alcance real de la semana: dispositivos (personas/mesas) distintos
+    # Alcance real de la ventana: dispositivos (personas/mesas) distintos
     a['people_week'] = db.execute(
-        "SELECT COUNT(DISTINCT device_id) n FROM plays WHERE bar_slug=? AND played_on>=? AND device_id!=''",
-        (bar_slug, str(monday))).fetchone()['n']
+        "SELECT COUNT(DISTINCT device_id) n FROM plays WHERE bar_slug=? AND played_on>=? AND played_on<=? AND device_id!=''",
+        (bar_slug, str(v_desde), str(v_hasta))).fetchone()['n']
     a['has_device_data'] = a['people_week'] > 0
 
-    # Semana anterior (para tendencia)
-    a['prev_week'] = db.execute(
-        "SELECT COUNT(*) n FROM plays WHERE bar_slug=? AND played_on>=? AND played_on<=?",
-        (bar_slug, str(monday_prev), str(sunday_prev))).fetchone()['n']
-    if a['prev_week'] > 0:
-        diff = (a['week'] - a['prev_week']) / a['prev_week'] * 100
-        a['trend_pct'] = round(abs(diff))
-        a['trend_dir'] = 'up' if diff > 5 else ('down' if diff < -5 else 'flat')
+    # Tendencia vs periodo anterior: solo tiene sentido en modo semanal (bares)
+    if not es_ventana:
+        a['prev_week'] = db.execute(
+            "SELECT COUNT(*) n FROM plays WHERE bar_slug=? AND played_on>=? AND played_on<=?",
+            (bar_slug, str(monday_prev), str(sunday_prev))).fetchone()['n']
+        if a['prev_week'] > 0:
+            diff = (a['week'] - a['prev_week']) / a['prev_week'] * 100
+            a['trend_pct'] = round(abs(diff))
+            a['trend_dir'] = 'up' if diff > 5 else ('down' if diff < -5 else 'flat')
 
-    # Reparto por día de la semana actual
+    # Reparto por día de la ventana
     dias_es = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
     por_dia = db.execute(
-        "SELECT played_on, COUNT(*) n FROM plays WHERE bar_slug=? AND played_on>=? GROUP BY played_on",
-        (bar_slug, str(monday))).fetchall()
+        "SELECT played_on, COUNT(*) n FROM plays WHERE bar_slug=? AND played_on>=? AND played_on<=? GROUP BY played_on",
+        (bar_slug, str(v_desde), str(v_hasta))).fetchall()
     conteo_dia = {r['played_on']: r['n'] for r in por_dia}
     a['active_days'] = len(conteo_dia)
-    for i in range(7):
-        d = monday + timedelta(days=i)
+    n_dias = min((v_hasta - v_desde).days + 1, 31)  # tope de barras del mini-gráfico
+    for i in range(n_dias):
+        d = v_desde + timedelta(days=i)
         if d > hoy:
             break
         c = conteo_dia.get(str(d), 0)
-        a['daily'].append({'dia': dias_es[i][:3], 'count': c})
+        # Etiqueta: día de la semana (bares) o día del mes (eventos, ej. "10")
+        etiqueta = dias_es[d.weekday()][:3] if not es_ventana else str(d.day)
+        a['daily'].append({'dia': etiqueta, 'count': c})
         if c > a['best_day_count']:
             a['best_day_count'] = c
-            a['best_day'] = dias_es[i]
+            a['best_day'] = dias_es[d.weekday()] if not es_ventana else f"{dias_es[d.weekday()]} {d.day}"
 
     # Franja horaria más activa (requiere played_at; solo registros nuevos lo tienen)
     filas_hora = db.execute(
-        "SELECT played_at FROM plays WHERE bar_slug=? AND played_on>=? AND played_at!=''",
-        (bar_slug, str(monday))).fetchall()
+        "SELECT played_at FROM plays WHERE bar_slug=? AND played_on>=? AND played_on<=? AND played_at!=''",
+        (bar_slug, str(v_desde), str(v_hasta))).fetchall()
     if filas_hora:
         from collections import Counter
         horas = Counter()
@@ -1112,10 +1129,10 @@ def calcular_analytics_bar(db, bar_slug):
             a['best_hour'] = f"{top_h:02d}:00–{(top_h+1)%24:02d}:00"
             a['best_hour_count'] = top_c
 
-    # Top juegos de la semana (favorito + top 3)
+    # Top juegos de la ventana (favorito + top 3)
     top_juegos = db.execute(
-        "SELECT game_type, COUNT(*) n FROM plays WHERE bar_slug=? AND played_on>=? GROUP BY game_type ORDER BY n DESC LIMIT 3",
-        (bar_slug, str(monday))).fetchall()
+        "SELECT game_type, COUNT(*) n FROM plays WHERE bar_slug=? AND played_on>=? AND played_on<=? GROUP BY game_type ORDER BY n DESC LIMIT 3",
+        (bar_slug, str(v_desde), str(v_hasta))).fetchall()
     if top_juegos:
         a['top_game'] = top_juegos[0]['game_type']
         a['top_game_count'] = top_juegos[0]['n']
@@ -1145,6 +1162,136 @@ GAME_NOMBRES = {
     'dosverdades': 'Dos Verdades, Una Mentira', 'masomenos': 'Más o Menos',
     'escalera': 'La Escalera', 'quienmas': '¿Quién es más probable?',
 }
+
+
+def calcular_analytics_evento(db, bar):
+    """Métricas con ventana DEL EVENTO (event_start → min(event_end, hoy)).
+
+    Devuelve un dict con la misma forma que calcular_analytics_bar para
+    reutilizar la plantilla del panel; cambia la ventana temporal y añade
+    'event_state' ('antes'/'durante'/'despues') para los mensajes.
+    Sin tendencia semanal (trend_pct=None): no aplica a un evento.
+    Es el informe que justifica el valor: "X asistentes, Y partidas en N días".
+    """
+    from datetime import timedelta, datetime as _dt
+    hoy = date.today()
+    bar_slug = bar['slug']
+
+    a = {
+        'week': 0, 'today': 0, 'prev_week': 0, 'trend_pct': None, 'trend_dir': 'flat',
+        'best_day': None, 'best_day_count': 0,
+        'best_hour': None, 'best_hour_count': 0,
+        'top_game': None, 'top_game_name': None, 'top_game_count': 0,
+        'active_days': 0, 'has_data': False, 'has_hour_data': False,
+        'daily': [],
+        'people_week': 0, 'has_device_data': False,
+        'total_historico': 0, 'people_historico': 0,
+        'avg_day': 0,
+        'top_games': [],
+        'event_state': 'antes',  # antes / durante / despues
+    }
+
+    # Acumulado histórico (incluye pruebas pre-evento; siempre visible)
+    a['total_historico'] = db.execute(
+        "SELECT COUNT(*) n FROM plays WHERE bar_slug=?", (bar_slug,)).fetchone()['n']
+    a['people_historico'] = db.execute(
+        "SELECT COUNT(DISTINCT device_id) n FROM plays WHERE bar_slug=? AND device_id!=''",
+        (bar_slug,)).fetchone()['n']
+
+    # Ventana del evento
+    try:
+        d0 = _dt.strptime(bar['event_start'], '%Y-%m-%d').date()
+        d1 = _dt.strptime(bar['event_end'], '%Y-%m-%d').date()
+    except (ValueError, TypeError, KeyError):
+        return a  # sin fechas válidas: estado vacío
+    if d1 < d0:
+        return a
+
+    if hoy < d0:
+        a['event_state'] = 'antes'
+    elif hoy > d1:
+        a['event_state'] = 'despues'
+    else:
+        a['event_state'] = 'durante'
+
+    fin_ventana = min(d1, hoy)
+    if fin_ventana < d0:
+        return a  # el evento aún no ha empezado: sin ventana que medir
+
+    ini, fin = str(d0), str(fin_ventana)
+
+    # Volumen del evento y hoy
+    a['week'] = db.execute(
+        "SELECT COUNT(*) n FROM plays WHERE bar_slug=? AND played_on>=? AND played_on<=?",
+        (bar_slug, ini, fin)).fetchone()['n']
+    a['today'] = db.execute(
+        "SELECT COUNT(*) n FROM plays WHERE bar_slug=? AND played_on=?",
+        (bar_slug, str(hoy))).fetchone()['n']
+
+    if a['week'] == 0:
+        return a
+    a['has_data'] = True
+
+    # Asistentes distintos (dispositivos) durante el evento
+    a['people_week'] = db.execute(
+        "SELECT COUNT(DISTINCT device_id) n FROM plays WHERE bar_slug=? AND played_on>=? AND played_on<=? AND device_id!=''",
+        (bar_slug, ini, fin)).fetchone()['n']
+    a['has_device_data'] = a['people_week'] > 0
+
+    # Reparto por día del evento (etiqueta "Vie 10" = día semana + nº)
+    dias_es_abr = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
+    por_dia = db.execute(
+        "SELECT played_on, COUNT(*) n FROM plays WHERE bar_slug=? AND played_on>=? AND played_on<=? GROUP BY played_on",
+        (bar_slug, ini, fin)).fetchall()
+    conteo_dia = {r['played_on']: r['n'] for r in por_dia}
+    a['active_days'] = len([v for v in conteo_dia.values() if v > 0])
+    n_dias = (fin_ventana - d0).days + 1
+    for i in range(min(n_dias, 14)):  # tope visual: 14 barras
+        d = d0 + timedelta(days=i)
+        c = conteo_dia.get(str(d), 0)
+        etiqueta = f"{dias_es_abr[d.weekday()]} {d.day}"
+        a['daily'].append({'dia': etiqueta, 'count': c})
+        if c > a['best_day_count']:
+            a['best_day_count'] = c
+            a['best_day'] = etiqueta
+
+    # Franja horaria más activa dentro del evento
+    filas_hora = db.execute(
+        "SELECT played_at FROM plays WHERE bar_slug=? AND played_on>=? AND played_on<=? AND played_at!=''",
+        (bar_slug, ini, fin)).fetchall()
+    if filas_hora:
+        from collections import Counter
+        horas = Counter()
+        for r in filas_hora:
+            try:
+                h = int(r['played_at'][11:13])
+                horas[h] += 1
+            except (ValueError, IndexError):
+                continue
+        if horas:
+            a['has_hour_data'] = True
+            top_h, top_c = horas.most_common(1)[0]
+            a['best_hour'] = f"{top_h:02d}:00–{(top_h+1)%24:02d}:00"
+            a['best_hour_count'] = top_c
+
+    # Top juegos del evento
+    top_juegos = db.execute(
+        "SELECT game_type, COUNT(*) n FROM plays WHERE bar_slug=? AND played_on>=? AND played_on<=? GROUP BY game_type ORDER BY n DESC LIMIT 3",
+        (bar_slug, ini, fin)).fetchall()
+    if top_juegos:
+        a['top_game'] = top_juegos[0]['game_type']
+        a['top_game_name'] = GAME_NOMBRES.get(top_juegos[0]['game_type'], top_juegos[0]['game_type'])
+        a['top_game_count'] = top_juegos[0]['n']
+        a['top_games'] = [
+            {'name': GAME_NOMBRES.get(r['game_type'], r['game_type']), 'count': r['n']}
+            for r in top_juegos
+        ]
+
+    # Media por día activo
+    if a['active_days'] > 0:
+        a['avg_day'] = round(a['week'] / a['active_days'], 1)
+
+    return a
 
 
 @app.route('/admin/<bar_slug>')
@@ -1183,7 +1330,11 @@ def admin_bar(bar_slug):
         (bar_slug, str(monday))
     ).fetchone()['n']
     pct_correct = round((correct_week / stats_week * 100)) if stats_week > 0 else 0
-    analytics = calcular_analytics_bar(db, bar_slug)
+    # Analytics: los eventos miden su ventana (event_start→event_end); los bares, la semana
+    if (bar['space_kind'] or 'local') == 'evento' and bar['event_start'] and bar['event_end']:
+        analytics = calcular_analytics_bar(db, bar_slug, ventana=(bar['event_start'], bar['event_end']))
+    else:
+        analytics = calcular_analytics_bar(db, bar_slug)
 
     # Códigos por día + código admin permanente (solo eventos)
     event_days = []
