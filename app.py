@@ -1167,25 +1167,34 @@ def admin_bar(bar_slug):
     pct_correct = round((correct_week / stats_week * 100)) if stats_week > 0 else 0
     analytics = calcular_analytics_bar(db, bar_slug)
 
-    # Códigos por día (solo eventos): lista de {date, code} entre event_start y event_end
+    # Códigos por día + código admin permanente (solo eventos)
     event_days = []
-    if (bar['space_kind'] or 'local') == 'evento' and bar['event_start'] and bar['event_end']:
-        try:
-            from datetime import datetime as _dt, timedelta as _td
-            d0 = _dt.strptime(bar['event_start'], '%Y-%m-%d').date()
-            d1 = _dt.strptime(bar['event_end'], '%Y-%m-%d').date()
-            if d1 >= d0 and (d1 - d0).days <= 60:  # tope de seguridad
-                rows = db.execute(
-                    "SELECT valid_from, code FROM access_codes WHERE bar_id = ?",
-                    (bar['id'],)
-                ).fetchall()
-                por_dia = {r['valid_from']: r['code'] for r in rows}
-                n = (d1 - d0).days + 1
-                for i in range(n):
-                    dia = str(d0 + _td(days=i))
-                    event_days.append({'date': dia, 'code': por_dia.get(dia, '')})
-        except (ValueError, TypeError):
-            event_days = []
+    event_admin_code = ''
+    if (bar['space_kind'] or 'local') == 'evento':
+        rows = db.execute(
+            "SELECT valid_from, valid_until, code FROM access_codes WHERE bar_id = ?",
+            (bar['id'],)
+        ).fetchall()
+        # El código admin es la fila con ventana centinela 2000→2099
+        for r in rows:
+            if r['valid_from'] == '2000-01-01' and r['valid_until'] == '2099-12-31':
+                event_admin_code = r['code']
+                break
+        # Días del evento: una fila por día (valid_from == valid_until == ese día)
+        if bar['event_start'] and bar['event_end']:
+            try:
+                from datetime import datetime as _dt, timedelta as _td
+                d0 = _dt.strptime(bar['event_start'], '%Y-%m-%d').date()
+                d1 = _dt.strptime(bar['event_end'], '%Y-%m-%d').date()
+                if d1 >= d0 and (d1 - d0).days <= 60:  # tope de seguridad
+                    por_dia = {r['valid_from']: r['code'] for r in rows
+                               if r['valid_from'] == r['valid_until']}
+                    n = (d1 - d0).days + 1
+                    for i in range(n):
+                        dia = str(d0 + _td(days=i))
+                        event_days.append({'date': dia, 'code': por_dia.get(dia, '')})
+            except (ValueError, TypeError):
+                event_days = []
 
     db.close()
     stats = {'today': stats_today, 'week': stats_week, 'pct_correct': pct_correct}
@@ -1194,7 +1203,7 @@ def admin_bar(bar_slug):
         analytics['top_game_name'] = GAME_NOMBRES.get(analytics['top_game'], analytics['top_game'])
     return render_template('admin/bar_panel.html', bar=bar, products=products,
                            current_code=current_code, valid_until=valid_until_str, stats=stats,
-                           analytics=analytics, event_days=event_days,
+                           analytics=analytics, event_days=event_days, event_admin_code=event_admin_code,
                            admin_role=session.get('admin_role','bar_admin'))
 
 def _normalizar_handle(valor, dominio):
@@ -1298,15 +1307,18 @@ def admin_save():
 def admin_event_codes():
     """Guarda los códigos por día de un evento (solo superadmin).
 
-    Recibe {bar_slug, codes: [{date: 'YYYY-MM-DD', code: 'ABC12'}, ...]}.
-    Cada día es una fila en access_codes con valid_from = valid_until = ese día.
-    Upsert por (bar_id, valid_from): si ya hay código para ese día, lo actualiza.
-    No toca la lógica de validación de acceso (que ya filtra por ventana de fecha)."""
+    Recibe {bar_slug, admin_code: 'ABC12', codes: [{date: 'YYYY-MM-DD', code: 'ABC12'}, ...]}.
+    - admin_code: código permanente que siempre funciona (para pruebas). Se guarda como
+      fila con ventana centinela 2000-01-01 → 2099-12-31, que la validación (que filtra
+      por ventana de fecha) acepta cualquier día. Vacío = se elimina.
+    - codes: un código por día del evento (valid_from = valid_until = ese día).
+    Upsert por (bar_id, valid_from). No toca la lógica de validación de acceso."""
     if session.get('admin_role') != 'superadmin':
         return jsonify({'ok': False, 'error': 'Solo superadmin'}), 403
     data = request.get_json() or {}
     bar_slug = data.get('bar_slug')
     codes = data.get('codes', [])
+    admin_code = _normalizar_codigo(data.get('admin_code') or '')
     if not isinstance(codes, list):
         return jsonify({'ok': False, 'error': 'Formato inválido'}), 400
 
@@ -1319,6 +1331,21 @@ def admin_event_codes():
         db.close()
         return jsonify({'ok': False, 'error': 'No es un evento'}), 400
 
+    # Ventana centinela del código de admin permanente
+    ADMIN_FROM, ADMIN_UNTIL = '2000-01-01', '2099-12-31'
+    existing_admin = db.execute(
+        "SELECT id FROM access_codes WHERE bar_id = ? AND valid_from = ? AND valid_until = ?",
+        (bar['id'], ADMIN_FROM, ADMIN_UNTIL)
+    ).fetchone()
+    if admin_code:
+        if existing_admin:
+            db.execute("UPDATE access_codes SET code = ? WHERE id = ?", (admin_code, existing_admin['id']))
+        else:
+            db.execute("INSERT INTO access_codes (bar_id, code, valid_from, valid_until) VALUES (?,?,?,?)",
+                       (bar['id'], admin_code, ADMIN_FROM, ADMIN_UNTIL))
+    elif existing_admin:
+        db.execute("DELETE FROM access_codes WHERE id = ?", (existing_admin['id'],))
+
     guardados = 0
     for item in codes:
         fecha = (item.get('date') or '').strip()
@@ -1329,17 +1356,20 @@ def admin_event_codes():
             _dt.strptime(fecha, '%Y-%m-%d')
         except (ValueError, TypeError):
             continue
+        # Seguridad: no permitir que un "día" use la ventana centinela del admin
+        if fecha in (ADMIN_FROM, ADMIN_UNTIL):
+            continue
         if not code:
-            # Código vacío para ese día: borrar el que hubiera (permite dejar días sin código)
-            db.execute("DELETE FROM access_codes WHERE bar_id = ? AND valid_from = ?", (bar['id'], fecha))
+            # Código vacío para ese día: borrar el del día (solo la fila de ese día concreto)
+            db.execute("DELETE FROM access_codes WHERE bar_id = ? AND valid_from = ? AND valid_until = ?",
+                       (bar['id'], fecha, fecha))
             continue
         existing = db.execute(
-            "SELECT id FROM access_codes WHERE bar_id = ? AND valid_from = ?",
-            (bar['id'], fecha)
+            "SELECT id FROM access_codes WHERE bar_id = ? AND valid_from = ? AND valid_until = ?",
+            (bar['id'], fecha, fecha)
         ).fetchone()
         if existing:
-            db.execute("UPDATE access_codes SET code = ?, valid_until = ? WHERE id = ?",
-                       (code, fecha, existing['id']))
+            db.execute("UPDATE access_codes SET code = ? WHERE id = ?", (code, existing['id']))
         else:
             db.execute("INSERT INTO access_codes (bar_id, code, valid_from, valid_until) VALUES (?,?,?,?)",
                        (bar['id'], code, fecha, fecha))
