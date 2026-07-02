@@ -31,6 +31,7 @@
   window.nookDeviceId = nookDeviceId;
 
   // Inyecta device_id en las llamadas de registro de partidas, sin tocar cada juego.
+  // Además registra en este dispositivo qué juegos se han jugado hoy (para el ✓ del menú).
   var _fetch = window.fetch;
   window.fetch = function(url, opts){
     try {
@@ -41,6 +42,21 @@
           b.device_id = nookDeviceId();
           opts = Object.assign({}, opts, { body: JSON.stringify(b) });
         }
+        // Marcar como jugado hoy en este dispositivo (clave por fecha: caduca sola)
+        try {
+          var gt = (b && b.game_type) || (url.indexOf('/api/pensamiento-responder') !== -1 ? 'pensamiento' : '');
+          if (gt) {
+            var hoy = new Date().toISOString().slice(0,10);
+            var pk = 'nook_played_' + hoy;
+            var arr = JSON.parse(localStorage.getItem(pk) || '[]');
+            if (arr.indexOf(gt) === -1) { arr.push(gt); localStorage.setItem(pk, JSON.stringify(arr)); }
+            // Limpieza: borrar claves de días anteriores
+            for (var i = localStorage.length - 1; i >= 0; i--) {
+              var kk = localStorage.key(i);
+              if (kk && kk.indexOf('nook_played_') === 0 && kk !== pk) localStorage.removeItem(kk);
+            }
+          }
+        } catch(e){}
       }
     } catch(e){}
     return _fetch.call(this, url, opts);

@@ -29,6 +29,17 @@
     display: flex; align-items: center; justify-content: center;
     box-shadow: 0 1px 4px rgba(0,0,0,0.18);
   }
+  /* Jugado hoy: distintivo sutil. El contenido se renueva mañana. */
+  .played-badge {
+    position: absolute; top: 6px; right: 8px; z-index: 2;
+    font-size: 13px; font-weight: 800; color: #fff;
+    background: #2E7D32; border-radius: 50%;
+    width: 22px; height: 22px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+  }
+  .activity-card-grid.played { opacity: 0.72; }
+  .activity-card-grid.played .activity-desc { color: #2E7D32; font-weight: 600; }
   .demo-wall-overlay {
     position: fixed; inset: 0; z-index: 2000;
     background: rgba(0,0,0,0.55);
@@ -543,12 +554,23 @@ async function showMenu() {
   const activeGames = IS_DEMO ? ACTIVITIES.slice() : ACTIVITIES.filter(a => a.active);
   const hasHidden = !IS_DEMO && ACTIVITIES.length > activeGames.length;
 
+  // Juegos ya jugados HOY en este dispositivo (registrado por game_base al terminar).
+  // El contenido se renueva cada mañana: el ✓ indica "ya lo hiciste, mañana hay nuevo".
+  let playedToday = [];
+  try {
+    playedToday = JSON.parse(localStorage.getItem('nook_played_' + new Date().toISOString().slice(0,10)) || '[]');
+  } catch(e) {}
+
   // Juegos a dobles (2 jugadores, 1 móvil). Van agrupados al final con un separador.
   const DOBLES = ['freep', 'dosverdades', 'masomenos', 'quienmas'];
+  // Juegos sin contenido diario renovable (a dobles / deterministas rejugables):
+  // no tiene sentido el ✓ de "hecho hoy" porque cada partida es distinta.
+  const SIN_CHECK = ['freep', 'dosverdades', 'masomenos', 'quienmas', 'poema'];
   let dividerInsertado = false;
 
   list.innerHTML = activeGames.map(a => {
     const locked = IS_DEMO && !a.active;
+    const played = !locked && playedToday.includes(a.slug) && !SIN_CHECK.includes(a.slug);
     let divider = '';
     // Insertar el separador justo antes del primer juego a dobles
     if (!dividerInsertado && DOBLES.includes(a.slug)) {
@@ -556,14 +578,15 @@ async function showMenu() {
       divider = `<div class="grid-divider"><span>👥 Juegos para dos jugadores</span></div>`;
     }
     return divider + `
-    <div class="activity-card-grid${locked ? ' locked' : ''}" onclick="${locked ? 'showDemoWall()' : `startActivity('${a.slug}')`}">
+    <div class="activity-card-grid${locked ? ' locked' : ''}${played ? ' played' : ''}" onclick="${locked ? 'showDemoWall()' : `startActivity('${a.slug}')`}">
       ${locked ? '<div class="lock-badge">🔒</div>' : ''}
+      ${played ? '<div class="played-badge" title="Jugado hoy — mañana hay contenido nuevo">✓</div>' : ''}
       <div class="activity-img-wrap">
         ${a.icon.startsWith('/') ? `<img src="${a.icon}" alt="${a.name}" class="activity-img">` : `<span class="activity-img-emoji">${a.icon}</span>`}
       </div>
       <div class="activity-grid-info">
         <div class="activity-name">${a.name}</div>
-        <div class="activity-desc">${a.description}</div>
+        <div class="activity-desc">${played ? 'Hecho · mañana hay nuevo' : a.description}</div>
       </div>
     </div>`;
   }).join('');
