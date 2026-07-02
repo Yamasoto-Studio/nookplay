@@ -126,8 +126,8 @@
     {% for bar in bars %}
     <div class="bar-row">
       <div>
-        <div class="bar-name">{{ bar.name }}</div>
-        <div class="bar-city">{{ bar.city }}{% if bar.province %}, {{ bar.province }}{% endif %}</div>
+        <div class="bar-name">{{ bar.name }}{% if (bar.space_kind or 'local') == 'evento' %} <span style="display:inline-block; font-size:10px; font-weight:700; background:#FBE8DC; color:#A8410E; border:1px solid #E8C4AC; border-radius:6px; padding:1px 7px; vertical-align:middle; letter-spacing:0.4px;">🎪 EVENTO</span>{% endif %}</div>
+        <div class="bar-city">{{ bar.city }}{% if bar.province %}, {{ bar.province }}{% endif %}{% if (bar.space_kind or 'local') == 'evento' and bar.event_start %} · {{ bar.event_start }} → {{ bar.event_end }}{% endif %}</div>
       </div>
       <div>
           <span class="plan-badge plan-{{ bar.plan or 'gift' }}">

@@ -130,8 +130,13 @@
         </div>
         <button class="btn-primary" onclick="validateCode()">Entrar</button>
         <p class="code-hint">
+          {% if (bar.space_kind or 'local') == 'evento' %}
+          🎟️ Encontrarás el código en tu entrada o en la cartelería del evento.<br>
+          <small>Cada día tiene su código.</small>
+          {% else %}
           🧾 Encontrarás el código en tu ticket o pídelo al personal del local.<br>
           <small>Cambia temporalmente.</small>
+          {% endif %}
         </p>
       </div>
 
@@ -415,7 +420,7 @@ async function validateCode() {
   const code = document.getElementById('code-input').value.trim().toUpperCase();
   const errorEl = document.getElementById('code-error');
   errorEl.textContent = '';
-  if (!code) { errorEl.textContent = 'Introduce el código del local.'; return; }
+  if (!code) { errorEl.textContent = 'Introduce el código de acceso.'; return; }
 
   const btn = document.querySelector('#s-code .btn-primary');
   btn.textContent = 'Comprobando...';

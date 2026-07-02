@@ -201,6 +201,17 @@
         </div>
       </div>
 
+      <div style="margin-top:14px; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 14px; background:var(--surface-1, #F7F2EB); border-radius:10px;">
+        <div>
+          <div style="font-size:13px; font-weight:600;">Modo pruebas (generar contenido a diario)</div>
+          <div style="font-size:12px; color:var(--text-muted); margin-top:2px; line-height:1.4;">Fuera de las fechas del evento no se genera contenido cada día (ahorro de IA). Activa esto para que se genere a diario igualmente. Para probar puntualmente no hace falta: al entrar a un juego se genera al momento.</div>
+        </div>
+        <label class="toggle" style="flex-shrink:0;">
+          <input type="checkbox" id="event_test_mode" {% if bar.event_test_mode %}checked{% endif %}>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
       <!-- Códigos por día -->
       <div style="margin-top:18px; padding-top:16px; border-top:1px solid var(--border);">
         <label style="display:block; font-size:13px; font-weight:600; margin-bottom:5px;">Código de admin (siempre funciona)</label>
@@ -1202,6 +1213,8 @@ async function saveChanges() {
     data.event_start = _start ? _start.value : '';
     data.event_end = _end ? _end.value : '';
     data.event_pool_size = _pool ? (parseInt(_pool.value, 10) || 1) : 1;
+    const _tm = document.getElementById('event_test_mode');
+    data.event_test_mode = _tm && _tm.checked ? 1 : 0;
   }
 
   for (let i = 0; i < 3; i++) {

@@ -610,6 +610,16 @@ def pregen_daily_games():
         # quedan con tema vacío y su generación es idéntica a la de siempre.
         _bar_d = dict(bar)
         set_event_theme(_theme_de(_bar_d))
+        # ── Evento fuera de fechas: no gastar IA a diario ────────────────
+        # Genera solo si hoy cae dentro de event_start→event_end, o si el
+        # superadmin activó el modo pruebas. Probar sin modo pruebas sigue
+        # funcionando: el fallback de cada juego genera bajo demanda.
+        if (_bar_d.get('space_kind') or 'local') == 'evento':
+            _ev_start = _bar_d.get('event_start') or ''
+            _ev_end = _bar_d.get('event_end') or ''
+            _hoy_en_evento = bool(_ev_start) and bool(_ev_end) and (_ev_start <= today <= _ev_end)
+            if not _hoy_en_evento and not _bar_d.get('event_test_mode'):
+                continue
         for game_type in GAME_TYPES:
             existing = db.execute(
                 "SELECT id FROM generated_games WHERE bar_id = ? AND game_type = ? AND game_date = ?",
@@ -1266,9 +1276,9 @@ def admin_save():
             _pool = 1
         _pool = max(1, min(20, _pool))
         db.execute(
-            "UPDATE bars SET space_kind=?, event_theme=?, event_start=?, event_end=?, event_pool_size=? WHERE slug=?",
+            "UPDATE bars SET space_kind=?, event_theme=?, event_start=?, event_end=?, event_pool_size=?, event_test_mode=? WHERE slug=?",
             (_sk, data.get('event_theme', '') or '', data.get('event_start', '') or '',
-             data.get('event_end', '') or '', _pool, bar_slug)
+             data.get('event_end', '') or '', _pool, 1 if data.get('event_test_mode') else 0, bar_slug)
         )
 
     db.execute(
@@ -3105,7 +3115,8 @@ def dilema_stats(bar_slug):
 def bars_map():
     db = get_db()
     bars = db.execute(
-        "SELECT name, city, latitude, longitude, slug FROM bars WHERE active = 1 AND latitude IS NOT NULL"
+        "SELECT name, city, latitude, longitude, slug FROM bars WHERE active = 1 AND latitude IS NOT NULL "
+        "AND (space_kind IS NULL OR space_kind != 'evento')"
     ).fetchall()
     db.close()
     return jsonify([dict(b) for b in bars])
