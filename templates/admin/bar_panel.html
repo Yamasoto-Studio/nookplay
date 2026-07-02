@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Panel — {{ bar.name }}{% endblock %}
 {% block content %}
+{% set es_evento = (bar.space_kind or 'local') == 'evento' %}
 
 <style>
   body { background: #F7F2EB !important; display: block !important; padding: 0 !important; }
@@ -260,10 +261,28 @@
   <!-- Guía rápida (onboarding) -->
   <div class="onboard-card" id="onboard-card">
     <div class="onboard-toggle" onclick="document.getElementById('onboard-card').classList.toggle('open')">
-      <h3>👋 Cómo funciona Nookplay en tu local</h3>
+      <h3 id="lbl-onboard-title">👋 Cómo funciona Nookplay {{ 'en tu evento' if es_evento else 'en tu local' }}</h3>
       <span class="onboard-chevron">▼</span>
     </div>
     <div class="onboard-body">
+      {% if es_evento %}
+      <div class="onboard-step">
+        <div class="onboard-num">1</div>
+        <div class="onboard-step-txt"><b>Coloca el QR</b> en la entrada, el programa, la cartelería o las pulseras. Lleva directo a los juegos del evento.</div>
+      </div>
+      <div class="onboard-step">
+        <div class="onboard-num">2</div>
+        <div class="onboard-step-txt"><b>Asigna un código a cada día</b> del evento desde el panel. Puedes fijarlos por adelantado e imprimirlos en las entradas o anunciarlos en tus canales.</div>
+      </div>
+      <div class="onboard-step">
+        <div class="onboard-num">3</div>
+        <div class="onboard-step-txt"><b>Los asistentes escanean y juegan.</b> Escanean el QR, escriben el código del día y acceden a juegos ambientados en la temática del evento.</div>
+      </div>
+      <div class="onboard-step">
+        <div class="onboard-num">4</div>
+        <div class="onboard-step-txt"><b>Personaliza desde aquí abajo:</b> temática, mensaje de bienvenida, actividades destacadas y los juegos activos. Recuerda pulsar <b>Guardar</b>.</div>
+      </div>
+      {% else %}
       <div class="onboard-step">
         <div class="onboard-num">1</div>
         <div class="onboard-step-txt"><b>Pega el vinilo con el QR</b> en la ventana o la entrada. Es fijo, se pone una vez y no cambia nunca.</div>
@@ -280,13 +299,14 @@
         <div class="onboard-num">4</div>
         <div class="onboard-step-txt"><b>Personaliza desde aquí abajo:</b> mensaje de bienvenida, despedida, tus productos y los juegos activos. Recuerda pulsar <b>Guardar</b>.</div>
       </div>
+      {% endif %}
     </div>
   </div>
 
   <!-- Panel de valor: tu semana en Nookplay -->
   <div class="insights-card">
     <div class="insights-head">
-      <h3>📊 Tu semana en Nookplay</h3>
+      <h3 id="lbl-insights-title">📊 {{ 'Actividad en Nookplay' if es_evento else 'Tu semana en Nookplay' }}</h3>
       {% if analytics.has_data and analytics.trend_pct is not none %}
         {% if analytics.trend_dir == 'up' %}
           <span class="insights-trend up">↑ {{ analytics.trend_pct }}% vs. semana pasada</span>
@@ -422,7 +442,6 @@
     </div>
 
     <!-- Enlaces del local/evento -->
-    {% set es_evento = (bar.space_kind or 'local') == 'evento' %}
     <div class="form-card">
       <h3 id="lbl-links-title">{{ 'Enlaces del evento' if es_evento else 'Enlaces de tu local' }}</h3>
       <div class="field-hint" style="margin-bottom:14px;"><span id="lbl-links-hint">{{ 'Lo que rellenes aparecerá como botón en la pantalla de los asistentes. Lo que dejes vacío, no se mostrará.' if es_evento else 'Lo que rellenes aparecerá como botón en la pantalla de tus clientes. Lo que dejes vacío, no se mostrará.' }}</span></div>
@@ -507,7 +526,7 @@
 
     <!-- Logo e imagen -->
     <div class="form-card">
-      <h3>Logo del local</h3>
+      <h3 id="lbl-logo-title">{{ 'Logo del evento' if es_evento else 'Logo del local' }}</h3>
       <div class="field">
         <label>Imagen actual</label>
         <img src="/static/clientes/{{ bar.slug }}/logo_header.png" alt="Logo" style="max-height:60px; display:block; margin-bottom:8px;" onerror="this.style.display='none'">
@@ -558,20 +577,20 @@
       </div>
     </div>
 
-    <!-- Sobre el local -->
+    <!-- Sobre el local/evento -->
     <div class="form-card">
-      <h3>Sobre el local</h3>
+      <h3 id="lbl-about-title">{{ 'Sobre el evento' if es_evento else 'Sobre el local' }}</h3>
       <div class="field">
         <label>Descripción</label>
-        <textarea name="description" rows="3" placeholder="Describe tu local...">{{ bar.description }}</textarea>
-        <div class="field-hint">La IA usa esto para personalizar los juegos de vez en cuando.</div>
+        <textarea name="description" rows="3" class="ph-about-desc" placeholder="{{ 'Describe el evento...' if es_evento else 'Describe tu local...' }}">{{ bar.description }}</textarea>
+        <div class="field-hint" id="lbl-about-hint">{{ 'Contexto general del evento. La temática de arriba es lo que más ambienta los juegos.' if es_evento else 'La IA usa esto para personalizar los juegos de vez en cuando.' }}</div>
       </div>
       <div class="field">
-        <label>Tu nombre</label>
-        <input type="text" name="owner_name" value="{{ bar.owner_name }}" placeholder="Lorena">
+        <label id="lbl-owner">{{ 'Organización' if es_evento else 'Tu nombre' }}</label>
+        <input type="text" name="owner_name" value="{{ bar.owner_name }}" class="ph-owner" placeholder="{{ 'Nombre de la organización' if es_evento else 'Lorena' }}">
       </div>
       <div class="field">
-        <label>Equipo (separado por comas)</label>
+        <label id="lbl-staff">{{ 'Equipo organizador (separado por comas)' if es_evento else 'Equipo (separado por comas)' }}</label>
         <input type="text" name="staff_names" value="{{ bar.staff_names }}" placeholder="Carla, Marta">
       </div>
     </div>
@@ -579,7 +598,7 @@
     <!-- Colores (solo superadmin) -->
     {% if admin_role == 'superadmin' %}
     <div class="form-card" style="margin-top:16px;">
-      <h3>Colores del local</h3>
+      <h3 id="lbl-colors-title">{{ 'Colores del evento' if es_evento else 'Colores del local' }}</h3>
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
         <div class="field">
           <label>Color principal</label>
@@ -603,7 +622,7 @@
             <input type="color" name="color_bg" value="{{ bar.color_bg or '#F7F2EB' }}" style="width:44px; height:36px; border:1px solid var(--border); border-radius:8px; cursor:pointer; padding:2px;">
             <input type="text" name="color_bg_hex" value="{{ bar.color_bg or '#F7F2EB' }}" placeholder="#F7F2EB" style="flex:1; font-size:13px; font-family:monospace;" oninput="syncColor(this, 'color_bg')">
           </div>
-          <div class="field-hint">Fondo general de la app del cliente</div>
+          <div class="field-hint" id="lbl-bg-hint">{{ 'Fondo general de la app del asistente' if es_evento else 'Fondo general de la app del cliente' }}</div>
         </div>
         <div class="field">
           <label>Fondo sutil</label>
@@ -615,7 +634,7 @@
         </div>
       </div>
       <div style="margin-top:12px; padding:12px; background:#F7F2EB; border-radius:8px; font-size:12px; color:#6B6059; line-height:1.5;">
-        Estos colores se aplican en toda la experiencia del cliente. <strong>Principal</strong> tiñe cabeceras y botones; <strong>Texto</strong> es el color que va sobre el principal (asegura buen contraste); <strong>Fondo</strong> y <strong>Sutil</strong> son las bases claras de la página.
+        Estos colores se aplican en toda la experiencia del <span id="lbl-colors-who">{{ 'asistente' if es_evento else 'cliente' }}</span>. <strong>Principal</strong> tiñe cabeceras y botones; <strong>Texto</strong> es el color que va sobre el principal (asegura buen contraste); <strong>Fondo</strong> y <strong>Sutil</strong> son las bases claras de la página.
       </div>
     </div>
     {% endif %}
@@ -823,14 +842,14 @@
   <div style="margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--border);">
     <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 10px;">Zona de peligro</div>
     <button type="button" onclick="openDeleteModal()" style="background: transparent; color: #cc2222; border: 1px solid #cc2222; border-radius: 8px; padding: 10px 18px; font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit;">
-      Eliminar este local permanentemente
+      Eliminar este {{ 'evento' if es_evento else 'local' }} permanentemente
     </button>
   </div>
 
   <!-- Modal confirmación eliminar -->
   <div id="delete-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:1000; align-items:center; justify-content:center; padding:20px;">
     <div style="background:#fff; border-radius:16px; padding:28px; width:100%; max-width:420px;">
-      <div style="font-size:20px; margin-bottom:4px;">⚠️ Eliminar local</div>
+      <div style="font-size:20px; margin-bottom:4px;">⚠️ Eliminar {{ 'evento' if es_evento else 'local' }}</div>
       <p style="font-size:14px; color:#6B6059; margin-bottom:16px; line-height:1.6;">
         Estás a punto de eliminar <strong>{{ bar.name }}</strong> y todos sus datos: partidas, códigos, productos y accesos. <strong>Esta acción no se puede deshacer.</strong>
       </p>
@@ -904,6 +923,19 @@
       priceLabel:  esEvento ? 'Horario / Lugar' : 'Precio',
       phPrice:     esEvento ? 'Sáb 17:00 · Sala B' : '2,50 €',
       imgLabel:    esEvento ? 'Imagen de la actividad' : 'Imagen del producto',
+      onboardTitle: '👋 Cómo funciona Nookplay ' + (esEvento ? 'en tu evento' : 'en tu local'),
+      logoTitle:   esEvento ? 'Logo del evento' : 'Logo del local',
+      aboutTitle:  esEvento ? 'Sobre el evento' : 'Sobre el local',
+      aboutHint:   esEvento ? 'Contexto general del evento. La temática de arriba es lo que más ambienta los juegos.'
+                            : 'La IA usa esto para personalizar los juegos de vez en cuando.',
+      phAboutDesc: esEvento ? 'Describe el evento...' : 'Describe tu local...',
+      ownerLabel:  esEvento ? 'Organización' : 'Tu nombre',
+      phOwner:     esEvento ? 'Nombre de la organización' : 'Lorena',
+      staffLabel:  esEvento ? 'Equipo organizador (separado por comas)' : 'Equipo (separado por comas)',
+      colorsTitle: esEvento ? 'Colores del evento' : 'Colores del local',
+      colorsWho:   esEvento ? 'asistente' : 'cliente',
+      bgHint:      esEvento ? 'Fondo general de la app del asistente' : 'Fondo general de la app del cliente',
+      insightsTitle: '📊 ' + (esEvento ? 'Actividad en Nookplay' : 'Tu semana en Nookplay'),
     };
     const setTxt = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
     setTxt('lbl-links-title', T.linksTitle);
@@ -913,6 +945,18 @@
     setTxt('lbl-prod-title', T.prodTitle);
     setTxt('lbl-prod-toggle', T.prodToggle);
     setTxt('lbl-prod-hint', T.prodHint);
+    setTxt('lbl-onboard-title', T.onboardTitle);
+    setTxt('lbl-logo-title', T.logoTitle);
+    setTxt('lbl-about-title', T.aboutTitle);
+    setTxt('lbl-about-hint', T.aboutHint);
+    setTxt('lbl-owner', T.ownerLabel);
+    setTxt('lbl-staff', T.staffLabel);
+    setTxt('lbl-colors-title', T.colorsTitle);
+    setTxt('lbl-colors-who', T.colorsWho);
+    setTxt('lbl-bg-hint', T.bgHint);
+    setTxt('lbl-insights-title', T.insightsTitle);
+    const _ad = document.querySelector('.ph-about-desc'); if (_ad) _ad.placeholder = T.phAboutDesc;
+    const _ow = document.querySelector('.ph-owner'); if (_ow) _ow.placeholder = T.phOwner;
     // Elementos repetidos (por índice de producto)
     document.querySelectorAll('.lbl-prod-item').forEach((el, i) => { el.textContent = T.itemWord + (i + 1); });
     document.querySelectorAll('.lbl-prod-img').forEach(el => { el.textContent = T.imgLabel; });
