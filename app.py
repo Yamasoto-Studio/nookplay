@@ -1838,10 +1838,10 @@ def dilema_api():
         return jsonify({'error': 'Invalid code'}), 403
 
     valid_code = db.execute(
-        "SELECT code FROM access_codes WHERE bar_id = ? AND valid_from <= ? AND valid_until >= ?",
-        (bar['id'], today, today)
+        "SELECT code FROM access_codes WHERE bar_id = ? AND code = ? AND valid_from <= ? AND valid_until >= ?",
+        (bar['id'], code, today, today)
     ).fetchone()
-    if not valid_code or valid_code['code'] != code:
+    if not valid_code:
         db.close()
         return jsonify({'error': 'Invalid code'}), 403
 
@@ -1909,10 +1909,10 @@ def veredicto_api():
         return jsonify({'error': 'Invalid code'}), 403
 
     valid_code = db.execute(
-        "SELECT code FROM access_codes WHERE bar_id = ? AND valid_from <= ? AND valid_until >= ?",
-        (bar['id'], today, today)
+        "SELECT code FROM access_codes WHERE bar_id = ? AND code = ? AND valid_from <= ? AND valid_until >= ?",
+        (bar['id'], code, today, today)
     ).fetchone()
-    if not valid_code or valid_code['code'] != code:
+    if not valid_code:
         db.close()
         return jsonify({'error': 'Invalid code'}), 403
 
@@ -2001,10 +2001,10 @@ def perfil_api():
         return jsonify({'error': 'Invalid code'}), 403
 
     valid_code = db.execute(
-        "SELECT code FROM access_codes WHERE bar_id = ? AND valid_from <= ? AND valid_until >= ?",
-        (bar['id'], today, today)
+        "SELECT code FROM access_codes WHERE bar_id = ? AND code = ? AND valid_from <= ? AND valid_until >= ?",
+        (bar['id'], code, today, today)
     ).fetchone()
-    if not valid_code or valid_code['code'] != code:
+    if not valid_code:
         db.close()
         return jsonify({'error': 'Invalid code'}), 403
 
@@ -2087,10 +2087,10 @@ def vestuario_api():
         return jsonify({'error': 'Invalid code'}), 403
 
     valid_code = db.execute(
-        "SELECT code FROM access_codes WHERE bar_id = ? AND valid_from <= ? AND valid_until >= ?",
-        (bar['id'], today, today)
+        "SELECT code FROM access_codes WHERE bar_id = ? AND code = ? AND valid_from <= ? AND valid_until >= ?",
+        (bar['id'], code, today, today)
     ).fetchone()
-    if not valid_code or valid_code['code'] != code:
+    if not valid_code:
         db.close()
         return jsonify({'error': 'Invalid code'}), 403
 
@@ -2172,10 +2172,10 @@ def trivia_api():
         return jsonify({'error': 'Invalid code'}), 403
 
     valid_code = db.execute(
-        "SELECT code FROM access_codes WHERE bar_id = ? AND valid_from <= ? AND valid_until >= ?",
-        (bar['id'], today, today)
+        "SELECT code FROM access_codes WHERE bar_id = ? AND code = ? AND valid_from <= ? AND valid_until >= ?",
+        (bar['id'], code, today, today)
     ).fetchone()
-    if not valid_code or valid_code['code'] != code:
+    if not valid_code:
         db.close()
         return jsonify({'error': 'Invalid code'}), 403
 
@@ -2257,10 +2257,10 @@ def sinopsis_api():
         return jsonify({'error': 'Invalid code'}), 403
 
     valid_code = db.execute(
-        "SELECT code FROM access_codes WHERE bar_id = ? AND valid_from <= ? AND valid_until >= ?",
-        (bar['id'], today, today)
+        "SELECT code FROM access_codes WHERE bar_id = ? AND code = ? AND valid_from <= ? AND valid_until >= ?",
+        (bar['id'], code, today, today)
     ).fetchone()
-    if not valid_code or valid_code['code'] != code:
+    if not valid_code:
         db.close()
         return jsonify({'error': 'Invalid code'}), 403
 
@@ -2343,10 +2343,10 @@ def titular_api():
         return jsonify({'error': 'Invalid code'}), 403
 
     valid_code = db.execute(
-        "SELECT code FROM access_codes WHERE bar_id = ? AND valid_from <= ? AND valid_until >= ?",
-        (bar['id'], today, today)
+        "SELECT code FROM access_codes WHERE bar_id = ? AND code = ? AND valid_from <= ? AND valid_until >= ?",
+        (bar['id'], code, today, today)
     ).fetchone()
-    if not valid_code or valid_code['code'] != code:
+    if not valid_code:
         db.close()
         return jsonify({'error': 'Invalid code'}), 403
 
@@ -2426,10 +2426,10 @@ def definicion_api():
         return jsonify({'error': 'Invalid code'}), 403
 
     valid_code = db.execute(
-        "SELECT code FROM access_codes WHERE bar_id = ? AND valid_from <= ? AND valid_until >= ?",
-        (bar['id'], today, today)
+        "SELECT code FROM access_codes WHERE bar_id = ? AND code = ? AND valid_from <= ? AND valid_until >= ?",
+        (bar['id'], code, today, today)
     ).fetchone()
-    if not valid_code or valid_code['code'] != code:
+    if not valid_code:
         db.close()
         return jsonify({'error': 'Invalid code'}), 403
 
@@ -2525,10 +2525,10 @@ def masomenos_api():
         return jsonify({'error': 'Invalid code'}), 403
 
     valid_code = db.execute(
-        "SELECT code FROM access_codes WHERE bar_id = ? AND valid_from <= ? AND valid_until >= ?",
-        (bar['id'], today, today)
+        "SELECT code FROM access_codes WHERE bar_id = ? AND code = ? AND valid_from <= ? AND valid_until >= ?",
+        (bar['id'], code, today, today)
     ).fetchone()
-    if not valid_code or valid_code['code'] != code:
+    if not valid_code:
         db.close()
         return jsonify({'error': 'Invalid code'}), 403
 
@@ -2590,10 +2590,10 @@ def escalera_api():
         db.close()
         return jsonify({'error': 'Invalid code'}), 403
     valid_code = db.execute(
-        "SELECT code FROM access_codes WHERE bar_id = ? AND valid_from <= ? AND valid_until >= ?",
-        (bar['id'], today, today)
+        "SELECT code FROM access_codes WHERE bar_id = ? AND code = ? AND valid_from <= ? AND valid_until >= ?",
+        (bar['id'], code, today, today)
     ).fetchone()
-    if not valid_code or valid_code['code'] != code:
+    if not valid_code:
         db.close()
         return jsonify({'error': 'Invalid code'}), 403
 
@@ -2672,10 +2672,10 @@ def quienmas_api():
         db.close()
         return jsonify({'error': 'Invalid code'}), 403
     valid_code = db.execute(
-        "SELECT code FROM access_codes WHERE bar_id = ? AND valid_from <= ? AND valid_until >= ?",
-        (bar['id'], today, today)
+        "SELECT code FROM access_codes WHERE bar_id = ? AND code = ? AND valid_from <= ? AND valid_until >= ?",
+        (bar['id'], code, today, today)
     ).fetchone()
-    if not valid_code or valid_code['code'] != code:
+    if not valid_code:
         db.close()
         return jsonify({'error': 'Invalid code'}), 403
 
@@ -2734,10 +2734,10 @@ def muertes_api():
         return jsonify({'error': 'Invalid code'}), 403
 
     valid_code = db.execute(
-        "SELECT code FROM access_codes WHERE bar_id = ? AND valid_from <= ? AND valid_until >= ?",
-        (bar['id'], today, today)
+        "SELECT code FROM access_codes WHERE bar_id = ? AND code = ? AND valid_from <= ? AND valid_until >= ?",
+        (bar['id'], code, today, today)
     ).fetchone()
-    if not valid_code or valid_code['code'] != code:
+    if not valid_code:
         db.close()
         return jsonify({'error': 'Invalid code'}), 403
 
@@ -2814,10 +2814,10 @@ def letra_api():
         return jsonify({'error': 'Invalid code'}), 403
 
     valid_code = db.execute(
-        "SELECT code FROM access_codes WHERE bar_id = ? AND valid_from <= ? AND valid_until >= ?",
-        (bar['id'], today, today)
+        "SELECT code FROM access_codes WHERE bar_id = ? AND code = ? AND valid_from <= ? AND valid_until >= ?",
+        (bar['id'], code, today, today)
     ).fetchone()
-    if not valid_code or valid_code['code'] != code:
+    if not valid_code:
         db.close()
         return jsonify({'error': 'Invalid code'}), 403
 
@@ -2892,10 +2892,10 @@ def pensamiento_api():
         db.close()
         return jsonify({'error': 'Invalid code'}), 403
     valid_code = db.execute(
-        "SELECT code FROM access_codes WHERE bar_id = ? AND valid_from <= ? AND valid_until >= ?",
-        (bar['id'], today, today)
+        "SELECT code FROM access_codes WHERE bar_id = ? AND code = ? AND valid_from <= ? AND valid_until >= ?",
+        (bar['id'], code, today, today)
     ).fetchone()
-    if not valid_code or valid_code['code'] != code:
+    if not valid_code:
         db.close()
         return jsonify({'error': 'Invalid code'}), 403
     cache_key = f"global_pensamiento_{today}"
@@ -3006,11 +3006,11 @@ def poema_api():
         db.close()
         return jsonify({'error': 'Invalid code'}), 403
     valid_code = db.execute(
-        "SELECT code FROM access_codes WHERE bar_id = ? AND valid_from <= ? AND valid_until >= ?",
-        (bar['id'], today, today)
+        "SELECT code FROM access_codes WHERE bar_id = ? AND code = ? AND valid_from <= ? AND valid_until >= ?",
+        (bar['id'], code, today, today)
     ).fetchone()
     db.close()
-    if not valid_code or valid_code['code'] != code:
+    if not valid_code:
         return jsonify({'error': 'Invalid code'}), 403
 
     nombre = data.get('nombre', '').strip()[:30] or 'alguien'
@@ -3050,10 +3050,10 @@ def menteagil_api():
         db.close()
         return jsonify({'error': 'Invalid code'}), 403
     valid_code = db.execute(
-        "SELECT code FROM access_codes WHERE bar_id = ? AND valid_from <= ? AND valid_until >= ?",
-        (bar['id'], today, today)
+        "SELECT code FROM access_codes WHERE bar_id = ? AND code = ? AND valid_from <= ? AND valid_until >= ?",
+        (bar['id'], code, today, today)
     ).fetchone()
-    if not valid_code or valid_code['code'] != code:
+    if not valid_code:
         db.close()
         return jsonify({'error': 'Invalid code'}), 403
     cache_key = f"global_menteagil_{today}"
@@ -3123,10 +3123,10 @@ def constitucion_api():
         db.close()
         return jsonify({'error': 'Invalid code'}), 403
     valid_code = db.execute(
-        "SELECT code FROM access_codes WHERE bar_id = ? AND valid_from <= ? AND valid_until >= ?",
-        (bar['id'], today, today)
+        "SELECT code FROM access_codes WHERE bar_id = ? AND code = ? AND valid_from <= ? AND valid_until >= ?",
+        (bar['id'], code, today, today)
     ).fetchone()
-    if not valid_code or valid_code['code'] != code:
+    if not valid_code:
         db.close()
         return jsonify({'error': 'Invalid code'}), 403
     cache_key = f"global_constitucion_{today}"
@@ -3246,10 +3246,10 @@ def conexiones_api():
         return jsonify({'error': 'Invalid code'}), 403
 
     valid_code = db.execute(
-        "SELECT code FROM access_codes WHERE bar_id = ? AND valid_from <= ? AND valid_until >= ?",
-        (bar['id'], today, today)
+        "SELECT code FROM access_codes WHERE bar_id = ? AND code = ? AND valid_from <= ? AND valid_until >= ?",
+        (bar['id'], code, today, today)
     ).fetchone()
-    if not valid_code or valid_code['code'] != code:
+    if not valid_code:
         db.close()
         return jsonify({'error': 'Invalid code'}), 403
 
@@ -3318,10 +3318,10 @@ def oraculo_api():
         return jsonify({'error': 'Invalid code'}), 403
 
     valid_code = db.execute(
-        "SELECT code FROM access_codes WHERE bar_id = ? AND valid_from <= ? AND valid_until >= ?",
-        (bar['id'], today, today)
+        "SELECT code FROM access_codes WHERE bar_id = ? AND code = ? AND valid_from <= ? AND valid_until >= ?",
+        (bar['id'], code, today, today)
     ).fetchone()
-    if not valid_code or valid_code['code'] != code:
+    if not valid_code:
         db.close()
         return jsonify({'error': 'Invalid code'}), 403
 
@@ -3383,10 +3383,10 @@ def donde_api():
         return jsonify({'error': 'Invalid code'}), 403
 
     valid_code = db.execute(
-        "SELECT code FROM access_codes WHERE bar_id = ? AND valid_from <= ? AND valid_until >= ?",
-        (bar['id'], today, today)
+        "SELECT code FROM access_codes WHERE bar_id = ? AND code = ? AND valid_from <= ? AND valid_until >= ?",
+        (bar['id'], code, today, today)
     ).fetchone()
-    if not valid_code or valid_code['code'] != code:
+    if not valid_code:
         db.close()
         return jsonify({'error': 'Invalid code'}), 403
 
@@ -3451,10 +3451,10 @@ def carta_api():
         return jsonify({'error': 'Invalid code'}), 403
 
     valid_code = db.execute(
-        "SELECT code FROM access_codes WHERE bar_id = ? AND valid_from <= ? AND valid_until >= ?",
-        (bar['id'], today, today)
+        "SELECT code FROM access_codes WHERE bar_id = ? AND code = ? AND valid_from <= ? AND valid_until >= ?",
+        (bar['id'], code, today, today)
     ).fetchone()
-    if not valid_code or valid_code['code'] != code:
+    if not valid_code:
         db.close()
         return jsonify({'error': 'Invalid code'}), 403
 
@@ -3499,10 +3499,10 @@ def reinas_api():
         return jsonify({'error': 'Invalid code'}), 403
 
     valid_code = db.execute(
-        "SELECT code FROM access_codes WHERE bar_id = ? AND valid_from <= ? AND valid_until >= ?",
-        (bar['id'], today, today)
+        "SELECT code FROM access_codes WHERE bar_id = ? AND code = ? AND valid_from <= ? AND valid_until >= ?",
+        (bar['id'], code, today, today)
     ).fetchone()
-    if not valid_code or valid_code['code'] != code:
+    if not valid_code:
         db.close()
         return jsonify({'error': 'Invalid code'}), 403
 
@@ -3547,10 +3547,10 @@ def orden_api():
         return jsonify({'error': 'Invalid code'}), 403
 
     valid_code = db.execute(
-        "SELECT code FROM access_codes WHERE bar_id = ? AND valid_from <= ? AND valid_until >= ?",
-        (bar['id'], today, today)
+        "SELECT code FROM access_codes WHERE bar_id = ? AND code = ? AND valid_from <= ? AND valid_until >= ?",
+        (bar['id'], code, today, today)
     ).fetchone()
-    if not valid_code or valid_code['code'] != code:
+    if not valid_code:
         db.close()
         return jsonify({'error': 'Invalid code'}), 403
 
@@ -3598,10 +3598,10 @@ def freep_api():
         return jsonify({'error': 'Invalid code'}), 403
 
     valid_code = db.execute(
-        "SELECT code FROM access_codes WHERE bar_id = ? AND valid_from <= ? AND valid_until >= ?",
-        (bar['id'], today, today)
+        "SELECT code FROM access_codes WHERE bar_id = ? AND code = ? AND valid_from <= ? AND valid_until >= ?",
+        (bar['id'], code, today, today)
     ).fetchone()
-    if not valid_code or valid_code['code'] != code:
+    if not valid_code:
         db.close()
         return jsonify({'error': 'Invalid code'}), 403
     db.close()
@@ -3646,10 +3646,10 @@ def local_api():
         return jsonify({'error': 'Invalid code'}), 403
 
     valid_code = db.execute(
-        "SELECT code FROM access_codes WHERE bar_id = ? AND valid_from <= ? AND valid_until >= ?",
-        (bar['id'], today, today)
+        "SELECT code FROM access_codes WHERE bar_id = ? AND code = ? AND valid_from <= ? AND valid_until >= ?",
+        (bar['id'], code, today, today)
     ).fetchone()
-    if not valid_code or valid_code['code'] != code:
+    if not valid_code:
         db.close()
         return jsonify({'error': 'Invalid code'}), 403
 
@@ -3715,10 +3715,10 @@ def equilibrio_api():
         return jsonify({'error': 'Invalid code'}), 403
 
     valid_code = db.execute(
-        "SELECT code FROM access_codes WHERE bar_id = ? AND valid_from <= ? AND valid_until >= ?",
-        (bar['id'], today, today)
+        "SELECT code FROM access_codes WHERE bar_id = ? AND code = ? AND valid_from <= ? AND valid_until >= ?",
+        (bar['id'], code, today, today)
     ).fetchone()
-    if not valid_code or valid_code['code'] != code:
+    if not valid_code:
         db.close()
         return jsonify({'error': 'Invalid code'}), 403
 
