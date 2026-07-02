@@ -200,6 +200,29 @@
           <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Cuántas variantes se generan (rotación).</div>
         </div>
       </div>
+
+      <!-- Códigos por día -->
+      <div style="margin-top:18px; padding-top:16px; border-top:1px solid var(--border);">
+        <label style="display:block; font-size:13px; font-weight:600; margin-bottom:5px;">Códigos de acceso por día</label>
+        {% if event_days %}
+          <div style="font-size:12px; color:var(--text-muted); margin-bottom:10px; line-height:1.5;">Asigna un código a cada día del evento. Puedes fijarlos por adelantado e imprimirlos en las entradas o anunciarlos. Deja vacío un día para dejarlo sin acceso.</div>
+          <div id="event-codes-list" style="display:flex; flex-direction:column; gap:8px;">
+            {% for d in event_days %}
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span style="font-size:13px; color:var(--text-sec); min-width:96px;" data-date="{{ d.date }}">{{ d.date }}</span>
+              <input type="text" class="event-code-input" data-date="{{ d.date }}" value="{{ d.code }}" maxlength="5" placeholder="—————" style="flex:1; max-width:160px; text-transform:uppercase; letter-spacing:2px; font-family:monospace; font-size:16px; padding:9px 12px; border:1.5px solid var(--border); border-radius:10px; box-sizing:border-box;">
+            </div>
+            {% endfor %}
+          </div>
+          <div style="display:flex; gap:10px; align-items:center; margin-top:12px;">
+            <button type="button" onclick="generarCodigosEvento()" style="background:var(--surface-1, #F0EBE3); color:var(--text-primary,#1A1A1A); border:1px solid var(--border); border-radius:8px; padding:8px 14px; font-size:13px; cursor:pointer; font-family:inherit;">🎲 Rellenar vacíos al azar</button>
+            <button type="button" onclick="guardarCodigosEvento()" style="background:#A8410E; color:white; border:none; border-radius:8px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit;">Guardar códigos</button>
+            <span id="event-codes-status" style="font-size:13px; color:var(--text-muted);"></span>
+          </div>
+        {% else %}
+          <div style="font-size:12px; color:var(--text-muted); line-height:1.5; padding:12px; background:var(--surface-1, #F7F2EB); border-radius:8px;">Define las <strong>fechas de inicio y fin</strong> arriba y pulsa <strong>Guardar</strong>. Al recargar, aquí aparecerá un campo de código para cada día del evento.</div>
+        {% endif %}
+      </div>
     </div>
   </div>
   {% endif %}
@@ -965,6 +988,43 @@
     for (let i = 0; i < 3; i++) setTxt('lbl-price-' + i, T.priceLabel);
   }
   document.addEventListener('DOMContentLoaded', onSpaceKindChange);
+
+  // ── Códigos por día del evento ───────────────────────────────────────
+  const _CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  function _genCode() {
+    let s = '';
+    for (let i = 0; i < 5; i++) s += _CODE_CHARS[Math.floor(Math.random() * _CODE_CHARS.length)];
+    return s;
+  }
+  function generarCodigosEvento() {
+    document.querySelectorAll('.event-code-input').forEach(inp => {
+      if (!inp.value.trim()) inp.value = _genCode();
+    });
+  }
+  async function guardarCodigosEvento() {
+    const inputs = document.querySelectorAll('.event-code-input');
+    const codes = [];
+    inputs.forEach(inp => {
+      codes.push({ date: inp.getAttribute('data-date'), code: inp.value.trim().toUpperCase() });
+    });
+    const status = document.getElementById('event-codes-status');
+    if (status) { status.textContent = 'Guardando…'; status.style.color = 'var(--text-muted)'; }
+    try {
+      const res = await fetch('/admin/api/event-codes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bar_slug: '{{ bar.slug }}', codes: codes })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        if (status) { status.textContent = '✓ Guardados'; status.style.color = '#2e7d32'; }
+      } else {
+        if (status) { status.textContent = 'Error: ' + (data.error || 'no se pudo'); status.style.color = '#cc2222'; }
+      }
+    } catch (e) {
+      if (status) { status.textContent = 'Error de red'; status.style.color = '#cc2222'; }
+    }
+  }
   </script>
   {% endif %}
 

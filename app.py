@@ -392,7 +392,12 @@ def generate_weekly_codes():
     sunday = monday + timedelta(days=6)
 
     db = get_db()
-    bars = db.execute("SELECT id, slug FROM bars WHERE active = 1 AND (plan IS NULL OR plan != 'demo')").fetchall()
+    # Excluir demos (código permanente) y eventos (códigos manuales por día):
+    # la rotación semanal automática pisaría los códigos que el organizador fija a mano.
+    bars = db.execute(
+        "SELECT id, slug FROM bars WHERE active = 1 AND (plan IS NULL OR plan != 'demo') "
+        "AND (space_kind IS NULL OR space_kind != 'evento')"
+    ).fetchall()
     for bar in bars:
         existing = db.execute(
             "SELECT id FROM access_codes WHERE bar_id = ? AND valid_from = ?",
@@ -1161,6 +1166,27 @@ def admin_bar(bar_slug):
     ).fetchone()['n']
     pct_correct = round((correct_week / stats_week * 100)) if stats_week > 0 else 0
     analytics = calcular_analytics_bar(db, bar_slug)
+
+    # Códigos por día (solo eventos): lista de {date, code} entre event_start y event_end
+    event_days = []
+    if (bar['space_kind'] or 'local') == 'evento' and bar['event_start'] and bar['event_end']:
+        try:
+            from datetime import datetime as _dt, timedelta as _td
+            d0 = _dt.strptime(bar['event_start'], '%Y-%m-%d').date()
+            d1 = _dt.strptime(bar['event_end'], '%Y-%m-%d').date()
+            if d1 >= d0 and (d1 - d0).days <= 60:  # tope de seguridad
+                rows = db.execute(
+                    "SELECT valid_from, code FROM access_codes WHERE bar_id = ?",
+                    (bar['id'],)
+                ).fetchall()
+                por_dia = {r['valid_from']: r['code'] for r in rows}
+                n = (d1 - d0).days + 1
+                for i in range(n):
+                    dia = str(d0 + _td(days=i))
+                    event_days.append({'date': dia, 'code': por_dia.get(dia, '')})
+        except (ValueError, TypeError):
+            event_days = []
+
     db.close()
     stats = {'today': stats_today, 'week': stats_week, 'pct_correct': pct_correct}
     # Nombre legible del juego favorito
@@ -1168,7 +1194,7 @@ def admin_bar(bar_slug):
         analytics['top_game_name'] = GAME_NOMBRES.get(analytics['top_game'], analytics['top_game'])
     return render_template('admin/bar_panel.html', bar=bar, products=products,
                            current_code=current_code, valid_until=valid_until_str, stats=stats,
-                           analytics=analytics,
+                           analytics=analytics, event_days=event_days,
                            admin_role=session.get('admin_role','bar_admin'))
 
 def _normalizar_handle(valor, dominio):
@@ -1266,6 +1292,61 @@ def admin_save():
     db.commit()
     db.close()
     return jsonify({'ok': True})
+
+@app.route('/admin/api/event-codes', methods=['POST'])
+@admin_required
+def admin_event_codes():
+    """Guarda los códigos por día de un evento (solo superadmin).
+
+    Recibe {bar_slug, codes: [{date: 'YYYY-MM-DD', code: 'ABC12'}, ...]}.
+    Cada día es una fila en access_codes con valid_from = valid_until = ese día.
+    Upsert por (bar_id, valid_from): si ya hay código para ese día, lo actualiza.
+    No toca la lógica de validación de acceso (que ya filtra por ventana de fecha)."""
+    if session.get('admin_role') != 'superadmin':
+        return jsonify({'ok': False, 'error': 'Solo superadmin'}), 403
+    data = request.get_json() or {}
+    bar_slug = data.get('bar_slug')
+    codes = data.get('codes', [])
+    if not isinstance(codes, list):
+        return jsonify({'ok': False, 'error': 'Formato inválido'}), 400
+
+    db = get_db()
+    bar = db.execute("SELECT id, space_kind FROM bars WHERE slug = ?", (bar_slug,)).fetchone()
+    if not bar:
+        db.close()
+        return jsonify({'ok': False, 'error': 'No encontrado'}), 404
+    if (bar['space_kind'] or 'local') != 'evento':
+        db.close()
+        return jsonify({'ok': False, 'error': 'No es un evento'}), 400
+
+    guardados = 0
+    for item in codes:
+        fecha = (item.get('date') or '').strip()
+        code = _normalizar_codigo(item.get('code') or '')
+        # Validar fecha YYYY-MM-DD
+        try:
+            from datetime import datetime as _dt
+            _dt.strptime(fecha, '%Y-%m-%d')
+        except (ValueError, TypeError):
+            continue
+        if not code:
+            # Código vacío para ese día: borrar el que hubiera (permite dejar días sin código)
+            db.execute("DELETE FROM access_codes WHERE bar_id = ? AND valid_from = ?", (bar['id'], fecha))
+            continue
+        existing = db.execute(
+            "SELECT id FROM access_codes WHERE bar_id = ? AND valid_from = ?",
+            (bar['id'], fecha)
+        ).fetchone()
+        if existing:
+            db.execute("UPDATE access_codes SET code = ?, valid_until = ? WHERE id = ?",
+                       (code, fecha, existing['id']))
+        else:
+            db.execute("INSERT INTO access_codes (bar_id, code, valid_from, valid_until) VALUES (?,?,?,?)",
+                       (bar['id'], code, fecha, fecha))
+        guardados += 1
+    db.commit()
+    db.close()
+    return jsonify({'ok': True, 'guardados': guardados})
 
 @app.route('/admin/api/create-user', methods=['POST'])
 def admin_create_user():
