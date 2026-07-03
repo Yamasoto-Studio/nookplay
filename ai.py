@@ -42,6 +42,18 @@ def get_event_theme():
     """Devuelve el tema de evento activo en este contexto (o '' si no hay)."""
     return _event_theme_ctx.get()
 
+# Hint de variante (pool de eventos): cuando se generan varias piezas del mismo
+# juego el mismo día, este número empuja a la IA a crear versiones distintas.
+# 0 = sin pool, comportamiento normal.
+_variant_hint_ctx = contextvars.ContextVar('variant_hint', default=0)
+
+def set_variant_hint(n):
+    """Fija el número de variante activo (0 para desactivar)."""
+    return _variant_hint_ctx.set(int(n or 0))
+
+def get_variant_hint():
+    return _variant_hint_ctx.get()
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Helpers de robustez IA: parseo tolerante + llamada con reintento
@@ -167,6 +179,11 @@ def _post_ia(prompt, max_tokens, api_key, reintentos=2, modelo='claude-sonnet-4-
         event_theme = get_event_theme()
     if event_theme:
         prompt = _bloque_tematico(event_theme) + "\n" + prompt
+    _vh = _variant_hint_ctx.get()
+    if _vh:
+        prompt = (f"VARIANTE {_vh} DE HOY: hoy se generan varias versiones de este juego. "
+                  f"Crea una versión claramente DISTINTA de las demás (otros protagonistas, "
+                  f"otro enfoque, otros datos, otro escenario).\n") + prompt
     ultimo_error = None
     for intento in range(reintentos + 1):
         try:

@@ -106,6 +106,14 @@ db.executescript('''
         value   TEXT DEFAULT ''
     );
 
+    CREATE TABLE IF NOT EXISTS variant_views (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        device_id   TEXT NOT NULL,
+        gg_id       INTEGER NOT NULL,
+        viewed_at   TEXT DEFAULT '',
+        UNIQUE(device_id, gg_id)
+    );
+
     CREATE TABLE IF NOT EXISTS plays (
         id          INTEGER PRIMARY KEY AUTOINCREMENT,
         code        TEXT NOT NULL,

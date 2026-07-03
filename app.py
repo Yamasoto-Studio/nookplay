@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 from datetime import date, datetime, timedelta
 import sqlite3
-from ai import generate_game, generate_impostor, generate_dilema, generate_conexiones, generate_oraculo, generate_donde, generate_carta, generate_reinas, generate_conexion_local, generate_equilibrio, generate_veredicto, generate_perfil, generate_vestuario, generate_trivia, generate_sinopsis, generate_muertes, generate_letra, generate_pensamiento, generate_poema, generate_menteagil, generate_constitucion, generate_orden, generate_titular, generate_definicion, generate_masomenos, generate_escalera, generate_quienmas, build_bar_context, get_day_seed, set_event_theme, reset_event_theme
+from ai import generate_game, generate_impostor, generate_dilema, generate_conexiones, generate_oraculo, generate_donde, generate_carta, generate_reinas, generate_conexion_local, generate_equilibrio, generate_veredicto, generate_perfil, generate_vestuario, generate_trivia, generate_sinopsis, generate_muertes, generate_letra, generate_pensamiento, generate_poema, generate_menteagil, generate_constitucion, generate_orden, generate_titular, generate_definicion, generate_masomenos, generate_escalera, generate_quienmas, build_bar_context, get_day_seed, set_event_theme, reset_event_theme, set_variant_hint
 import os
 import smtplib
 from email.mime.text import MIMEText
@@ -422,12 +422,12 @@ def get_historial_reciente(db, game_type, bar_slug=None, dias=10, campo='titulo'
     desde = str(date.today() - timedelta(days=dias))
     if bar_slug:
         rows = db.execute(
-            "SELECT content FROM generated_games WHERE game_type = ? AND bar_id = (SELECT id FROM bars WHERE slug = ?) AND game_date >= ? AND game_date < ? ORDER BY game_date DESC",
+            "SELECT content FROM generated_games WHERE game_type = ? AND bar_id = (SELECT id FROM bars WHERE slug = ?) AND game_date >= ? AND game_date <= ? ORDER BY game_date DESC",
             (game_type, bar_slug, desde, hoy)
         ).fetchall()
     else:
         rows = db.execute(
-            "SELECT content FROM generated_games WHERE game_type = ? AND game_date >= ? AND game_date < ? ORDER BY game_date DESC",
+            "SELECT content FROM generated_games WHERE game_type = ? AND game_date >= ? AND game_date <= ? ORDER BY game_date DESC",
             (game_type, desde, hoy)
         ).fetchall()
     items = []
@@ -601,6 +601,8 @@ def pregen_daily_games():
     """Ejecuta cada día a las 6am — pre-genera los juegos del día para todos los bares."""
     today = str(date.today())
     resumen = {'ok': [], 'error': []}
+    # Juegos por-bar: los únicos que un evento genera (y en pool si procede)
+    POOL_GAME_TYPES = {'crimen', 'impostor', 'dilema', 'conexiones', 'veredicto', 'perfil', 'vestuario', 'trivia', 'local'}
     GAME_TYPES = ['crimen', 'impostor', 'dilema', 'conexiones', 'oraculo', 'donde', 'local', 'veredicto', 'perfil', 'vestuario', 'trivia', 'sinopsis', 'muertes', 'letra', 'pensamiento', 'menteagil', 'constitucion', 'titular', 'definicion', 'masomenos', 'escalera', 'quienmas']
 
     db = get_db()
@@ -615,6 +617,12 @@ def pregen_daily_games():
         # quedan con tema vacío y su generación es idéntica a la de siempre.
         _bar_d = dict(bar)
         set_event_theme(_theme_de(_bar_d))
+        set_variant_hint(0)
+        _es_evento_bar = (_bar_d.get('space_kind') or 'local') == 'evento'
+        try:
+            _pool_n = max(1, min(20, int(_bar_d.get('event_pool_size') or 1))) if _es_evento_bar else 1
+        except (TypeError, ValueError):
+            _pool_n = 1
         # ── Evento fuera de fechas: no gastar IA a diario ────────────────
         # Genera solo si hoy cae dentro de event_start→event_end, o si el
         # superadmin activó el modo pruebas. Probar sin modo pruebas sigue
@@ -626,11 +634,20 @@ def pregen_daily_games():
             if not _hoy_en_evento and not _bar_d.get('event_test_mode'):
                 continue
         for game_type in GAME_TYPES:
-            existing = db.execute(
-                "SELECT id FROM generated_games WHERE bar_id = ? AND game_type = ? AND game_date = ?",
+            # Un evento solo genera juegos por-bar (los tematizables). Los globales
+            # compartidos no: irían con la temática del evento a todos los bares.
+            if _es_evento_bar and game_type not in POOL_GAME_TYPES:
+                continue
+            # Pool de variantes: los eventos generan hasta _pool_n piezas por juego.
+            # Bares: _target=1 y comportamiento idéntico al de siempre.
+            _target = _pool_n if game_type in POOL_GAME_TYPES else 1
+            _hechas = db.execute(
+                "SELECT COUNT(*) n FROM generated_games WHERE bar_id = ? AND game_type = ? AND game_date = ?",
                 (bar['id'], game_type, today)
-            ).fetchone()
-            if not existing:
+            ).fetchone()['n']
+            for _rep in range(max(0, _target - _hechas)):
+                if _target > 1:
+                    set_variant_hint(_hechas + _rep + 1)
                 try:
                     products = db.execute(
                         "SELECT title FROM bar_products WHERE bar_id = ? AND active = 1",
@@ -893,7 +910,8 @@ def admin_pregen_now():
             dbx.commit()
             dbx.close()
             global _game_cache
-            _game_cache = {k: v for k, v in _game_cache.items() if today not in k}
+            for _k in [k for k in _game_cache if today in k]:
+                del _game_cache[_k]
 
             resumen = pregen_daily_games()
 
@@ -1741,7 +1759,98 @@ def validate_code():
 # API — Juegos
 # --------------------------------------------------------------------------
 
-_game_cache = {}
+
+# ─── Pool de variantes (eventos) ───────────────────────────────────────────
+# Un evento con event_pool_size>1 tiene N piezas por juego y día. Cada
+# dispositivo recibe la primera variante que no haya visto; si las vio todas,
+# la más antigua. Fuente de verdad: BD (multi-worker safe).
+
+_pool_slugs_cache = {'t': 0.0, 'v': set()}
+
+def _pool_slugs():
+    """Slugs de espacios con pool de variantes activo (TTL 60s)."""
+    import time as _t
+    if _t.time() - _pool_slugs_cache['t'] > 60:
+        try:
+            dbp = get_db()
+            rows = dbp.execute(
+                "SELECT slug FROM bars WHERE space_kind='evento' AND event_pool_size>1 AND active=1"
+            ).fetchall()
+            dbp.close()
+            _pool_slugs_cache['v'] = {r['slug'] for r in rows}
+            _pool_slugs_cache['t'] = _t.time()
+        except Exception:
+            pass
+    return _pool_slugs_cache['v']
+
+
+def _leer_pregenerado(db, bar_id, game_type, today):
+    """Lee el contenido pre-generado de un juego. Devuelve una fila con
+    ['content'] o None (compatible con el fetchone() al que sustituye).
+
+    Con una sola pieza (bares, o eventos sin pool): idéntico a antes.
+    Con varias (pool de evento): elige variante por dispositivo — la primera
+    no vista, o la vista hace más tiempo si ya las vio todas — y registra
+    la vista en variant_views."""
+    rows = db.execute(
+        "SELECT id, content FROM generated_games WHERE bar_id = ? AND game_type = ? AND game_date = ? ORDER BY id",
+        (bar_id, game_type, today)
+    ).fetchall()
+    if not rows:
+        return None
+    if len(rows) == 1:
+        return rows[0]
+    device_id = ''
+    try:
+        body = request.get_json(silent=True) or {}
+        device_id = str(body.get('device_id') or '')[:80]
+    except Exception:
+        pass
+    if not device_id:
+        import random as _r
+        return rows[_r.randrange(len(rows))]
+    ids = [r['id'] for r in rows]
+    marcas = ','.join('?' * len(ids))
+    vistos = db.execute(
+        f"SELECT gg_id, viewed_at FROM variant_views WHERE device_id = ? AND gg_id IN ({marcas})",
+        [device_id] + ids
+    ).fetchall()
+    vistos_map = {v['gg_id']: v['viewed_at'] for v in vistos}
+    no_vistas = [r for r in rows if r['id'] not in vistos_map]
+    elegido = no_vistas[0] if no_vistas else min(rows, key=lambda r: vistos_map.get(r['id'], ''))
+    try:
+        db.execute(
+            "INSERT OR REPLACE INTO variant_views (device_id, gg_id, viewed_at) VALUES (?,?,?)",
+            (device_id, elegido['id'], now_madrid_iso())
+        )
+        db.commit()
+    except Exception:
+        pass
+    return elegido
+
+
+class _GameCache(dict):
+    """Caché en memoria por worker. Para espacios con pool de variantes se
+    desactiva (contains siempre False, set ignorado): cachear una sola
+    respuesta impediría servir variantes distintas por dispositivo."""
+    @staticmethod
+    def _es_pool(key):
+        try:
+            return key.rsplit('_', 2)[0] in _pool_slugs()
+        except Exception:
+            return False
+    def __contains__(self, key):
+        if self._es_pool(key):
+            return False
+        return super().__contains__(key)
+    def __setitem__(self, key, value):
+        if self._es_pool(key):
+            return
+        super().__setitem__(key, value)
+
+
+_game_cache = _GameCache()
+
 
 @app.route('/api/game', methods=['POST'])
 def game():
@@ -1766,10 +1875,7 @@ def game():
         return jsonify({'error': 'Código no válido'}), 403
 
     # Buscar en caché BD
-    cached = db.execute("""
-        SELECT content FROM generated_games
-        WHERE bar_id = ? AND game_type = 'crimen' AND game_date = ?
-    """, (bar['id'], today)).fetchone()
+    cached = _leer_pregenerado(db, bar['id'], 'crimen', today)
 
     if cached:
         db.close()
@@ -1828,10 +1934,7 @@ def impostor():
         db.close()
         return jsonify({'error': 'Código no válido'}), 403
 
-    cached = db.execute("""
-        SELECT content FROM generated_games
-        WHERE bar_id = ? AND game_type = 'impostor' AND game_date = ?
-    """, (bar['id'], today)).fetchone()
+    cached = _leer_pregenerado(db, bar['id'], 'impostor', today)
 
     if cached:
         db.close()
@@ -2005,10 +2108,7 @@ def dilema_api():
         return jsonify(_game_cache[cache_key])
 
     # Check pre-generated
-    pregenerated = db.execute(
-        "SELECT content FROM generated_games WHERE bar_id = ? AND game_type = 'dilema' AND game_date = ?",
-        (bar_id, today)
-    ).fetchone()
+    pregenerated = _leer_pregenerado(db, bar_id, 'dilema', today)
     if pregenerated:
         import json as _json
         game_data = _json.loads(pregenerated['content'])
@@ -2075,10 +2175,7 @@ def veredicto_api():
         db.close()
         return jsonify(_game_cache[cache_key])
 
-    pregenerated = db.execute(
-        "SELECT content FROM generated_games WHERE bar_id = ? AND game_type = 'veredicto' AND game_date = ?",
-        (bar_id, today)
-    ).fetchone()
+    pregenerated = _leer_pregenerado(db, bar_id, 'veredicto', today)
     if pregenerated:
         import json as _json
         game_data = _json.loads(pregenerated['content'])
@@ -2165,10 +2262,7 @@ def perfil_api():
         db.close()
         return jsonify(_game_cache[cache_key])
 
-    pregenerated = db.execute(
-        "SELECT content FROM generated_games WHERE bar_id = ? AND game_type = 'perfil' AND game_date = ?",
-        (bar_id, today)
-    ).fetchone()
+    pregenerated = _leer_pregenerado(db, bar_id, 'perfil', today)
     if pregenerated:
         import json as _json
         game_data = _json.loads(pregenerated['content'])
@@ -2251,10 +2345,7 @@ def vestuario_api():
         db.close()
         return jsonify(_game_cache[cache_key])
 
-    pregenerated = db.execute(
-        "SELECT content FROM generated_games WHERE bar_id = ? AND game_type = 'vestuario' AND game_date = ?",
-        (bar_id, today)
-    ).fetchone()
+    pregenerated = _leer_pregenerado(db, bar_id, 'vestuario', today)
     if pregenerated:
         import json as _json
         game_data = _json.loads(pregenerated['content'])
@@ -2336,10 +2427,7 @@ def trivia_api():
         db.close()
         return jsonify(_game_cache[cache_key])
 
-    pregenerated = db.execute(
-        "SELECT content FROM generated_games WHERE bar_id = ? AND game_type = 'trivia' AND game_date = ?",
-        (bar_id, today)
-    ).fetchone()
+    pregenerated = _leer_pregenerado(db, bar_id, 'trivia', today)
     if pregenerated:
         import json as _json
         game_data = _json.loads(pregenerated['content'])
@@ -3409,10 +3497,7 @@ def conexiones_api():
         db.close()
         return jsonify(_game_cache[cache_key])
 
-    pregenerated = db.execute(
-        "SELECT content FROM generated_games WHERE bar_id = ? AND game_type = 'conexiones' AND game_date = ?",
-        (bar['id'], today)
-    ).fetchone()
+    pregenerated = _leer_pregenerado(db, bar['id'], 'conexiones', today)
     if pregenerated:
         import json as _json
         game_data = _json.loads(pregenerated['content'])
@@ -3809,10 +3894,7 @@ def local_api():
         db.close()
         return jsonify(_game_cache[cache_key])
 
-    pregenerated = db.execute(
-        "SELECT content FROM generated_games WHERE bar_id = ? AND game_type = 'local' AND game_date = ?",
-        (bar['id'], today)
-    ).fetchone()
+    pregenerated = _leer_pregenerado(db, bar['id'], 'local', today)
     if pregenerated:
         import json as _json
         game_data = _json.loads(pregenerated['content'])
