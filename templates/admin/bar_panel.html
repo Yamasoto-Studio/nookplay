@@ -238,8 +238,11 @@
         {% else %}
           <div style="font-size:12px; color:var(--text-muted); line-height:1.5; padding:12px; background:var(--surface-1, #F7F2EB); border-radius:8px;">Define las <strong>fechas de inicio y fin</strong> arriba y pulsa <strong>Guardar</strong>. Al recargar, aquí aparecerá un campo de código para cada día del evento.</div>
         {% endif %}
-        <div style="display:flex; gap:10px; align-items:center; margin-top:14px;">
+        <div style="display:flex; gap:10px; align-items:center; margin-top:14px; flex-wrap:wrap;">
           <button type="button" onclick="guardarCodigosEvento()" style="background:#A8410E; color:white; border:none; border-radius:8px; padding:9px 18px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit;">Guardar códigos</button>
+          {% if event_days %}
+          <button type="button" onclick="imprimirCodigosEvento()" style="background:transparent; color:var(--text-primary,#1A1A1A); border:1px solid var(--border); border-radius:8px; padding:9px 14px; font-size:13px; cursor:pointer; font-family:inherit;">🖨️ Hojas imprimibles</button>
+          {% endif %}
           <span id="event-codes-status" style="font-size:13px; color:var(--text-muted);"></span>
         </div>
       </div>
@@ -1028,6 +1031,53 @@
       if (!inp.value.trim()) inp.value = _genCode();
     });
   }
+  // Hojas imprimibles del evento: una página por día con su código grande.
+  // Lee los códigos de los inputs (lo que ves es lo que imprimes). Los días
+  // sin código se saltan. Recuerda guardar antes para que el papel y la BD coincidan.
+  function imprimirCodigosEvento() {
+    const eventName = {{ bar.name|tojson }};
+    const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+    const DIAS = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+    const paginas = [];
+    document.querySelectorAll('.event-code-input').forEach(inp => {
+      const code = inp.value.trim().toUpperCase();
+      if (!code) return; // días sin código no se imprimen
+      const fecha = inp.getAttribute('data-date'); // YYYY-MM-DD
+      const d = new Date(fecha + 'T12:00:00');
+      const fechaTxt = `${DIAS[d.getDay()]} ${d.getDate()} de ${MESES[d.getMonth()]}`;
+      paginas.push(`
+        <div class="pagina">
+          <div class="marca">Nookplay · ${eventName}</div>
+          <div class="fecha">${fechaTxt}</div>
+          <div class="sub">Escanea el QR del evento y entra este código para jugar</div>
+          <div class="label">Código de hoy</div>
+          <div class="boxes">${[...code].map(c => '<div class="b">' + c + '</div>').join('')}</div>
+          <div class="val">Válido solo el ${d.getDate()} de ${MESES[d.getMonth()]}</div>
+          <div class="tip">Colócalo en la entrada, el punto de información o la cartelería.</div>
+        </div>`);
+    });
+    if (!paginas.length) { alert('No hay códigos que imprimir. Asigna códigos a los días primero.'); return; }
+    const w = window.open('', '_blank');
+    w.document.write(`
+      <!DOCTYPE html><html><head><meta charset="utf-8"><title>Códigos ${eventName}</title>
+      <style>
+        @page { margin: 1.5cm; }
+        body { font-family: -apple-system, Segoe UI, Roboto, sans-serif; text-align: center; color: #1A1A1A; margin: 0; }
+        .pagina { padding: 60px 20px 40px; page-break-after: always; }
+        .pagina:last-child { page-break-after: auto; }
+        .marca { font-size: 18px; letter-spacing: 2px; color: #C4622D; font-weight: 800; text-transform: uppercase; margin-bottom: 6px; }
+        .fecha { font-size: 26px; font-weight: 800; margin-bottom: 10px; }
+        .sub { font-size: 15px; color: #6B6059; margin-bottom: 36px; }
+        .label { font-size: 14px; text-transform: uppercase; letter-spacing: 2px; color: #6B6059; margin-bottom: 18px; }
+        .boxes { display: flex; gap: 12px; justify-content: center; margin-bottom: 30px; }
+        .b { width: 84px; height: 110px; border: 3px solid #1A1A1A; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 64px; font-weight: 800; font-family: ui-monospace, monospace; }
+        .val { font-size: 14px; color: #6B6059; }
+        .tip { margin-top: 40px; font-size: 13px; color: #999; }
+      </style></head><body>${paginas.join('')}</body></html>`);
+    w.document.close();
+    setTimeout(() => w.print(), 300);
+  }
+
   async function guardarCodigosEvento() {
     const inputs = document.querySelectorAll('.event-code-input');
     const codes = [];
