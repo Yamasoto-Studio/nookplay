@@ -324,14 +324,6 @@ html, body { overscroll-behavior: none; }
       </ul>
     </div>
 
-    <div class="fp-promo">
-      <div class="fp-promo-ico">🃏</div>
-      <div class="fp-promo-txt">
-        Esta es la versión digital de Freep. El <b>juego de mesa original</b> incluye <b>cartas especiales</b> (comodines, robos y giros) que lo hacen mucho más estratégico y divertido.
-        <a href="https://playfreep.com" target="_blank" rel="noopener" class="fp-promo-link">Consíguelo en playfreep.com →</a>
-      </div>
-    </div>
-
     <div class="fp-names">
       <div class="fp-name-row"><label>Jugador 1</label><input id="fp-n1" maxlength="14" placeholder="Jugador 1"></div>
       <div class="fp-name-row"><label>Jugador 2</label><input id="fp-n2" maxlength="14" placeholder="Jugador 2"></div>
@@ -339,6 +331,15 @@ html, body { overscroll-behavior: none; }
 
     <button class="fp-btn go" onclick="startDuel()" style="width:100%;">Empezar duelo</button>
     <button class="btn-back-game" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
+
+    <div class="fp-buy">
+      <img src="/static/CajaFreep_400.webp" alt="Caja del juego de mesa Freep" class="fp-buy-img" onerror="this.style.display='none'">
+      <div class="fp-buy-txt">
+        <div class="t">Freep es un juego de mesa real.</div>
+        <div class="s">Con cartas especiales que no están en esta versión: comodines, robos y giros. Hasta 6 personas.</div>
+        <a class="fp-buy-btn" href="https://www.yamasoto.com/freep/" target="_blank" rel="noopener">Consíguelo aquí →</a>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -436,7 +437,7 @@ html, body { overscroll-behavior: none; }
       <div class="fp-buy-txt">
         <div class="t">¿Os ha enganchado? Freep es un juego de mesa real.</div>
         <div class="s">Con cartas especiales que no están en esta versión: comodines, robos y giros. Hasta 6 personas.</div>
-        <a class="fp-buy-btn" href="https://playfreep.com" target="_blank" rel="noopener">Consíguelo en playfreep.com →</a>
+        <a class="fp-buy-btn" href="https://www.yamasoto.com/freep/" target="_blank" rel="noopener">Consíguelo aquí →</a>
       </div>
     </div>
 
