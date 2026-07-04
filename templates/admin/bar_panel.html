@@ -742,7 +742,7 @@
   .game-row-img { width: 44px; height: 44px; border-radius: 8px; object-fit: cover; flex-shrink: 0; }
   .game-row-info { flex: 1; min-width: 0; }
   .game-row-name { font-size: 14px; font-weight: 600; color: var(--text); }
-  .game-badge.badge-theme { font-size: 12px; background: #FBE8DC; border: 1px solid #E8C4AC; border-radius: 5px; padding: 0 4px; vertical-align: middle; cursor: help; }
+  .game-badge.badge-theme { font-size: 10px; font-weight: 700; letter-spacing: 0.3px; text-transform: uppercase; color: #A8410E; background: #FBE8DC; border: 1px solid #E8C4AC; border-radius: 5px; padding: 1px 6px; vertical-align: middle; }
   .game-row-status { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
   .game-row.active-row .game-row-name { color: var(--text); }
   .game-row.inactive-row { background: #fafafa; }
@@ -827,7 +827,7 @@
         const isLocked = !g.available && !g.fixed;
         const canToggle = g.selectable && !isLocked;
         const themeChip = (ES_EVENTO_PANEL && TEMATIZABLES.has(g.slug))
-          ? ' <span class="game-badge badge-theme" title="Este juego se ambienta con la temática del evento">🎨</span>' : '';
+          ? ' <span class="game-badge badge-theme">Temático</span>' : '';
 
         let statusText = '';
         let badgeHtml = '';

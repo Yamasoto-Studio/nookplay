@@ -518,12 +518,16 @@ Crea un reto "Las Conexiones" con estas reglas:
 
 1. Exactamente 8 palabras en total — 2 grupos de 4
 2. Cada grupo tiene una categoría oculta que las conecta
-3. TRAMPA OBLIGATORIA: al menos 1 palabra parece pertenecer a ambos grupos pero solo va en uno
-4. Las palabras deben ser reconocibles para cualquier persona adulta española
-5. Las categorías no pueden ser obvias — tienen que hacer pensar
-6. Nivel de dificultad: MEDIO — se puede resolver pero no es inmediato
-7. Tono: divertido, sorprendente, con un punto de "¡cómo no lo vi!"
-8. Los grupos deben tener nombres cortos y reveladores (máx 4 palabras)
+3. TRAMPA OBLIGATORIA: una palabra que ESTÁ en un solo grupo pero PODRÍA encajar
+   en el otro. La ambigüedad está en el significado, NUNCA en repetir la palabra.
+4. REGLA INQUEBRANTABLE: las 8 palabras deben ser TODAS DISTINTAS entre sí.
+   Ninguna palabra puede aparecer en los dos grupos ni repetirse. Un tablero con
+   una palabra duplicada es un tablero INVÁLIDO.
+5. Las palabras deben ser reconocibles para cualquier persona adulta española
+6. Las categorías no pueden ser obvias — tienen que hacer pensar
+7. Nivel de dificultad: MEDIO — se puede resolver pero no es inmediato
+8. Tono: divertido, sorprendente, con un punto de "¡cómo no lo vi!"
+9. Los grupos deben tener nombres cortos y reveladores (máx 4 palabras)
 
 TIPOS DE CONEXIONES que funcionan bien:
 - Palabras que van antes/después de otra ("__ de leche", "café __")
@@ -551,13 +555,24 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
 IMPORTANTE: Las palabras deben estar en MAYÚSCULAS."""
 
     result = _post_ia(prompt + _bloque_evitar(evitar), 800, api_key)
-    
+
+    # Validación defensiva: las 8 palabras deben ser únicas. Si la IA dupica
+    # alguna (interpretando mal la "trampa"), se regenera una vez con aviso
+    # reforzado. El tablero con palabra repetida confunde: parece un error.
+    def _duplicadas(r):
+        todas = [p.strip().upper() for p in r['grupo_a']['palabras'] + r['grupo_b']['palabras']]
+        return len(set(todas)) != 8
+    if _duplicadas(result):
+        refuerzo = ("\nATENCIÓN: tu intento anterior REPITIÓ una palabra en los dos grupos. "
+                    "Eso es un tablero inválido. Genera uno nuevo con 8 palabras TODAS DISTINTAS.")
+        result = _post_ia(prompt + refuerzo + _bloque_evitar(evitar), 800, api_key)
+
     # Mezclar las 8 palabras aleatoriamente
     import random as _random
     todas = result['grupo_a']['palabras'] + result['grupo_b']['palabras']
     _random.shuffle(todas)
     result['palabras_mezcladas'] = todas
-    
+
     return result
 
 
