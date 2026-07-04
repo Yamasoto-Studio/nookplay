@@ -504,7 +504,7 @@ def _persistir_generado(bar_id, game_type, game_data, es_global=False):
         dbp = get_db()
         if es_global:
             ya = dbp.execute(
-                "SELECT id FROM generated_games WHERE game_type = ? AND game_date = ?",
+                "SELECT id FROM generated_games WHERE game_type = ? AND game_date = ? AND bar_id NOT IN (SELECT id FROM bars WHERE space_kind = 'evento')",
                 (game_type, hoy)
             ).fetchone()
         else:
@@ -602,8 +602,8 @@ def pregen_daily_games():
     today = str(date.today())
     resumen = {'ok': [], 'error': []}
     # Juegos por-bar: los únicos que un evento genera (y en pool si procede)
-    POOL_GAME_TYPES = {'crimen', 'impostor', 'dilema', 'conexiones', 'veredicto', 'perfil', 'vestuario', 'trivia', 'local'}
-    GAME_TYPES = ['crimen', 'impostor', 'dilema', 'conexiones', 'oraculo', 'donde', 'local', 'veredicto', 'perfil', 'vestuario', 'trivia', 'sinopsis', 'muertes', 'letra', 'pensamiento', 'menteagil', 'constitucion', 'titular', 'definicion', 'masomenos', 'escalera', 'quienmas']
+    POOL_GAME_TYPES = {'crimen', 'impostor', 'dilema', 'conexiones', 'veredicto', 'perfil', 'vestuario', 'trivia', 'local', 'orden', 'sinopsis', 'letra', 'quienmas'}
+    GAME_TYPES = ['crimen', 'impostor', 'dilema', 'conexiones', 'oraculo', 'donde', 'local', 'veredicto', 'perfil', 'vestuario', 'trivia', 'sinopsis', 'muertes', 'letra', 'pensamiento', 'menteagil', 'constitucion', 'titular', 'definicion', 'masomenos', 'escalera', 'quienmas', 'orden']
 
     db = get_db()
     bars = db.execute("SELECT * FROM bars WHERE active = 1").fetchall()
@@ -704,14 +704,15 @@ def pregen_daily_games():
                         ev = get_historial_reciente(db, 'trivia', bar['slug'], campo='trivia_preguntas')
                         game_data = generate_trivia(bar['slug'], evitar=ev)
                     elif game_type == 'sinopsis':
-                        # Única para todos los bares — solo generar una vez
-                        existing = db.execute(
-                            "SELECT id FROM generated_games WHERE game_type = 'sinopsis' AND game_date = ?",
-                            (today,)
-                        ).fetchone()
-                        if existing:
-                            continue
-                        ev = get_historial_reciente(db, 'sinopsis', None, campo='opciones')
+                        # Bares: única global. Eventos: propia y temática (con pool)
+                        if not _es_evento_bar:
+                            existing = db.execute(
+                                "SELECT id FROM generated_games WHERE game_type = 'sinopsis' AND game_date = ? AND bar_id NOT IN (SELECT id FROM bars WHERE space_kind = 'evento')",
+                                (today,)
+                            ).fetchone()
+                            if existing:
+                                continue
+                        ev = get_historial_reciente(db, 'sinopsis', bar['slug'] if _es_evento_bar else None, campo='opciones')
                         game_data = generate_sinopsis(bar['slug'], evitar=ev)
                     elif game_type == 'muertes':
                         existing = db.execute(
@@ -723,13 +724,14 @@ def pregen_daily_games():
                         ev = get_historial_reciente(db, 'muertes', None, campo='titulo')
                         game_data = generate_muertes(bar['slug'], evitar=ev)
                     elif game_type == 'letra':
-                        existing = db.execute(
-                            "SELECT id FROM generated_games WHERE game_type = 'letra' AND game_date = ?",
-                            (today,)
-                        ).fetchone()
-                        if existing:
-                            continue
-                        ev = get_historial_reciente(db, 'letra', None, campo='opciones')
+                        if not _es_evento_bar:
+                            existing = db.execute(
+                                "SELECT id FROM generated_games WHERE game_type = 'letra' AND game_date = ? AND bar_id NOT IN (SELECT id FROM bars WHERE space_kind = 'evento')",
+                                (today,)
+                            ).fetchone()
+                            if existing:
+                                continue
+                        ev = get_historial_reciente(db, 'letra', bar['slug'] if _es_evento_bar else None, campo='opciones')
                         game_data = generate_letra(bar['slug'], evitar=ev)
                     elif game_type == 'pensamiento':
                         existing = db.execute(
@@ -792,14 +794,19 @@ def pregen_daily_games():
                             continue
                         ev = get_historial_reciente(db, 'escalera', None, campo='escalera_enunciados')
                         game_data = generate_escalera(bar['slug'], evitar=ev)
+                    elif game_type == 'orden':
+                        if not _es_evento_bar:
+                            continue  # bares: El Orden se genera bajo demanda, como siempre
+                        game_data = generate_orden(bar['slug'])
                     elif game_type == 'quienmas':
-                        existing = db.execute(
-                            "SELECT id FROM generated_games WHERE game_type = 'quienmas' AND game_date = ?",
-                            (today,)
-                        ).fetchone()
-                        if existing:
-                            continue
-                        ev = get_historial_reciente(db, 'quienmas', None, campo='afirmaciones')
+                        if not _es_evento_bar:
+                            existing = db.execute(
+                                "SELECT id FROM generated_games WHERE game_type = 'quienmas' AND game_date = ? AND bar_id NOT IN (SELECT id FROM bars WHERE space_kind = 'evento')",
+                                (today,)
+                            ).fetchone()
+                            if existing:
+                                continue
+                        ev = get_historial_reciente(db, 'quienmas', bar['slug'] if _es_evento_bar else None, campo='afirmaciones')
                         game_data = generate_quienmas(bar['slug'], evitar=ev)
                     
                     import json as _json
@@ -2504,15 +2511,20 @@ def sinopsis_api():
         return jsonify({'error': 'Invalid code'}), 403
 
     # Sinopsis es única para todos los bares
-    cache_key = f"global_sinopsis_{today}"
+    _es_ev = (bar['space_kind'] or 'local') == 'evento'
+    cache_key = f"{bar_slug}_sinopsis_{today}" if _es_ev else f"global_sinopsis_{today}"
     if cache_key in _game_cache:
         db.close()
         return jsonify(_game_cache[cache_key])
 
-    pregenerated = db.execute(
-        "SELECT content FROM generated_games WHERE game_type = 'sinopsis' AND game_date = ?",
-        (today,)
-    ).fetchone()
+    if _es_ev:
+        # Evento: contenido propio y temático (con pool por dispositivo)
+        pregenerated = _leer_pregenerado(db, bar['id'], 'sinopsis', today)
+    else:
+        pregenerated = db.execute(
+            "SELECT content FROM generated_games WHERE game_type = 'sinopsis' AND game_date = ? AND bar_id NOT IN (SELECT id FROM bars WHERE space_kind = 'evento')",
+            (today,)
+        ).fetchone()
     if pregenerated:
         import json as _json
         game_data = _json.loads(pregenerated['content'])
@@ -2524,11 +2536,15 @@ def sinopsis_api():
 
     try:
         _dbev = get_db()
-        _ev = get_historial_reciente(_dbev, 'sinopsis', None, campo='opciones')
+        _ev = get_historial_reciente(_dbev, 'sinopsis', bar_slug if _es_ev else None, campo='opciones')
         _dbev.close()
-        game_data = generate_sinopsis(bar_slug, evitar=_ev)
+        _tok = set_event_theme(_theme_de(bar))
+        try:
+            game_data = generate_sinopsis(bar_slug, evitar=_ev)
+        finally:
+            reset_event_theme(_tok)
         _bid = bar['id']
-        _persistir_generado(_bid, 'sinopsis', game_data, es_global=True)
+        _persistir_generado(_bid, 'sinopsis', game_data, es_global=(not _es_ev))
         _game_cache[cache_key] = game_data
         return jsonify(game_data)
     except Exception as e:
@@ -2918,15 +2934,20 @@ def quienmas_api():
         db.close()
         return jsonify({'error': 'Invalid code'}), 403
 
-    cache_key = f"global_quienmas_{today}"
+    _es_ev = (bar['space_kind'] or 'local') == 'evento'
+    cache_key = f"{bar_slug}_quienmas_{today}" if _es_ev else f"global_quienmas_{today}"
     if cache_key in _game_cache:
         db.close()
         return jsonify(_game_cache[cache_key])
 
-    pregenerated = db.execute(
-        "SELECT content FROM generated_games WHERE game_type = 'quienmas' AND game_date = ?",
-        (today,)
-    ).fetchone()
+    if _es_ev:
+        # Evento: contenido propio y temático (con pool por dispositivo)
+        pregenerated = _leer_pregenerado(db, bar['id'], 'quienmas', today)
+    else:
+        pregenerated = db.execute(
+            "SELECT content FROM generated_games WHERE game_type = 'quienmas' AND game_date = ? AND bar_id NOT IN (SELECT id FROM bars WHERE space_kind = 'evento')",
+            (today,)
+        ).fetchone()
     if pregenerated:
         import json as _json
         game_data = _json.loads(pregenerated['content'])
@@ -2937,10 +2958,14 @@ def quienmas_api():
     db.close()
     try:
         _dbev = get_db()
-        _ev = get_historial_reciente(_dbev, 'quienmas', None, campo='afirmaciones')
+        _ev = get_historial_reciente(_dbev, 'quienmas', bar_slug if _es_ev else None, campo='afirmaciones')
         _dbev.close()
-        game_data = generate_quienmas(bar_slug, evitar=_ev)
-        _persistir_generado(bar['id'], 'quienmas', game_data, es_global=True)
+        _tok = set_event_theme(_theme_de(bar))
+        try:
+            game_data = generate_quienmas(bar_slug, evitar=_ev)
+        finally:
+            reset_event_theme(_tok)
+        _persistir_generado(bar['id'], 'quienmas', game_data, es_global=(not _es_ev))
         _game_cache[cache_key] = game_data
         return jsonify(game_data)
     except Exception as e:
@@ -3060,15 +3085,20 @@ def letra_api():
         db.close()
         return jsonify({'error': 'Invalid code'}), 403
 
-    cache_key = f"global_letra_{today}"
+    _es_ev = (bar['space_kind'] or 'local') == 'evento'
+    cache_key = f"{bar_slug}_letra_{today}" if _es_ev else f"global_letra_{today}"
     if cache_key in _game_cache:
         db.close()
         return jsonify(_game_cache[cache_key])
 
-    pregenerated = db.execute(
-        "SELECT content FROM generated_games WHERE game_type = 'letra' AND game_date = ?",
-        (today,)
-    ).fetchone()
+    if _es_ev:
+        # Evento: contenido propio y temático (con pool por dispositivo)
+        pregenerated = _leer_pregenerado(db, bar['id'], 'letra', today)
+    else:
+        pregenerated = db.execute(
+            "SELECT content FROM generated_games WHERE game_type = 'letra' AND game_date = ? AND bar_id NOT IN (SELECT id FROM bars WHERE space_kind = 'evento')",
+            (today,)
+        ).fetchone()
     if pregenerated:
         import json as _json
         game_data = _json.loads(pregenerated['content'])
@@ -3079,11 +3109,15 @@ def letra_api():
     db.close()
     try:
         _dbev = get_db()
-        _ev = get_historial_reciente(_dbev, 'letra', None, campo='opciones')
+        _ev = get_historial_reciente(_dbev, 'letra', bar_slug if _es_ev else None, campo='opciones')
         _dbev.close()
-        game_data = generate_letra(bar_slug, evitar=_ev)
+        _tok = set_event_theme(_theme_de(bar))
+        try:
+            game_data = generate_letra(bar_slug, evitar=_ev)
+        finally:
+            reset_event_theme(_tok)
         _bid = bar['id']
-        _persistir_generado(_bid, 'letra', game_data, es_global=True)
+        _persistir_generado(_bid, 'letra', game_data, es_global=(not _es_ev))
         _game_cache[cache_key] = game_data
         return jsonify(game_data)
     except Exception as e:
@@ -3790,11 +3824,28 @@ def orden_api():
         db.close()
         return jsonify({'error': 'Invalid code'}), 403
 
-    db.close()
+    _es_ev = (bar['space_kind'] or 'local') == 'evento'
     cache_key = f"{bar_slug}_orden_{today}"
-    if cache_key in _game_cache:
+    if not _es_ev and cache_key in _game_cache:
+        db.close()
         return jsonify(_game_cache[cache_key])
 
+    if _es_ev:
+        # Evento: contenido propio y temático, persistido en BD (con pool por dispositivo)
+        pre = _leer_pregenerado(db, bar['id'], 'orden', today)
+        db.close()
+        if pre:
+            import json as _json
+            return jsonify(_json.loads(pre['content']))
+        _tok = set_event_theme(_theme_de(bar))
+        try:
+            game_data = generate_orden(bar_slug)
+        finally:
+            reset_event_theme(_tok)
+        _persistir_generado(bar['id'], 'orden', game_data, es_global=False)
+        return jsonify(game_data)
+
+    db.close()
     game_data = generate_orden(bar_slug)
     _game_cache[cache_key] = game_data
     return jsonify(game_data)
