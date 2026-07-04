@@ -244,9 +244,10 @@ def _bloque_tematico(event_theme):
     if not event_theme or not event_theme.strip():
         return ""
     return f"""
-CONTEXTO TEMÁTICO DEL EVENTO (MUY IMPORTANTE): Este contenido se juega en un evento con esta temática:
+CONTEXTO TEMÁTICO DEL EVENTO (MÁXIMA PRIORIDAD): Este contenido se juega en un evento con esta temática:
 «{event_theme.strip()}»
 Ambienta el juego en ese universo: usa sus referencias, su público y su tono. El contenido debe sentirse hecho a medida para ese evento, no genérico. Mantén el rigor y la jugabilidad; solo cambia la ambientación.
+IMPORTANTE: si el prompt indica una CATEGORÍA o CATEGORÍA BASE concreta, reinterprétala DENTRO de la temática del evento (ej.: categoría "gastronomía" en un evento de anime → gastronomía japonesa y comida icónica del anime). La temática del evento SIEMPRE manda sobre la categoría.
 """
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -602,7 +602,7 @@ def pregen_daily_games():
     today = str(date.today())
     resumen = {'ok': [], 'error': []}
     # Juegos por-bar: los únicos que un evento genera (y en pool si procede)
-    POOL_GAME_TYPES = {'crimen', 'impostor', 'dilema', 'conexiones', 'veredicto', 'perfil', 'vestuario', 'trivia', 'local', 'orden', 'sinopsis', 'letra', 'quienmas'}
+    POOL_GAME_TYPES = {'crimen', 'impostor', 'dilema', 'conexiones', 'veredicto', 'perfil', 'vestuario', 'trivia', 'local', 'orden', 'sinopsis', 'letra', 'quienmas', 'escalera', 'masomenos'}
     GAME_TYPES = ['crimen', 'impostor', 'dilema', 'conexiones', 'oraculo', 'donde', 'local', 'veredicto', 'perfil', 'vestuario', 'trivia', 'sinopsis', 'muertes', 'letra', 'pensamiento', 'menteagil', 'constitucion', 'titular', 'definicion', 'masomenos', 'escalera', 'quienmas', 'orden']
 
     db = get_db()
@@ -777,22 +777,24 @@ def pregen_daily_games():
                         ev = get_historial_reciente(db, 'definicion', None, campo='palabra')
                         game_data = generate_definicion(bar['slug'], evitar=ev)
                     elif game_type == 'masomenos':
-                        existing = db.execute(
-                            "SELECT id FROM generated_games WHERE game_type = 'masomenos' AND game_date = ?",
-                            (today,)
-                        ).fetchone()
-                        if existing:
-                            continue
-                        ev = get_historial_reciente(db, 'masomenos', None, campo='masomenos_preguntas')
+                        if not _es_evento_bar:
+                            existing = db.execute(
+                                "SELECT id FROM generated_games WHERE game_type = 'masomenos' AND game_date = ? AND bar_id NOT IN (SELECT id FROM bars WHERE space_kind = 'evento')",
+                                (today,)
+                            ).fetchone()
+                            if existing:
+                                continue
+                        ev = get_historial_reciente(db, 'masomenos', bar['slug'] if _es_evento_bar else None, campo='masomenos_preguntas')
                         game_data = generate_masomenos(bar['slug'], evitar=ev)
                     elif game_type == 'escalera':
-                        existing = db.execute(
-                            "SELECT id FROM generated_games WHERE game_type = 'escalera' AND game_date = ?",
-                            (today,)
-                        ).fetchone()
-                        if existing:
-                            continue
-                        ev = get_historial_reciente(db, 'escalera', None, campo='escalera_enunciados')
+                        if not _es_evento_bar:
+                            existing = db.execute(
+                                "SELECT id FROM generated_games WHERE game_type = 'escalera' AND game_date = ? AND bar_id NOT IN (SELECT id FROM bars WHERE space_kind = 'evento')",
+                                (today,)
+                            ).fetchone()
+                            if existing:
+                                continue
+                        ev = get_historial_reciente(db, 'escalera', bar['slug'] if _es_evento_bar else None, campo='escalera_enunciados')
                         game_data = generate_escalera(bar['slug'], evitar=ev)
                     elif game_type == 'orden':
                         if not _es_evento_bar:
@@ -2787,15 +2789,19 @@ def masomenos_api():
         db.close()
         return jsonify({'error': 'Invalid code'}), 403
 
-    cache_key = f"global_masomenos_{today}"
+    _es_ev = (bar['space_kind'] or 'local') == 'evento'
+    cache_key = f"{bar_slug}_masomenos_{today}" if _es_ev else f"global_masomenos_{today}"
     if cache_key in _game_cache:
         db.close()
         return jsonify(_game_cache[cache_key])
 
-    pregenerated = db.execute(
-        "SELECT content FROM generated_games WHERE game_type = 'masomenos' AND game_date = ?",
-        (today,)
-    ).fetchone()
+    if _es_ev:
+        pregenerated = _leer_pregenerado(db, bar['id'], 'masomenos', today)
+    else:
+        pregenerated = db.execute(
+            "SELECT content FROM generated_games WHERE game_type = 'masomenos' AND game_date = ? AND bar_id NOT IN (SELECT id FROM bars WHERE space_kind = 'evento')",
+            (today,)
+        ).fetchone()
     if pregenerated:
         import json as _json
         game_data = _json.loads(pregenerated['content'])
@@ -2806,10 +2812,14 @@ def masomenos_api():
     db.close()
     try:
         _dbev = get_db()
-        _ev = get_historial_reciente(_dbev, 'masomenos', None, campo='masomenos_preguntas')
+        _ev = get_historial_reciente(_dbev, 'masomenos', bar_slug if _es_ev else None, campo='masomenos_preguntas')
         _dbev.close()
-        game_data = generate_masomenos(bar_slug, evitar=_ev)
-        _persistir_generado(bar['id'], 'masomenos', game_data, es_global=True)
+        _tok = set_event_theme(_theme_de(bar))
+        try:
+            game_data = generate_masomenos(bar_slug, evitar=_ev)
+        finally:
+            reset_event_theme(_tok)
+        _persistir_generado(bar['id'], 'masomenos', game_data, es_global=(not _es_ev))
         _game_cache[cache_key] = game_data
         return jsonify(game_data)
     except Exception as e:
@@ -2852,15 +2862,19 @@ def escalera_api():
         db.close()
         return jsonify({'error': 'Invalid code'}), 403
 
-    cache_key = f"global_escalera_{today}"
+    _es_ev = (bar['space_kind'] or 'local') == 'evento'
+    cache_key = f"{bar_slug}_escalera_{today}" if _es_ev else f"global_escalera_{today}"
     if cache_key in _game_cache:
         db.close()
         return jsonify(_game_cache[cache_key])
 
-    pregenerated = db.execute(
-        "SELECT content FROM generated_games WHERE game_type = 'escalera' AND game_date = ?",
-        (today,)
-    ).fetchone()
+    if _es_ev:
+        pregenerated = _leer_pregenerado(db, bar['id'], 'escalera', today)
+    else:
+        pregenerated = db.execute(
+            "SELECT content FROM generated_games WHERE game_type = 'escalera' AND game_date = ? AND bar_id NOT IN (SELECT id FROM bars WHERE space_kind = 'evento')",
+            (today,)
+        ).fetchone()
     if pregenerated:
         import json as _json
         game_data = _json.loads(pregenerated['content'])
@@ -2871,10 +2885,14 @@ def escalera_api():
     db.close()
     try:
         _dbev = get_db()
-        _ev = get_historial_reciente(_dbev, 'escalera', None, campo='escalera_enunciados')
+        _ev = get_historial_reciente(_dbev, 'escalera', bar_slug if _es_ev else None, campo='escalera_enunciados')
         _dbev.close()
-        game_data = generate_escalera(bar_slug, evitar=_ev)
-        _persistir_generado(bar['id'], 'escalera', game_data, es_global=True)
+        _tok = set_event_theme(_theme_de(bar))
+        try:
+            game_data = generate_escalera(bar_slug, evitar=_ev)
+        finally:
+            reset_event_theme(_tok)
+        _persistir_generado(bar['id'], 'escalera', game_data, es_global=(not _es_ev))
         _game_cache[cache_key] = game_data
         return jsonify(game_data)
     except Exception as e:

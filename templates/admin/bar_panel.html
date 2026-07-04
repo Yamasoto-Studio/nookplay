@@ -822,7 +822,7 @@
       const list = document.getElementById('games-list');
       // En eventos, marcar de un vistazo los juegos que se ambientan con la temática
       const ES_EVENTO_PANEL = {{ 'true' if es_evento else 'false' }};
-      const TEMATIZABLES = new Set(['crimen','impostor','dilema','conexiones','veredicto','perfil','vestuario','trivia','local','orden','sinopsis','letra','quienmas']);
+      const TEMATIZABLES = new Set(['crimen','impostor','dilema','conexiones','veredicto','perfil','vestuario','trivia','local','orden','sinopsis','letra','quienmas','escalera','masomenos']);
       list.innerHTML = games.map(g => {
         const isLocked = !g.available && !g.fixed;
         const canToggle = g.selectable && !isLocked;
