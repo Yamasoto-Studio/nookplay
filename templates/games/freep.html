@@ -287,14 +287,17 @@ html, body { overscroll-behavior: none; }
 .fp-buy {
   margin-top: 20px; border-radius: var(--radius-md); overflow: hidden;
   background: #11243B; color: #fff; text-align: left;
-  display: flex; align-items: center; gap: 14px; padding: 14px 16px;
+  display: flex; align-items: center; gap: 14px; padding: 14px;
+}
+.fp-buy .fp-buy-img { width: 92px; flex-shrink: 0; border-radius: 8px; display: block; }
+.fp-buy .fp-buy-txt { flex: 1; min-width: 0; }
+.fp-buy .fp-buy-txt .t { font-size: 14px; font-weight: 700; line-height: 1.35; }
+.fp-buy .fp-buy-txt .s { font-size: 12px; opacity: 0.8; margin-top: 3px; line-height: 1.4; }
+.fp-buy .fp-buy-btn {
+  display: inline-block; margin-top: 10px; background: #FFD23F; color: #11243B;
+  font-size: 13px; font-weight: 800; padding: 8px 14px; border-radius: 8px;
   text-decoration: none;
 }
-.fp-buy .fp-buy-logo { font-size: 22px; font-weight: 800; font-style: italic; flex-shrink: 0; }
-.fp-buy .fp-buy-txt { flex: 1; }
-.fp-buy .fp-buy-txt .t { font-size: 14px; font-weight: 700; line-height: 1.3; }
-.fp-buy .fp-buy-txt .s { font-size: 12px; opacity: 0.75; margin-top: 2px; }
-.fp-buy .fp-buy-go { font-size: 13px; font-weight: 800; color: #FFD23F; white-space: nowrap; }
 .fp-stat-line { text-align: center; font-size: 12px; color: var(--text-muted); margin-top: 14px; min-height: 16px; }
 </style>
 
@@ -325,7 +328,7 @@ html, body { overscroll-behavior: none; }
       <div class="fp-promo-ico">🃏</div>
       <div class="fp-promo-txt">
         Esta es la versión digital de Freep. El <b>juego de mesa original</b> incluye <b>cartas especiales</b> (comodines, robos y giros) que lo hacen mucho más estratégico y divertido.
-        <a href="https://www.yamasoto.com/freep/" target="_blank" rel="noopener" class="fp-promo-link">Consíguelo aquí →</a>
+        <a href="https://playfreep.com" target="_blank" rel="noopener" class="fp-promo-link">Consíguelo en playfreep.com →</a>
       </div>
     </div>
 
@@ -428,14 +431,14 @@ html, body { overscroll-behavior: none; }
       </div>
     </div>
 
-    <a class="fp-buy" href="https://www.yamasoto.com/freep/" target="_blank" rel="noopener">
-      <div class="fp-buy-logo">Freep</div>
+    <div class="fp-buy">
+      <img src="/static/CajaFreep_400.webp" alt="Caja del juego de mesa Freep" class="fp-buy-img" onerror="this.style.display='none'">
       <div class="fp-buy-txt">
-        <div class="t">¿Os ha enganchado? Es un juego de mesa real.</div>
-        <div class="s">Llévate Freep a casa y juega hasta 6 personas.</div>
+        <div class="t">¿Os ha enganchado? Freep es un juego de mesa real.</div>
+        <div class="s">Con cartas especiales que no están en esta versión: comodines, robos y giros. Hasta 6 personas.</div>
+        <a class="fp-buy-btn" href="https://playfreep.com" target="_blank" rel="noopener">Consíguelo en playfreep.com →</a>
       </div>
-      <div class="fp-buy-go">playfreep.com →</div>
-    </a>
+    </div>
 
     <div class="fp-stat-line" id="r-stat"></div>
 

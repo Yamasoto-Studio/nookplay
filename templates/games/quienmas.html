@@ -49,6 +49,14 @@ body { overscroll-behavior: none; width: 100%; max-width: 100%; overflow-x: hidd
 .qm-resultado.coincide .qm-resultado-tit { color: #2E7D32; }
 .qm-resultado.discrepa .qm-resultado-tit { color: #B8860B; }
 .qm-resultado-detalle { font-size: 14px; color: var(--text-secondary); line-height: 1.6; }
+/* Repaso final: quién señaló a quién en cada ronda */
+.qm-repaso { display: flex; flex-direction: column; gap: 8px; margin: 14px 0 18px; }
+.qm-repaso-item { padding: 10px 12px; border-radius: var(--radius-md); border: 1px solid var(--border); text-align: left; }
+.qm-repaso-item.ok { background: #F0FFF4; border-color: #A5D6A7; }
+.qm-repaso-item.no { background: var(--bar-bg-subtle); }
+.qm-repaso-af { font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.4; margin-bottom: 3px; }
+.qm-repaso-votos { font-size: 12px; color: var(--text-secondary); }
+.qm-repaso-votos b { color: var(--text); }
 .qm-resultado-detalle b { color: var(--text); }
 
 .qm-marcador { display: flex; justify-content: center; gap: 24px; margin-bottom: 16px; }
@@ -140,6 +148,7 @@ body { overscroll-behavior: none; width: 100%; max-width: 100%; overflow-x: hidd
       <div class="qm-resultado-tit" id="f-tit"></div>
       <div class="qm-resultado-detalle" id="f-detalle"></div>
     </div>
+    <div class="qm-repaso" id="f-repaso"></div>
     <button class="btn-primary" onclick="location.reload()">↻ Jugar otra vez</button>
     <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
     <div class="tomorrow">Mañana, preguntas nuevas.<br>{{ bar.tomorrow_message or 'Vuelve a tomar un café.' }}</div>
@@ -170,6 +179,7 @@ let ronda = 0;
 let coincidencias = 0;
 let turno = 0;        // quién vota primero en esta ronda
 let votoPrimero = null;
+let historial = [];   // repaso final: quién señaló a quién en cada ronda
 
 async function init() {
   try {
@@ -231,6 +241,12 @@ function votar(eleccion) {
     const votoSegundo = eleccion;
     const coincide = (votoPrimero === votoSegundo);
     if (coincide) coincidencias++;
+    historial.push({
+      af: afirmaciones[ronda],
+      v1n: players[turno].name, v1p: players[votoPrimero].name,
+      v2n: players[1 - turno].name, v2p: players[votoSegundo].name,
+      ok: coincide
+    });
 
     const banner = document.getElementById('r-banner');
     const ico = document.getElementById('r-ico');
@@ -289,6 +305,15 @@ function mostrarFinal() {
     banner.className = 'qm-resultado discrepa'; ico.textContent = '🌀';
     det.innerHTML = `¡Sois todo un misterio el uno para el otro! Tema de conversación asegurado.`;
   }
+  // Repaso ronda a ronda: quién señaló a quién (para comentarlo con el café)
+  document.getElementById('f-repaso').innerHTML = historial.map(h => `
+    <div class="qm-repaso-item ${h.ok ? 'ok' : 'no'}">
+      <div class="qm-repaso-af">${h.ok ? '🎯' : '🤔'} ${h.af}</div>
+      <div class="qm-repaso-votos">${h.ok
+        ? `Los dos: <b>${h.v1p}</b>`
+        : `${h.v1n} → <b>${h.v1p}</b> · ${h.v2n} → <b>${h.v2p}</b>`}</div>
+    </div>
+  `).join('');
   showScreen('s-final');
 }
 
