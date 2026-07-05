@@ -1468,7 +1468,7 @@ def admin_save():
         )
 
     db.execute(
-        "UPDATE bars SET welcome_message=?, tomorrow_message=?, promo_active=?, description=?, owner_name=?, staff_names=?, color_primary=?, color_primary_text=?, color_bg=?, color_bg_subtle=?, address=?, city=?, province=?, zip_code=?, country=?, latitude=?, longitude=?, social_instagram=?, social_facebook=?, social_tiktok=?, menu_url=? WHERE slug=?",
+        "UPDATE bars SET welcome_message=?, tomorrow_message=?, promo_active=?, description=?, owner_name=?, staff_names=?, color_primary=?, color_primary_text=?, color_bg=?, color_bg_subtle=?, address=?, city=?, province=?, zip_code=?, country=?, latitude=?, longitude=?, social_instagram=?, social_facebook=?, social_tiktok=?, menu_url=?, menu_label=? WHERE slug=?",
         (data.get('welcome_message',''), data.get('tomorrow_message',''), data.get('promo_active',0),
          data.get('description',''), data.get('owner_name',''),
          data.get('staff_names',''), data.get('color_primary','#C4622D'),
@@ -1480,6 +1480,7 @@ def admin_save():
          _normalizar_handle(data.get('social_facebook',''), 'facebook.com'),
          _normalizar_handle(data.get('social_tiktok',''), 'tiktok.com'),
          _normalizar_url(data.get('menu_url','')),
+         (data.get('menu_label','') or '')[:30],
          bar_slug)
     )
     db.execute("DELETE FROM bar_products WHERE bar_id = ?", (bar['id'],))

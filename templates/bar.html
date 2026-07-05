@@ -208,7 +208,7 @@
           {% if bar.menu_url %}
           <a class="local-links-menu" href="{{ bar.menu_url }}" target="_blank" rel="noopener">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18M3 12h18M3 19h12"/></svg>
-            Ver nuestra carta
+            {{ bar.menu_label or ('Ver más info del evento' if (bar.space_kind or 'local') == 'evento' else 'Ver nuestra carta') }}
           </a>
           {% endif %}
           {% if bar.social_instagram or bar.social_facebook or bar.social_tiktok %}

@@ -247,9 +247,14 @@ async function finJuego(conservaBote, escaleraCompleta) {
   try {
     const sr = await fetch(`/api/escalera-stats/${BAR_SLUG}`);
     const stats = await sr.json();
-    if (stats.total >= 3) {
-      document.getElementById('r-pct').style.display = 'block';
-      document.getElementById('r-pct').innerHTML = `Hoy en este local, la media es <strong>${stats.avg_peldano}</strong> peldaños. Lo máximo alcanzado: <strong>${stats.max_peldano}</strong>.`;
+    const el = document.getElementById('r-pct');
+    if (el && stats.total >= 1) {
+      el.style.display = 'block';
+      if (stats.total >= 3) {
+        el.innerHTML = `Hoy aquí han jugado <strong>${stats.total}</strong> personas. Media: <strong>${stats.avg_peldano}</strong> peldaños · Récord del día: <strong>${stats.max_peldano}</strong>.`;
+      } else {
+        el.innerHTML = `Eres de los primeros en jugar hoy. Récord del día hasta ahora: <strong>${stats.max_peldano}</strong> peldaños.`;
+      }
     }
   } catch(e) {}
 
