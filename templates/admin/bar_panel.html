@@ -96,7 +96,17 @@
 
   /* Form sections */
   .form-card { background: #fff; border-radius: 14px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
-  .form-card h3 { font-size: 15px; font-weight: 600; color: #1A1A1A; margin-bottom: 16px; }
+  .form-card h3 {
+    font-size: 16px; font-weight: 700; color: #1A1A1A;
+    background: #F7F2EB; border-left: 4px solid {{ bar.color_primary or '#C4622D' }};
+    border-radius: 0 8px 8px 0; padding: 10px 14px;
+    margin: -4px -4px 18px; letter-spacing: 0.2px;
+  }
+  .code-card .card-title {
+    font-size: 13px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+    color: #1A1A1A; background: #F7F2EB; border-left: 4px solid {{ bar.color_primary or '#C4622D' }};
+    border-radius: 0 8px 8px 0; padding: 9px 14px; margin: -4px -4px 14px;
+  }
   .field { margin-bottom: 14px; }
   .field label { display: block; font-size: 13px; font-weight: 500; color: #1A1A1A; margin-bottom: 5px; }
   .field input, .field textarea { width: 100%; padding: 11px 13px; border: 1px solid #E5DDD5; border-radius: 10px; font-size: 15px; font-family: inherit; outline: none; transition: border-color 0.15s; resize: vertical; }
@@ -158,10 +168,17 @@
     <div class="admin-bar-logo">
       <img src="/static/clientes/{{ bar.slug }}/logo_header.png" alt="{{ bar.name }}" onerror="this.style.display='none'">
     </div>
-    <div>
+    <div style="flex:1; min-width:0;">
       <div class="admin-bar-name">{{ bar.name }}</div>
       <div class="admin-bar-city">{{ bar.city }}{% if bar.province %}, {{ bar.province }}{% endif %}</div>
     </div>
+    {% set _view_code = (event_admin_code if es_evento and event_admin_code else current_code) %}
+    {% if _view_code and _view_code != 'N/D' %}
+    <a href="/{{ bar.slug }}?code={{ _view_code }}" target="_blank" rel="noopener"
+       style="flex-shrink:0; background: rgba(255,255,255,0.92); color: #1A1A1A; text-decoration: none; font-size: 13px; font-weight: 700; padding: 10px 14px; border-radius: 10px; box-shadow: 0 1px 6px rgba(0,0,0,0.15); white-space: nowrap;">
+      👁️ Ver como cliente
+    </a>
+    {% endif %}
   </div>
 
   {% if admin_role == 'superadmin' %}
@@ -255,6 +272,9 @@
   <div class="code-card">
     <div class="card-title">Código de esta semana</div>
     <div class="code-boxes" id="code-boxes"></div>
+    <div style="text-align:center; margin: 2px 0 8px;">
+      <button type="button" onclick="copiarCodigo(this)" style="background:transparent; border:1px solid #E0D5CC; border-radius:8px; padding:6px 14px; font-size:12px; font-weight:600; color:#6B6059; cursor:pointer; font-family:inherit;">📋 Copiar código</button>
+    </div>
     <div class="code-validity">Válido hasta el {{ valid_until }}</div>
     <div class="code-hint">📋 Cópialo en la pizarra de tu barra para que los clientes lo vean al pedir.<br>Cada lunes cambia: entra aquí y actualízalo.</div>
     <button type="button" class="code-print-btn" onclick="abrirCodigoImprimible()">🖨️ Ver versión para imprimir</button>
@@ -275,6 +295,13 @@
       });
     })();
 
+    async function copiarCodigo(btn) {
+      try {
+        await navigator.clipboard.writeText({{ current_code|tojson }});
+        const t = btn.textContent; btn.textContent = '✓ Copiado';
+        setTimeout(() => { btn.textContent = t; }, 1800);
+      } catch(e) { alert('Código: ' + {{ current_code|tojson }}); }
+    }
     function abrirCodigoImprimible() {
       const code = {{ current_code|tojson }};
       const validez = {{ valid_until|tojson }};
@@ -535,7 +562,7 @@
         </div>
         <div class="field-hint" id="lbl-prod-hint">{{ 'Las actividades aparecen antes de los juegos y al terminar.' if es_evento else 'Los productos aparecen antes de los juegos y al terminar.' }}</div>
       </div>
-      {% for i in range(3) %}
+      {% for i in range(6) %}
       {% set p = products[i] if i < products|length else None %}
       <div class="product-item" id="product-item-{{ i }}">
         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
@@ -1026,7 +1053,7 @@
     document.querySelectorAll('.lbl-prod-img').forEach(el => { el.textContent = T.imgLabel; });
     document.querySelectorAll('.ph-prod-title').forEach(el => { el.placeholder = T.phTitle; });
     document.querySelectorAll('.ph-prod-price').forEach(el => { el.placeholder = T.phPrice; });
-    for (let i = 0; i < 3; i++) setTxt('lbl-price-' + i, T.priceLabel);
+    for (let i = 0; i < 6; i++) setTxt('lbl-price-' + i, T.priceLabel);
   }
   document.addEventListener('DOMContentLoaded', onSpaceKindChange);
 
@@ -1284,7 +1311,7 @@ async function saveChanges() {
     data.event_test_mode = _tm && _tm.checked ? 1 : 0;
   }
 
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 6; i++) {
     const active = form[`product_active_${i}`] && form[`product_active_${i}`].checked;
     const title = form[`product_title_${i}`] ? form[`product_title_${i}`].value.trim() : '';
     if (active && title) {
