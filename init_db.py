@@ -59,6 +59,7 @@ db.executescript('''
         event_pool_size     INTEGER DEFAULT 1,
         event_test_mode     INTEGER DEFAULT 0,
         menu_label          TEXT DEFAULT '',
+        code_manual         INTEGER DEFAULT 0,
         active              INTEGER DEFAULT 1,
         created_at          TEXT DEFAULT (datetime(\'now\')),
         updated_at          TEXT DEFAULT (datetime(\'now\'))
@@ -192,6 +193,7 @@ migrations = [
     "ALTER TABLE bars ADD COLUMN event_pool_size INTEGER DEFAULT 1",
     "ALTER TABLE bars ADD COLUMN event_test_mode INTEGER DEFAULT 0",
     "ALTER TABLE bars ADD COLUMN menu_label TEXT DEFAULT ''",
+    "ALTER TABLE bars ADD COLUMN code_manual INTEGER DEFAULT 0",
 ]
 for sql in migrations:
     try:

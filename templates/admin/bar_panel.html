@@ -276,9 +276,76 @@
       <button type="button" onclick="copiarCodigo(this)" style="background:transparent; border:1px solid #E0D5CC; border-radius:8px; padding:6px 14px; font-size:12px; font-weight:600; color:#6B6059; cursor:pointer; font-family:inherit;">📋 Copiar código</button>
     </div>
     <div class="code-validity">Válido hasta el {{ valid_until }}</div>
-    <div class="code-hint">📋 Cópialo en la pizarra de tu barra para que los clientes lo vean al pedir.<br>Cada lunes cambia: entra aquí y actualízalo.</div>
+    <div class="code-hint" id="code-hint-auto">📋 Cópialo en la pizarra de tu barra para que los clientes lo vean al pedir.<br>Cada lunes cambia: entra aquí y actualízalo.</div>
     <button type="button" class="code-print-btn" onclick="abrirCodigoImprimible()">🖨️ Ver versión para imprimir</button>
+
+    <div style="margin-top:16px; padding-top:16px; border-top:1px solid #EFE7DE;">
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+        <div>
+          <div style="font-size:13px; font-weight:600;">Elegir mi propio código</div>
+          <div style="font-size:12px; color:#8A7F74; margin-top:2px; line-height:1.4;">En vez del código semanal automático, pones el que quieras y lo cambias cuando quieras.</div>
+        </div>
+        <label class="toggle" style="flex-shrink:0;">
+          <input type="checkbox" id="code_manual" onchange="onCodeManualChange()" {% if bar.code_manual %}checked{% endif %}>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div id="manual-code-box" style="margin-top:14px; {% if not bar.code_manual %}display:none;{% endif %}">
+        <div style="display:flex; gap:10px; align-items:center;">
+          <input type="text" id="manual_code" maxlength="8" placeholder="TUCODIGO" value="{{ current_code if bar.code_manual and current_code != 'N/D' else '' }}" style="flex:1; text-transform:uppercase; letter-spacing:2px; font-family:monospace; font-size:16px; padding:9px 12px; border:1.5px solid #E5DDD5; border-radius:10px; box-sizing:border-box;">
+          <button type="button" onclick="guardarCodigoManual()" style="background:#A8410E; color:white; border:none; border-radius:8px; padding:9px 16px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; white-space:nowrap;">Guardar</button>
+        </div>
+        <div id="manual-code-status" style="font-size:12px; color:#8A7F74; margin-top:6px;"></div>
+      </div>
+    </div>
   </div>
+
+  <script>
+    function onCodeManualChange() {
+      const on = document.getElementById('code_manual').checked;
+      document.getElementById('manual-code-box').style.display = on ? 'block' : 'none';
+      const hint = document.getElementById('code-hint-auto');
+      if (hint) {
+        hint.innerHTML = on
+          ? '✏️ Modo manual activo: este código no cambia solo. Vuelve aquí cuando quieras ponerle otro.'
+          : '📋 Cópialo en la pizarra de tu barra para que los clientes lo vean al pedir.<br>Cada lunes cambia: entra aquí y actualízalo.';
+      }
+      if (!on) guardarModoAutomatico();
+    }
+    document.addEventListener('DOMContentLoaded', () => {
+      const cm = document.getElementById('code_manual');
+      if (cm && cm.checked) {
+        const hint = document.getElementById('code-hint-auto');
+        if (hint) hint.innerHTML = '✏️ Modo manual activo: este código no cambia solo. Vuelve aquí cuando quieras ponerle otro.';
+      }
+    });
+    async function guardarModoAutomatico() {
+      const status = document.getElementById('manual-code-status');
+      try {
+        const res = await fetch('/admin/api/local-code', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bar_slug: {{ bar.slug|tojson }}, code_manual: false })
+        });
+        const data = await res.json();
+        if (status) { status.textContent = data.ok ? '✓ Vuelto a automático (el código cambiará el próximo lunes)' : 'Error al guardar'; status.style.color = data.ok ? '#2e7d32' : '#cc2222'; }
+      } catch(e) { if (status) { status.textContent = 'Error de red'; status.style.color = '#cc2222'; } }
+    }
+    async function guardarCodigoManual() {
+      const code = document.getElementById('manual_code').value.trim().toUpperCase();
+      const status = document.getElementById('manual-code-status');
+      if (!code) { if (status) { status.textContent = 'Escribe un código primero'; status.style.color = '#cc2222'; } return; }
+      if (status) { status.textContent = 'Guardando…'; status.style.color = '#8A7F74'; }
+      try {
+        const res = await fetch('/admin/api/local-code', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bar_slug: {{ bar.slug|tojson }}, code_manual: true, manual_code: code })
+        });
+        const data = await res.json();
+        if (data.ok) { if (status) { status.textContent = '✓ Guardado. Este es tu código hasta que lo cambies.'; status.style.color = '#2e7d32'; } }
+        else { if (status) { status.textContent = 'Error: ' + (data.error || 'no se pudo'); status.style.color = '#cc2222'; } }
+      } catch(e) { if (status) { status.textContent = 'Error de red'; status.style.color = '#cc2222'; } }
+    }
+  </script>
 
   <script>
     // Pinta el código en casillas grandes, carácter a carácter (evita errores al copiarlo)

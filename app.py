@@ -392,11 +392,11 @@ def generate_weekly_codes():
     sunday = monday + timedelta(days=6)
 
     db = get_db()
-    # Excluir demos (código permanente) y eventos (códigos manuales por día):
-    # la rotación semanal automática pisaría los códigos que el organizador fija a mano.
+    # Excluir demos (código permanente), eventos (códigos manuales por día) y
+    # locales que el dueño puso en modo manual (él lo cambia cuando quiera).
     bars = db.execute(
         "SELECT id, slug FROM bars WHERE active = 1 AND (plan IS NULL OR plan != 'demo') "
-        "AND (space_kind IS NULL OR space_kind != 'evento')"
+        "AND (space_kind IS NULL OR space_kind != 'evento') AND (code_manual IS NULL OR code_manual = 0)"
     ).fetchall()
     for bar in bars:
         existing = db.execute(
@@ -1498,6 +1498,63 @@ def admin_save():
     db.commit()
     db.close()
     return jsonify({'ok': True})
+
+@app.route('/admin/api/local-code', methods=['POST'])
+def admin_local_code():
+    """Activa/desactiva el código manual de un LOCAL y, si se activa, guarda el
+    código que el propio dueño elija. Endpoint aislado del resto del formulario
+    (admin_save) a propósito: éste solo toca code_manual y access_codes, para no
+    arriesgar pisar el resto de campos del bar con un payload parcial.
+
+    Con code_manual=1: la rotación semanal (lunes 6am) salta este bar. El dueño
+    entra cuando quiera y pone el código que quiera, sin caducidad forzada.
+    Con code_manual=0: se cierra la ventana del código manual (si había) y la
+    rotación automática retoma con normalidad."""
+    data = request.get_json() or {}
+    bar_slug = data.get('bar_slug')
+    if session.get('admin_role') != 'superadmin' and session.get('admin_bar_slug') != bar_slug:
+        return jsonify({'ok': False, 'error': 'No autorizado'}), 403
+
+    db = get_db()
+    bar = db.execute("SELECT id, space_kind FROM bars WHERE slug = ?", (bar_slug,)).fetchone()
+    if not bar:
+        db.close()
+        return jsonify({'ok': False, 'error': 'No encontrado'}), 404
+    if (bar['space_kind'] or 'local') == 'evento':
+        db.close()
+        return jsonify({'ok': False, 'error': 'Los eventos usan su propio sistema de códigos'}), 400
+
+    _cm = 1 if data.get('code_manual') else 0
+    db.execute("UPDATE bars SET code_manual=? WHERE slug=?", (_cm, bar_slug))
+
+    if _cm:
+        _code = _normalizar_codigo(data.get('manual_code') or '')
+        if not _code:
+            db.close()
+            return jsonify({'ok': False, 'error': 'Escribe un código'}), 400
+        # Ventana amplia (centinela): dura hasta que el dueño lo cambie, sin caducar solo.
+        existing = db.execute(
+            "SELECT id FROM access_codes WHERE bar_id = ? AND valid_from = '2000-01-01' AND valid_until = '2099-12-31'",
+            (bar['id'],)
+        ).fetchone()
+        if existing:
+            db.execute("UPDATE access_codes SET code=? WHERE id=?", (_code, existing['id']))
+        else:
+            db.execute(
+                "INSERT INTO access_codes (bar_id, code, valid_from, valid_until) VALUES (?,?,?,?)",
+                (bar['id'], _code, '2000-01-01', '2099-12-31')
+            )
+    else:
+        # Vuelta a automático: cerrar el código manual para que no conviva
+        # para siempre en paralelo a la rotación semanal.
+        db.execute(
+            "DELETE FROM access_codes WHERE bar_id = ? AND valid_from = '2000-01-01' AND valid_until = '2099-12-31'",
+            (bar['id'],)
+        )
+    db.commit()
+    db.close()
+    return jsonify({'ok': True})
+
 
 @app.route('/admin/api/event-codes', methods=['POST'])
 @admin_required
