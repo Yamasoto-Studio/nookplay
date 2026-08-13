@@ -84,24 +84,6 @@
   .streak-text { font-size: 14px; line-height: 1.35; color: var(--bar-accent-dark); }
   .streak-text b { font-weight: 800; }
   @keyframes streak-in { from { opacity: 0; transform: translateY(-8px) scale(0.96); } to { opacity: 1; transform: none; } }
-  /* Programa del evento */
-  .ev-programa { margin: 4px 0 18px; text-align: left; }
-  .ev-programa-title { font-size: 13px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: var(--bar-primary); margin-bottom: 8px; }
-  .ev-prog-day { background: var(--bar-bg-card, #fff); border: 1px solid var(--border, #E5DDD5); border-radius: 12px; margin-bottom: 8px; overflow: hidden; }
-  .ev-prog-day.hoy { border-color: var(--bar-primary); border-width: 1.5px; }
-  .ev-prog-day-h { display: flex; justify-content: space-between; align-items: center; padding: 9px 13px; font-size: 12px; font-weight: 800; letter-spacing: 0.5px; color: var(--text-secondary, #6B6059); cursor: pointer; }
-  .ev-prog-day.hoy .ev-prog-day-h { color: var(--bar-primary); cursor: default; }
-  .ev-prog-chevron { transition: transform 0.2s; font-size: 11px; }
-  .ev-prog-day.open .ev-prog-chevron { transform: rotate(180deg); }
-  .ev-prog-day .ev-prog-items { display: none; padding: 0 13px 10px; }
-  .ev-prog-day.hoy .ev-prog-items, .ev-prog-day.open .ev-prog-items { display: block; }
-  .ev-prog-item { font-size: 13px; line-height: 1.5; padding: 5px 0; border-top: 1px dashed var(--border, #EFE7DE); }
-  .ev-prog-item:first-child { border-top: none; }
-  .ev-prog-time { font-weight: 700; font-family: ui-monospace, monospace; color: var(--bar-primary); margin-right: 6px; }
-  .ev-prog-tit { font-weight: 600; color: var(--text, #1A1A1A); }
-  .ev-prog-place { color: var(--text-secondary, #6B6059); font-size: 12px; }
-  .ev-prog-kind { display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; background: var(--bar-bg-subtle, #F0EBE3); border-radius: 5px; padding: 1px 6px; margin-left: 6px; vertical-align: middle; color: var(--text-secondary, #6B6059); }
-
   .local-links {
     margin: 28px 16px 8px;
     background: var(--bar-bg-card, #fff);
@@ -179,33 +161,6 @@
         <p class="menu-welcome" id="menu-welcome"></p>
 
         <div id="streak-banner" class="streak-banner" style="display:none;"></div>
-
-        {% if (bar.space_kind or 'local') == 'evento' and event_schedule %}
-        <!-- Programa del evento: citas de hoy destacadas, resto plegado por día -->
-        <div class="ev-programa">
-          <div class="ev-programa-title">📅 Programa del evento</div>
-          {% set dias_prog = event_schedule | map(attribute='day') | list | unique | list %}
-          {% for dia in dias_prog %}
-          {% set es_hoy = (dia == today_str) %}
-          <div class="ev-prog-day{% if es_hoy %} hoy{% endif %}">
-            <div class="ev-prog-day-h" {% if not es_hoy %}onclick="this.parentElement.classList.toggle('open')"{% endif %}>
-              <span>{{ 'HOY' if es_hoy else dia[8:10] ~ '/' ~ dia[5:7] }}</span>
-              {% if not es_hoy %}<span class="ev-prog-chevron">▾</span>{% endif %}
-            </div>
-            <div class="ev-prog-items">
-              {% for it in event_schedule if it.day == dia %}
-              <div class="ev-prog-item">
-                {% if it.time_start %}<span class="ev-prog-time">{{ it.time_start }}</span>{% endif %}
-                <span class="ev-prog-tit">{{ it.title }}</span>
-                {% if it.place %}<span class="ev-prog-place">· {{ it.place }}</span>{% endif %}
-                {% if it.kind %}<span class="ev-prog-kind">{{ it.kind }}</span>{% endif %}
-              </div>
-              {% endfor %}
-            </div>
-          </div>
-          {% endfor %}
-        </div>
-        {% endif %}
 
         <div id="activities-list" class="activities-grid"></div>
 

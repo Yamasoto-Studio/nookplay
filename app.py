@@ -1397,22 +1397,7 @@ def admin_bar(bar_slug):
     # Nombre legible del juego favorito
     if analytics.get('top_game'):
         analytics['top_game_name'] = GAME_NOMBRES.get(analytics['top_game'], analytics['top_game'])
-    # Programa del evento para el editor del panel
-    event_schedule = []
-    if (bar['space_kind'] or 'local') == 'evento':
-        try:
-            _dbs = get_db()
-            event_schedule = [dict(r) for r in _dbs.execute(
-                "SELECT day, time_start, title, place, kind FROM event_schedule WHERE bar_id = ? ORDER BY day, time_start, id",
-                (bar['id'],)
-            ).fetchall()]
-            _dbs.close()
-        except Exception:
-            event_schedule = []
-    import json as _json_sched
-    event_schedule_json = _json_sched.dumps(event_schedule)
     return render_template('admin/bar_panel.html', bar=bar, products=products,
-                           event_schedule_json=event_schedule_json,
                            current_code=current_code, valid_until=valid_until_str, stats=stats,
                            analytics=analytics, event_days=event_days, event_admin_code=event_admin_code,
                            admin_role=session.get('admin_role','bar_admin'))
@@ -1513,59 +1498,6 @@ def admin_save():
     db.commit()
     db.close()
     return jsonify({'ok': True})
-
-@app.route('/admin/api/event-schedule', methods=['POST'])
-def admin_event_schedule():
-    """Guarda el programa del evento (citas: charlas, torneos, actuaciones...).
-
-    Lo puede editar el superadmin O el propio admin del evento (el organizador),
-    que es la gracia: autogestión. Endpoint aislado (patrón local-code): solo
-    toca la tabla event_schedule, nunca el resto de campos del bar.
-    Recibe {bar_slug, items: [{day, time_start, title, place, kind}]} y hace
-    replace-all de las citas del evento (borrar + insertar la lista)."""
-    data = request.get_json() or {}
-    bar_slug = data.get('bar_slug')
-    if session.get('admin_role') != 'superadmin' and session.get('admin_bar_slug') != bar_slug:
-        return jsonify({'ok': False, 'error': 'No autorizado'}), 403
-    items = data.get('items', [])
-    if not isinstance(items, list) or len(items) > 300:
-        return jsonify({'ok': False, 'error': 'Formato inválido'}), 400
-
-    db = get_db()
-    bar = db.execute("SELECT id, space_kind FROM bars WHERE slug = ?", (bar_slug,)).fetchone()
-    if not bar:
-        db.close()
-        return jsonify({'ok': False, 'error': 'No encontrado'}), 404
-    if (bar['space_kind'] or 'local') != 'evento':
-        db.close()
-        return jsonify({'ok': False, 'error': 'Solo eventos tienen programa'}), 400
-
-    db.execute("DELETE FROM event_schedule WHERE bar_id = ?", (bar['id'],))
-    guardadas = 0
-    for it in items:
-        if not isinstance(it, dict):
-            continue
-        titulo = (it.get('title') or '').strip()[:120]
-        dia = (it.get('day') or '').strip()
-        if not titulo or not dia:
-            continue
-        try:
-            from datetime import datetime as _dt
-            _dt.strptime(dia, '%Y-%m-%d')
-        except (ValueError, TypeError):
-            continue
-        hora = (it.get('time_start') or '').strip()[:5]
-        lugar = (it.get('place') or '').strip()[:80]
-        tipo = (it.get('kind') or '').strip()[:30]
-        db.execute(
-            "INSERT INTO event_schedule (bar_id, day, time_start, title, place, kind) VALUES (?,?,?,?,?,?)",
-            (bar['id'], dia, hora, titulo, lugar, tipo)
-        )
-        guardadas += 1
-    db.commit()
-    db.close()
-    return jsonify({'ok': True, 'guardadas': guardadas})
-
 
 @app.route('/admin/api/local-code', methods=['POST'])
 def admin_local_code():
@@ -1792,22 +1724,11 @@ def bar(bar_slug):
             )
             db.commit()
 
-    # Programa del evento (citas: charlas, torneos, actuaciones...) — solo eventos
-    event_schedule = []
-    if (bar['space_kind'] or 'local') == 'evento':
-        try:
-            event_schedule = [dict(r) for r in db.execute(
-                "SELECT day, time_start, title, place, kind FROM event_schedule WHERE bar_id = ? ORDER BY day, time_start, id",
-                (bar['id'],)
-            ).fetchall()]
-        except Exception:
-            event_schedule = []
     db.close()
     import json as json_lib
     products_json = json_lib.dumps([dict(p) for p in products])
     return render_template('bar.html', bar=bar, products=products, products_json=products_json,
-                           demo_code=demo_code, is_demo=is_demo,
-                           event_schedule=event_schedule, today_str=str(date.today()))
+                           demo_code=demo_code, is_demo=is_demo)
 
 @app.route('/<bar_slug>/crimen')
 def crimen_page(bar_slug):
