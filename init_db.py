@@ -108,6 +108,16 @@ db.executescript('''
         value   TEXT DEFAULT ''
     );
 
+    CREATE TABLE IF NOT EXISTS event_schedule (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        bar_id      INTEGER NOT NULL,
+        day         TEXT NOT NULL,
+        time_start  TEXT DEFAULT '',
+        title       TEXT NOT NULL,
+        place       TEXT DEFAULT '',
+        kind        TEXT DEFAULT ''
+    );
+
     CREATE TABLE IF NOT EXISTS variant_views (
         id          INTEGER PRIMARY KEY AUTOINCREMENT,
         device_id   TEXT NOT NULL,
