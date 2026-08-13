@@ -261,6 +261,33 @@
         <textarea id="event_theme" name="event_theme" rows="3" placeholder="Ej: Evento de manga, anime y cómic. Público friki, otaku y gamer. Referencias a series de anime, videojuegos, cultura japonesa y superhéroes. Tono desenfadado y cómplice." style="width:100%; box-sizing:border-box; font-family:inherit; font-size:14px; padding:10px; border:1.5px solid var(--border); border-radius:10px; resize:vertical;">{{ bar.event_theme or '' }}</textarea>
         <div style="font-size:12px; color:var(--text-muted); margin-top:5px; line-height:1.5;">Describe el <strong>público, las referencias y el tono</strong>, no solo el nombre. Cuanto más rico, mejor ambienta la IA todos los juegos del evento.</div>
       </div>
+
+      <div style="margin-bottom:14px;">
+        <label style="display:block; font-size:13px; font-weight:600; margin-bottom:6px;">Nivel del público</label>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <label style="flex:1; min-width:150px; display:block; border:1.5px solid var(--border); border-radius:10px; padding:10px 12px; cursor:pointer;">
+            <input type="radio" name="event_fan_level" value="general" {% if (bar.event_fan_level or 'fan') == 'general' %}checked{% endif %} style="margin-right:6px;">
+            <strong style="font-size:13px;">Público general</strong>
+            <div style="font-size:11px; color:var(--text-muted); margin-top:3px; line-height:1.4;">Referencias que cualquiera reconoce. Familias, curiosos.</div>
+          </label>
+          <label style="flex:1; min-width:150px; display:block; border:1.5px solid var(--border); border-radius:10px; padding:10px 12px; cursor:pointer;">
+            <input type="radio" name="event_fan_level" value="fan" {% if (bar.event_fan_level or 'fan') == 'fan' %}checked{% endif %} style="margin-right:6px;">
+            <strong style="font-size:13px;">Aficionado</strong>
+            <div style="font-size:11px; color:var(--text-muted); margin-top:3px; line-height:1.4;">Lo popular con guiños que un fan medio agradece.</div>
+          </label>
+          <label style="flex:1; min-width:150px; display:block; border:1.5px solid var(--border); border-radius:10px; padding:10px 12px; cursor:pointer;">
+            <input type="radio" name="event_fan_level" value="experto" {% if (bar.event_fan_level or 'fan') == 'experto' %}checked{% endif %} style="margin-right:6px;">
+            <strong style="font-size:13px;">Muy experto</strong>
+            <div style="font-size:11px; color:var(--text-muted); margin-top:3px; line-height:1.4;">Deep cuts y guiños que solo la comunidad pilla.</div>
+          </label>
+        </div>
+      </div>
+
+      <div style="margin-bottom:14px;">
+        <label for="event_insider" style="display:block; font-size:13px; font-weight:600; margin-bottom:5px;">Datos internos del evento</label>
+        <textarea id="event_insider" name="event_insider" rows="3" maxlength="4000" placeholder="Ej: Invitados de este año (nombres), anécdotas de ediciones pasadas, nombres de salas o zonas del recinto, el food truck famoso, bromas internas de la comunidad, el torneo estrella..." style="width:100%; box-sizing:border-box; font-family:inherit; font-size:14px; padding:10px; border:1.5px solid var(--border); border-radius:10px; resize:vertical;">{{ bar.event_insider or '' }}</textarea>
+        <div style="font-size:12px; color:var(--text-muted); margin-top:5px; line-height:1.5;">Lo que la IA no puede saber sola. Los juegos mencionarán estos nombres y lugares — es lo que hace decir <strong>"esto está hecho para nosotros"</strong>.</div>
+      </div>
       <div style="display:flex; gap:12px; flex-wrap:wrap;">
         <div style="flex:1; min-width:140px;">
           <label for="event_start" style="display:block; font-size:13px; font-weight:600; margin-bottom:5px;">Fecha inicio</label>
@@ -1435,6 +1462,10 @@ async function saveChanges() {
     data.event_pool_size = _pool ? (parseInt(_pool.value, 10) || 1) : 1;
     const _tm = document.getElementById('event_test_mode');
     data.event_test_mode = _tm && _tm.checked ? 1 : 0;
+    const _ins = document.getElementById('event_insider');
+    data.event_insider = _ins ? _ins.value : '';
+    const _fl = document.querySelector('input[name="event_fan_level"]:checked');
+    data.event_fan_level = _fl ? _fl.value : 'fan';
   }
 
   for (let i = 0; i < 6; i++) {

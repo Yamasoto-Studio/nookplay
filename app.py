@@ -478,16 +478,43 @@ def get_historial_reciente(db, game_type, bar_slug=None, dias=10, campo='titulo'
 
 
 def _theme_de(bar):
-    """Devuelve el tema temático de un espacio si es un evento con tema, o '' si no.
-    Acepta una fila sqlite3.Row o un dict. Centraliza la lógica para no repetirla
-    en pregen y en los fallbacks de los endpoints."""
+    """Compone el tema completo de un evento: temática + nivel del público +
+    datos internos. Devuelve '' si no es un evento o no tiene temática.
+    Acepta una fila sqlite3.Row o un dict. Todo lo que devuelve viaja por
+    contextvar a TODOS los generadores (pregen y fallbacks) sin tocar firmas.
+    La temática es el interruptor maestro: sin ella, no hay ambientación."""
     try:
         b = dict(bar)
     except Exception:
         return ''
     if (b.get('space_kind') or 'local') != 'evento':
         return ''
-    return b.get('event_theme', '') or ''
+    tema = (b.get('event_theme', '') or '').strip()
+    if not tema:
+        return ''
+    partes = [tema]
+
+    # Nivel de afición del público: gradúa las referencias (de lo popular al deep cut)
+    NIVELES = {
+        'general': ("NIVEL DEL PÚBLICO: variado, con mucha gente no experta. Usa referencias "
+                    "que cualquiera reconoce; evita guiños de nicho que dejen fuera a la mayoría."),
+        'fan': ("NIVEL DEL PÚBLICO: aficionado. Mezcla referencias populares con guiños "
+                "que un fan medio reconoce y agradece."),
+        'experto': ("NIVEL DEL PÚBLICO: muy entendido. Usa referencias profundas y guiños de "
+                    "nicho que solo la comunidad pilla; huye de lo demasiado obvio o trillado."),
+    }
+    nivel = (b.get('event_fan_level') or 'fan').strip()
+    partes.append(NIVELES.get(nivel, NIVELES['fan']))
+
+    # Datos internos: lo que la IA no puede saber (invitados, anécdotas, lugares del evento)
+    insider = (b.get('event_insider', '') or '').strip()
+    if insider:
+        partes.append(
+            "DATOS INTERNOS DE ESTE EVENTO (menciónalos cuando encajen de forma natural — "
+            "son lo que hace que el contenido se sienta hecho a medida y no genérico; "
+            "no los fuerces en todas las piezas, repártelos):\n" + insider
+        )
+    return "\n\n".join(partes)
 
 
 def _persistir_generado(bar_id, game_type, game_data, es_global=False):
@@ -1462,9 +1489,12 @@ def admin_save():
             _pool = 1
         _pool = max(1, min(20, _pool))
         db.execute(
-            "UPDATE bars SET space_kind=?, event_theme=?, event_start=?, event_end=?, event_pool_size=?, event_test_mode=? WHERE slug=?",
+            "UPDATE bars SET space_kind=?, event_theme=?, event_start=?, event_end=?, event_pool_size=?, event_test_mode=?, event_insider=?, event_fan_level=? WHERE slug=?",
             (_sk, data.get('event_theme', '') or '', data.get('event_start', '') or '',
-             data.get('event_end', '') or '', _pool, 1 if data.get('event_test_mode') else 0, bar_slug)
+             data.get('event_end', '') or '', _pool, 1 if data.get('event_test_mode') else 0,
+             (data.get('event_insider', '') or '')[:4000],
+             data.get('event_fan_level') if data.get('event_fan_level') in ('general', 'fan', 'experto') else 'fan',
+             bar_slug)
         )
 
     db.execute(
