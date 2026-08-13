@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Informe — {{ bar.name }} · Nookplay</title>
+<style>
+  :root { --terra: #C4622D; --cta: #A8410E; --ink: #1A1A1A; --muted: #6B6059; --bg-soft: #F7F2EB; --line: #EFE7DE; }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--ink); margin: 0; background: #fff; }
+  .sheet { max-width: 760px; margin: 0 auto; padding: 36px 28px 28px; }
+
+  /* Barra de acciones (no se imprime) */
+  .toolbar { display: flex; gap: 10px; justify-content: flex-end; padding: 14px 28px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: #fff; }
+  .toolbar a, .toolbar button { font-family: inherit; font-size: 13px; font-weight: 600; border-radius: 8px; padding: 9px 14px; cursor: pointer; text-decoration: none; }
+  .btn-print { background: var(--cta); color: #fff; border: none; }
+  .btn-back { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+
+  /* Cabecera */
+  .head { display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 3px solid var(--terra); padding-bottom: 18px; margin-bottom: 26px; }
+  .head-logo { height: 34px; width: auto; }
+  .head-meta { text-align: right; }
+  .head-kicker { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
+  .head-title { font-size: 24px; font-weight: 800; margin: 2px 0; }
+  .head-dates { font-size: 13px; color: var(--muted); }
+
+  /* Números hero */
+  .hero { display: flex; gap: 14px; margin-bottom: 26px; flex-wrap: wrap; }
+  .hero-card { flex: 1; min-width: 150px; background: var(--bg-soft); border-radius: 14px; padding: 18px 16px; text-align: center; }
+  .hero-num { font-size: 34px; font-weight: 800; color: var(--terra); line-height: 1.1; }
+  .hero-lbl { font-size: 12px; color: var(--muted); margin-top: 4px; line-height: 1.4; }
+
+  /* Secciones */
+  .sec { margin-bottom: 26px; }
+  .sec-title { font-size: 13px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); border-left: 4px solid var(--terra); padding-left: 10px; margin-bottom: 14px; }
+
+  /* Gráfico por día (barras horizontales, imprime bien) */
+  .chart-row { display: flex; align-items: center; gap: 10px; margin-bottom: 7px; }
+  .chart-day { width: 34px; font-size: 12px; font-weight: 700; color: var(--muted); text-align: right; flex-shrink: 0; }
+  .chart-track { flex: 1; background: var(--bg-soft); border-radius: 6px; height: 22px; overflow: hidden; }
+  .chart-fill { height: 100%; background: var(--terra); border-radius: 6px; min-width: 2px; }
+  .chart-val { width: 44px; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+
+  /* Destacados */
+  .high { display: flex; gap: 14px; flex-wrap: wrap; }
+  .high-card { flex: 1; min-width: 170px; border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
+  .high-k { font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+  .high-v { font-size: 16px; font-weight: 700; }
+  .high-s { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .top-item { display: flex; justify-content: space-between; font-size: 14px; padding: 5px 0; border-bottom: 1px dashed var(--line); }
+  .top-item:last-child { border-bottom: none; }
+  .top-item .n { font-weight: 700; color: var(--terra); }
+
+  /* Estado vacío */
+  .empty { text-align: center; color: var(--muted); background: var(--bg-soft); border-radius: 14px; padding: 40px 20px; font-size: 14px; line-height: 1.6; }
+
+  /* Pie */
+  .foot { border-top: 1px solid var(--line); margin-top: 30px; padding-top: 14px; display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); }
+  .foot b { color: var(--terra); }
+
+  @media print {
+    .toolbar { display: none; }
+    .sheet { padding: 0; max-width: none; }
+    @page { size: A4 portrait; margin: 1.6cm; }
+    .hero-card, .chart-track, .empty { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <a class="btn-back" href="/admin/{{ bar.slug }}">← Volver al panel</a>
+  <button class="btn-print" onclick="window.print()">🖨️ Imprimir / Guardar como PDF</button>
+</div>
+
+<div class="sheet">
+
+  <div class="head">
+    <img class="head-logo" src="/static/logo.svg" alt="Nookplay">
+    <div class="head-meta">
+      <div class="head-kicker">Informe del evento</div>
+      <div class="head-title">{{ bar.name }}</div>
+      <div class="head-dates">{{ fechas_str }}</div>
+    </div>
+  </div>
+
+  {% if a.has_data %}
+
+  <div class="hero">
+    {% if a.has_device_data %}
+    <div class="hero-card">
+      <div class="hero-num">{{ a.people_week }}</div>
+      <div class="hero-lbl">asistentes jugaron<br>(dispositivos únicos)</div>
+    </div>
+    {% endif %}
+    <div class="hero-card">
+      <div class="hero-num">{{ a.week }}</div>
+      <div class="hero-lbl">partidas jugadas<br>durante el evento</div>
+    </div>
+    <div class="hero-card">
+      <div class="hero-num">{{ a.active_days }}</div>
+      <div class="hero-lbl">día{{ 's' if a.active_days != 1 }} con actividad</div>
+    </div>
+  </div>
+
+  {% if a.daily %}
+  <div class="sec">
+    <div class="sec-title">Partidas por día</div>
+    {% for d in a.daily %}
+    <div class="chart-row">
+      <div class="chart-day">{{ d.dia }}</div>
+      <div class="chart-track"><div class="chart-fill" style="width: {{ (d.count / max_daily * 100) | round(1) if max_daily else 0 }}%;"></div></div>
+      <div class="chart-val">{{ d.count }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="sec">
+    <div class="sec-title">Destacados</div>
+    <div class="high">
+      {% if a.top_games %}
+      <div class="high-card">
+        <div class="high-k">🏆 Juegos más jugados</div>
+        {% for g in a.top_games %}
+        <div class="top-item"><span>{{ loop.index }}. {{ g.name }}</span><span class="n">{{ g.count }}</span></div>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% if a.best_day %}
+      <div class="high-card">
+        <div class="high-k">📅 Mejor día</div>
+        <div class="high-v">{{ a.best_day }}</div>
+        <div class="high-s">{{ a.best_day_count }} partidas</div>
+      </div>
+      {% endif %}
+      {% if a.has_hour_data and a.best_hour %}
+      <div class="high-card">
+        <div class="high-k">⏰ Franja estrella</div>
+        <div class="high-v">{{ a.best_hour }}</div>
+        <div class="high-s">{{ a.best_hour_count }} partidas</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  {% else %}
+  <div class="empty">
+    Aún no hay partidas registradas en la ventana del evento.<br>
+    El informe se rellena solo a medida que los asistentes juegan.
+  </div>
+  {% endif %}
+
+  <div class="foot">
+    <div>Informe generado por <b>Nookplay</b> · nookplay.app</div>
+    <div>{{ hoy }}</div>
+  </div>
+
+</div>
+
+</body>
+</html>

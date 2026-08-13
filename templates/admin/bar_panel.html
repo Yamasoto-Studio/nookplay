@@ -535,6 +535,10 @@
   <div class="insights-card">
     <div class="insights-head">
       <h3 id="lbl-insights-title">📊 {{ 'Actividad en Nookplay' if es_evento else 'Tu semana en Nookplay' }}</h3>
+      {% if es_evento and analytics.ventana_evento %}
+      <a href="/admin/informe/{{ bar.slug }}" target="_blank" rel="noopener"
+         style="display:inline-block; margin-bottom:12px; background:transparent; color:#A8410E; border:1.5px solid #E8C4AC; border-radius:8px; padding:8px 14px; font-size:13px; font-weight:600; text-decoration:none;">📄 Informe del evento</a>
+      {% endif %}
       {% if analytics.has_data and analytics.trend_pct is not none %}
         {% if analytics.trend_dir == 'up' %}
           <span class="insights-trend up">↑ {{ analytics.trend_pct }}% vs. semana pasada</span>

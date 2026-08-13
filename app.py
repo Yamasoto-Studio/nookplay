@@ -1529,6 +1529,42 @@ def admin_save():
     db.close()
     return jsonify({'ok': True})
 
+@app.route('/admin/informe/<bar_slug>')
+@admin_required
+def admin_informe(bar_slug):
+    """Informe del evento: documento imprimible (Guardar como PDF) con los
+    resultados de la ventana del evento. Pensado para que el organizador lo
+    reenvíe a su junta o patrocinadores — y como material comercial del
+    siguiente evento. Solo eventos con fechas definidas."""
+    if session.get('admin_role') != 'superadmin' and session.get('admin_bar_slug') != bar_slug:
+        return redirect('/admin')
+    db = get_db()
+    bar = db.execute("SELECT * FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
+    if not bar:
+        db.close()
+        return redirect('/admin')
+    if (bar['space_kind'] or 'local') != 'evento' or not (bar['event_start'] and bar['event_end']):
+        db.close()
+        return redirect(f'/admin/{bar_slug}')
+    analytics = calcular_analytics_bar(db, bar_slug, ventana=(bar['event_start'], bar['event_end']))
+    db.close()
+    max_daily = max([d['count'] for d in analytics.get('daily', [])], default=0)
+    # Fechas legibles en español: "12–15 de noviembre de 2026"
+    MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+             'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+    try:
+        d1 = datetime.strptime(bar['event_start'], '%Y-%m-%d').date()
+        d2 = datetime.strptime(bar['event_end'], '%Y-%m-%d').date()
+        if d1.month == d2.month and d1.year == d2.year:
+            fechas_str = f"{d1.day}–{d2.day} de {MESES[d1.month-1]} de {d1.year}"
+        else:
+            fechas_str = f"{d1.day} de {MESES[d1.month-1]} — {d2.day} de {MESES[d2.month-1]} de {d2.year}"
+    except (ValueError, TypeError):
+        fechas_str = f"{bar['event_start']} — {bar['event_end']}"
+    return render_template('admin/informe.html', bar=bar, a=analytics,
+                           max_daily=max_daily, fechas_str=fechas_str, hoy=str(date.today()))
+
+
 @app.route('/admin/qr/<bar_slug>.png')
 @admin_required
 def admin_qr_png(bar_slug):
