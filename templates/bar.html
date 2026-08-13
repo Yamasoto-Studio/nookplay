@@ -558,7 +558,7 @@ async function showMenu() {
   // El contenido se renueva cada mañana: el ✓ indica "ya lo hiciste, mañana hay nuevo".
   let playedToday = [];
   try {
-    playedToday = JSON.parse(localStorage.getItem('nook_played_' + new Date().toISOString().slice(0,10)) || '[]');
+    playedToday = JSON.parse(localStorage.getItem('nook_played_{{ bar.slug }}_' + new Date().toISOString().slice(0,10)) || '[]');
   } catch(e) {}
 
   // Juegos a dobles (2 jugadores, 1 móvil). Van agrupados al final con un separador.

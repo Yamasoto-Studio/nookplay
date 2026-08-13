@@ -629,7 +629,7 @@ def pregen_daily_games():
     today = str(date.today())
     resumen = {'ok': [], 'error': []}
     # Juegos por-bar: los únicos que un evento genera (y en pool si procede)
-    POOL_GAME_TYPES = {'crimen', 'impostor', 'dilema', 'conexiones', 'veredicto', 'perfil', 'vestuario', 'trivia', 'local', 'orden', 'sinopsis', 'letra', 'quienmas', 'escalera', 'masomenos'}
+    POOL_GAME_TYPES = EVENT_GAME_TYPES
     GAME_TYPES = ['crimen', 'impostor', 'dilema', 'conexiones', 'oraculo', 'donde', 'local', 'veredicto', 'perfil', 'vestuario', 'trivia', 'sinopsis', 'muertes', 'letra', 'pensamiento', 'menteagil', 'constitucion', 'titular', 'definicion', 'masomenos', 'escalera', 'quienmas', 'orden']
 
     db = get_db()
@@ -1203,6 +1203,12 @@ def calcular_analytics_bar(db, bar_slug, ventana=None):
 
 
 # Nombres legibles de los juegos (para mostrar al dueño del local)
+# Juegos por-bar tematizables: los que un evento genera como propios (con pool).
+# Única fuente de verdad — la usan el pregen, el panel y la regeneración.
+EVENT_GAME_TYPES = {'crimen', 'impostor', 'dilema', 'conexiones', 'veredicto', 'perfil',
+                    'vestuario', 'trivia', 'local', 'orden', 'sinopsis', 'letra',
+                    'quienmas', 'escalera', 'masomenos'}
+
 GAME_NOMBRES = {
     'crimen': 'El Crimen del Día', 'impostor': 'El Impostor', 'dilema': 'El Dilema',
     'conexiones': 'Conexiones', 'oraculo': 'El Oráculo', 'donde': '¿Dónde está?',
@@ -1424,9 +1430,31 @@ def admin_bar(bar_slug):
     # Nombre legible del juego favorito
     if analytics.get('top_game'):
         analytics['top_game_name'] = GAME_NOMBRES.get(analytics['top_game'], analytics['top_game'])
+    # Contenido de hoy (solo eventos): estado de generación por juego activo
+    contenido_hoy = []
+    if (bar['space_kind'] or 'local') == 'evento':
+        try:
+            _dbc = get_db()
+            _activos = [r['game_slug'] for r in _dbc.execute(
+                "SELECT game_slug FROM bar_games WHERE bar_id = ? AND active = 1", (bar['id'],)
+            ).fetchall()]
+            _hoy_ch = str(date.today())
+            for _gs in _activos:
+                if _gs not in EVENT_GAME_TYPES:
+                    continue
+                _n = _dbc.execute(
+                    "SELECT COUNT(*) n FROM generated_games WHERE bar_id = ? AND game_type = ? AND game_date = ?",
+                    (bar['id'], _gs, _hoy_ch)
+                ).fetchone()['n']
+                contenido_hoy.append({'slug': _gs, 'name': GAME_NOMBRES.get(_gs, _gs), 'count': _n})
+            _dbc.close()
+        except Exception:
+            contenido_hoy = []
+
     return render_template('admin/bar_panel.html', bar=bar, products=products,
                            current_code=current_code, valid_until=valid_until_str, stats=stats,
                            analytics=analytics, event_days=event_days, event_admin_code=event_admin_code,
+                           contenido_hoy=contenido_hoy,
                            admin_role=session.get('admin_role','bar_admin'))
 
 def _normalizar_handle(valor, dominio):
@@ -1563,6 +1591,54 @@ def admin_informe(bar_slug):
         fechas_str = f"{bar['event_start']} — {bar['event_end']}"
     return render_template('admin/informe.html', bar=bar, a=analytics,
                            max_daily=max_daily, fechas_str=fechas_str, hoy=str(date.today()))
+
+
+@app.route('/admin/api/regen-game', methods=['POST'])
+def admin_regen_game():
+    """Descarta el contenido de HOY de un juego del evento para que se genere
+    de nuevo (temático) al abrirlo. Reutiliza los fallbacks existentes — un solo
+    camino de generación (lección 25). Límite diario por evento para controlar
+    el gasto de IA. Endpoint aislado: solo toca generated_games/variant_views."""
+    data = request.get_json() or {}
+    bar_slug = data.get('bar_slug')
+    gt = data.get('game_type')
+    if session.get('admin_role') != 'superadmin' and session.get('admin_bar_slug') != bar_slug:
+        return jsonify({'ok': False, 'error': 'No autorizado'}), 403
+    if gt not in EVENT_GAME_TYPES:
+        return jsonify({'ok': False, 'error': 'Este juego no admite regeneración'}), 400
+    db = get_db()
+    bar = db.execute("SELECT id, space_kind FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
+    if not bar:
+        db.close()
+        return jsonify({'ok': False, 'error': 'No encontrado'}), 404
+    if (bar['space_kind'] or 'local') != 'evento':
+        db.close()
+        return jsonify({'ok': False, 'error': 'Solo disponible en eventos'}), 400
+
+    LIMITE_DIARIO = 10
+    hoy = str(date.today())
+    key = f"regen_{bar['id']}_{hoy}"
+    row = db.execute("SELECT value FROM app_state WHERE key = ?", (key,)).fetchone()
+    usadas = int(row['value']) if row and (row['value'] or '').isdigit() else 0
+    if usadas >= LIMITE_DIARIO:
+        db.close()
+        return jsonify({'ok': False, 'error': f'Límite de {LIMITE_DIARIO} regeneraciones diarias alcanzado'}), 429
+
+    gg = db.execute(
+        "SELECT id FROM generated_games WHERE bar_id = ? AND game_type = ? AND game_date = ?",
+        (bar['id'], gt, hoy)
+    ).fetchall()
+    ids = [r['id'] for r in gg]
+    if ids:
+        marcas = ','.join('?' * len(ids))
+        db.execute(f"DELETE FROM variant_views WHERE gg_id IN ({marcas})", ids)
+        db.execute(f"DELETE FROM generated_games WHERE id IN ({marcas})", ids)
+    db.execute("INSERT OR REPLACE INTO app_state (key, value) VALUES (?, ?)", (key, str(usadas + 1)))
+    db.commit()
+    db.close()
+    # Limpiar la caché en memoria de este worker (los pools ya la ignoran)
+    _game_cache.pop(f"{bar_slug}_{gt}_{hoy}", None)
+    return jsonify({'ok': True, 'descartadas': len(ids), 'restantes': LIMITE_DIARIO - usadas - 1})
 
 
 @app.route('/admin/qr/<bar_slug>.png')

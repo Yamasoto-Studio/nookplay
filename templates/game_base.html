@@ -49,13 +49,16 @@
           var gt = (b && b.game_type) || (url.indexOf('/api/pensamiento-responder') !== -1 ? 'pensamiento' : '');
           if (gt) {
             var hoy = new Date().toISOString().slice(0,10);
-            var pk = 'nook_played_' + hoy;
+            var pk = 'nook_played_{{ bar.slug }}_' + hoy;
             var arr = JSON.parse(localStorage.getItem(pk) || '[]');
             if (arr.indexOf(gt) === -1) { arr.push(gt); localStorage.setItem(pk, JSON.stringify(arr)); }
-            // Limpieza: borrar claves de días anteriores
+            // Limpieza: días anteriores DE ESTE ESPACIO + claves del formato viejo sin slug
             for (var i = localStorage.length - 1; i >= 0; i--) {
               var kk = localStorage.key(i);
-              if (kk && kk.indexOf('nook_played_') === 0 && kk !== pk) localStorage.removeItem(kk);
+              if (!kk) continue;
+              var deEsteEspacio = kk.indexOf('nook_played_{{ bar.slug }}_') === 0 && kk !== pk;
+              var formatoViejo = /^nook_played_\d{4}-\d{2}-\d{2}$/.test(kk);
+              if (deEsteEspacio || formatoViejo) localStorage.removeItem(kk);
             }
           }
         } catch(e){}
