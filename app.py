@@ -1499,6 +1499,42 @@ def admin_save():
     db.close()
     return jsonify({'ok': True})
 
+@app.route('/admin/qr/<bar_slug>.png')
+@admin_required
+def admin_qr_png(bar_slug):
+    """PNG del QR de acceso del espacio (apunta a nookplay.app/<slug>).
+
+    Generado en servidor para resolución de imprenta garantizada, sin depender
+    del navegador ni de CDNs. Cada admin solo puede pedir el QR de su espacio.
+    ?size= píxeles del lado (240 vista previa, hasta 2400 para imprenta)."""
+    if session.get('admin_role') != 'superadmin' and session.get('admin_bar_slug') != bar_slug:
+        return jsonify({'ok': False, 'error': 'No autorizado'}), 403
+    db = get_db()
+    bar = db.execute("SELECT id FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
+    db.close()
+    if not bar:
+        return jsonify({'ok': False, 'error': 'No encontrado'}), 404
+    try:
+        size = max(160, min(2400, int(request.args.get('size', 240))))
+    except (TypeError, ValueError):
+        size = 240
+    import io as _io
+    import qrcode as _qrcode
+    qr = _qrcode.QRCode(border=2, error_correction=_qrcode.constants.ERROR_CORRECT_M)
+    qr.add_data(f"https://nookplay.app/{bar_slug}")
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    # Reescalar al tamaño pedido (NEAREST mantiene los módulos nítidos, sin difuminar)
+    img = img.resize((size, size), resample=0)
+    buf = _io.BytesIO()
+    img.save(buf, format='PNG')
+    buf.seek(0)
+    from flask import send_file as _send_file
+    resp = _send_file(buf, mimetype='image/png')
+    resp.headers['Cache-Control'] = 'no-store'
+    return resp
+
+
 @app.route('/admin/api/local-code', methods=['POST'])
 def admin_local_code():
     """Activa/desactiva el código manual de un LOCAL y, si se activa, guarda el
