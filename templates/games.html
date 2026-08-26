@@ -121,6 +121,7 @@
   }
   .badge-starter { background: #FFF3E0; color: #C4622D; }
   .badge-free    { background: #F0E0D4; color: #7A3A18; }
+  .badge-evento  { background: #FBE8DC; color: #A8410E; }
 
   /* PLANS */
   .plans-section {
@@ -268,9 +269,49 @@
         {% else %}
           <span class="game-card-badge badge-free">Elegible en Starter</span>
         {% endif %}
+        {% if g.tematizable %}
+          <span class="game-card-badge badge-evento">🎪 Se tematiza en eventos</span>
+        {% endif %}
       </div>
     </div>
     {% endfor %}
+  </div>
+</section>
+
+<!-- EVENTOS: la transformación -->
+<section class="section" style="background: var(--white); max-width: none; padding-left: 0; padding-right: 0;">
+  <div style="max-width: 960px; margin: 0 auto; padding: 0 24px;">
+    <div class="section-label">Nookplay en eventos</div>
+    <h2 class="section-title">Los mismos juegos. Tu universo.</h2>
+    <p class="section-sub">En un evento, los juegos marcados con 🎪 se transforman: la IA los ambienta con tu temática y tus datos internos — invitados, salas, anécdotas — y genera contenido nuevo cada día del evento. Así cambia:</p>
+
+    <div style="display: flex; gap: 14px; align-items: stretch; flex-wrap: wrap; margin-top: 8px;">
+      <div style="flex: 1; min-width: 240px; background: var(--bg); border: 1px solid var(--border); border-radius: 14px; padding: 20px;">
+        <div style="font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #8A7F74; margin-bottom: 10px;">La Trivia · sin temática</div>
+        <div style="font-size: 15px; line-height: 1.5; color: var(--dark);">«¿En qué año llegó el ser humano a la Luna?»</div>
+      </div>
+      <div style="align-self: center; font-size: 22px; color: #A8410E;">→</div>
+      <div style="flex: 1; min-width: 240px; background: #FBE8DC; border: 1.5px solid #E8C4AC; border-radius: 14px; padding: 20px;">
+        <div style="font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #A8410E; margin-bottom: 10px;">La Trivia · en tu festival de juegos de mesa</div>
+        <div style="font-size: 15px; line-height: 1.5; color: var(--dark);">«¿Cómo se llama la sala del festival donde se juega hasta medianoche?»</div>
+      </div>
+    </div>
+    <p style="font-size: 13px; color: var(--text-sec); margin-top: 14px; line-height: 1.6;">Y lo mismo con el resto: el crimen del día puede ocurrir en tu recinto, el dilema enfrentar a tus personajes, las conexiones esconder tus guiños... Contenido que hace decir <strong>«esto está hecho para nosotros»</strong>.</p>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px;">
+      <span style="font-size: 12px; font-weight: 600; background: var(--bg); border: 1px solid var(--border); border-radius: 20px; padding: 6px 12px;">🎨 Temática y datos internos</span>
+      <span style="font-size: 12px; font-weight: 600; background: var(--bg); border: 1px solid var(--border); border-radius: 20px; padding: 6px 12px;">🎚️ Nivel del público (de general a experto)</span>
+      <span style="font-size: 12px; font-weight: 600; background: var(--bg); border: 1px solid var(--border); border-radius: 20px; padding: 6px 12px;">🔀 Varias piezas por juego y día</span>
+      <span style="font-size: 12px; font-weight: 600; background: var(--bg); border: 1px solid var(--border); border-radius: 20px; padding: 6px 12px;">📅 Agenda del evento con horarios</span>
+      <span style="font-size: 12px; font-weight: 600; background: var(--bg); border: 1px solid var(--border); border-radius: 20px; padding: 6px 12px;">🎟️ Códigos por día</span>
+      <span style="font-size: 12px; font-weight: 600; background: var(--bg); border: 1px solid var(--border); border-radius: 20px; padding: 6px 12px;">🖨️ QR y cartel de imprenta</span>
+      <span style="font-size: 12px; font-weight: 600; background: var(--bg); border: 1px solid var(--border); border-radius: 20px; padding: 6px 12px;">📄 Informe final en PDF</span>
+      <span style="font-size: 12px; font-weight: 600; background: var(--bg); border: 1px solid var(--border); border-radius: 20px; padding: 6px 12px;">🎛️ Admin completo para el organizador</span>
+    </div>
+
+    <div style="margin-top: 24px;">
+      <button class="cta-btn" onclick="openContactModal()">Cuéntanos tu evento</button>
+    </div>
   </div>
 </section>
 
@@ -279,7 +320,7 @@
   <div class="plans-inner">
     <div class="section-label">Los planes</div>
     <h2 class="section-title">Elige el que mejor encaja</h2>
-    <p class="section-sub">Sin permanencia. Sin complicaciones. Activa los juegos que quieres y cámbialos cuando quieras.</p>
+    <p class="section-sub">Para locales: mensualidad sin permanencia, activa los juegos que quieres y cámbialos cuando quieras. Para eventos: precio único por evento, con todo incluido.</p>
 
     <div class="plans-grid">
 
@@ -323,6 +364,15 @@
         </ul>
       </div>
 
+    </div>
+
+    <div class="plan-card" style="margin-top: 16px; border: 1.5px solid #A8410E; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; text-align: left;">
+      <div style="flex: 1; min-width: 240px;">
+        <div class="plan-name">🎪 Eventos</div>
+        <div class="plan-price" style="font-size: 20px;">Precio por evento <span>según días y aforo</span></div>
+        <div class="plan-desc" style="margin-top: 6px;">Todo incluido: todos los juegos tematizables con tu temática y datos internos, agenda con horarios, códigos por día, QR y cartel de imprenta, e informe final en PDF.</div>
+      </div>
+      <button onclick="openContactModal()" style="background: #A8410E; color: white; border: none; padding: 13px 26px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; white-space: nowrap;">Cuéntanos tu evento</button>
     </div>
   </div>
 </section>

@@ -361,7 +361,10 @@ def games_catalog():
     db = get_db()
     games = db.execute("SELECT slug, name, description, icon, plan_min FROM games WHERE active = 1 ORDER BY position").fetchall()
     db.close()
-    return render_template('games.html', games=[dict(g) for g in games])
+    games = [dict(g) for g in games]
+    for g in games:
+        g['tematizable'] = g['slug'] in EVENT_GAME_TYPES
+    return render_template('games.html', games=games)
 
 
 
