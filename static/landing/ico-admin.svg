@@ -1,0 +1,14 @@
+<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Admin">
+<style>
+@keyframes slide{0%,100%{transform:translateX(0)}50%{transform:translateX(11px)}}
+@keyframes slide2{0%,100%{transform:translateX(0)}50%{transform:translateX(-11px)}}
+.k1{animation:slide 5s ease-in-out infinite}
+.k2{animation:slide2 5s ease-in-out infinite}
+@media (prefers-reduced-motion: reduce){*{animation:none!important}}
+</style>
+<rect x="8" y="11" width="32" height="26" rx="5" stroke="#1A1A1A" stroke-width="2.2"/>
+<path d="M14 20h20" stroke="#1A1A1A" stroke-width="2.2" stroke-linecap="round" opacity=".3"/>
+<path d="M14 28h20" stroke="#1A1A1A" stroke-width="2.2" stroke-linecap="round" opacity=".3"/>
+<circle class="k1" cx="18.5" cy="20" r="3.4" fill="#C4622D"/>
+<circle class="k2" cx="29.5" cy="28" r="3.4" fill="#1A1A1A"/>
+</svg>

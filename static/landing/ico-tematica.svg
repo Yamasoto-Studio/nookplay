@@ -1,0 +1,15 @@
+<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Temática">
+<style>
+@keyframes tw{0%,100%{transform:scale(.55);opacity:.35}50%{transform:scale(1.15);opacity:1}}
+.s1,.s2,.s3{transform-box:fill-box;transform-origin:center}
+.s1{animation:tw 3.8s ease-in-out infinite}
+.s2{animation:tw 3.8s ease-in-out infinite;animation-delay:.9s}
+.s3{animation:tw 3.8s ease-in-out infinite;animation-delay:1.8s}
+@media (prefers-reduced-motion: reduce){*{animation:none!important}}
+</style>
+<path d="M36.5 11.5 14 34" stroke="#1A1A1A" stroke-width="2.6" stroke-linecap="round"/>
+<path d="M33 8 40 15" stroke="#C4622D" stroke-width="4.2" stroke-linecap="round"/>
+<path class="s1" d="M14 10.5 l1.5 3.4 3.4 1.5 -3.4 1.5 -1.5 3.4 -1.5-3.4 -3.4-1.5 3.4-1.5Z" fill="#C4622D"/>
+<path class="s2" d="M31 30 l1.2 2.7 2.7 1.2 -2.7 1.2 -1.2 2.7 -1.2-2.7 -2.7-1.2 2.7-1.2Z" fill="#1A1A1A"/>
+<circle class="s3" cx="24" cy="9" r="2.1" fill="#FBE8DC" stroke="#C4622D" stroke-width="1.4"/>
+</svg>

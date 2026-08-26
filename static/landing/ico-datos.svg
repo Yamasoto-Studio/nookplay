@@ -1,0 +1,16 @@
+<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Datos internos">
+<style>
+@keyframes pulse{0%,100%{opacity:.25}50%{opacity:1}}
+@keyframes glow{0%,100%{transform:scale(1)}50%{transform:scale(1.25)}}
+.r{animation:pulse 3.6s ease-in-out infinite}
+.g{transform-box:fill-box;transform-origin:center;animation:glow 3.6s ease-in-out infinite}
+@media (prefers-reduced-motion: reduce){*{animation:none!important}}
+</style>
+<circle cx="24" cy="20" r="9" stroke="#1A1A1A" stroke-width="2.2"/>
+<circle class="g" cx="24" cy="20" r="3.2" fill="#C4622D"/>
+<path d="M21 32.5h6M22 36.5h4" stroke="#1A1A1A" stroke-width="2.2" stroke-linecap="round"/>
+<g class="r" stroke="#C4622D" stroke-width="2.2" stroke-linecap="round">
+<path d="M24 4.5v3"/><path d="M12.7 8.7l2.1 2.1"/><path d="M35.3 8.7l-2.1 2.1"/>
+<path d="M8.5 20h3"/><path d="M36.5 20h3"/>
+</g>
+</svg>

@@ -1,0 +1,15 @@
+<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Agenda">
+<style>
+@keyframes tick{to{transform:rotate(360deg)}}
+.h{transform-box:view-box;transform-origin:33.5px 31.5px;animation:tick 12s linear infinite}
+@media (prefers-reduced-motion: reduce){*{animation:none!important}}
+</style>
+<rect x="7" y="10" width="25" height="26" rx="4" stroke="#1A1A1A" stroke-width="2.2"/>
+<path d="M7 17.5h25" stroke="#1A1A1A" stroke-width="2.2"/>
+<path d="M13.5 6.5v5M25.5 6.5v5" stroke="#1A1A1A" stroke-width="2.2" stroke-linecap="round"/>
+<rect x="12" y="22" width="4" height="4" rx="1" fill="#FBE8DC"/>
+<rect x="19" y="22" width="4" height="4" rx="1" fill="#C4622D"/>
+<circle cx="33.5" cy="31.5" r="8.5" fill="#FFFFFF" stroke="#1A1A1A" stroke-width="2.2"/>
+<path class="h" d="M33.5 31.5V26" stroke="#C4622D" stroke-width="2.4" stroke-linecap="round"/>
+<path d="M33.5 31.5H37" stroke="#1A1A1A" stroke-width="2.4" stroke-linecap="round"/>
+</svg>
