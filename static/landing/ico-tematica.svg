@@ -7,8 +7,8 @@
 .s3{animation:tw 3.8s ease-in-out infinite;animation-delay:1.8s}
 @media (prefers-reduced-motion: reduce){*{animation:none!important}}
 </style>
-<path d="M36.5 11.5 14 34" stroke="#1A1A1A" stroke-width="2.6" stroke-linecap="round"/>
-<path d="M33 8 40 15" stroke="#C4622D" stroke-width="4.2" stroke-linecap="round"/>
+<path d="M34 14 14 34" stroke="#1A1A1A" stroke-width="2.6" stroke-linecap="round"/>
+<path d="M35.5 12.5 41 7" stroke="#C4622D" stroke-width="4.4" stroke-linecap="round"/>
 <path class="s1" d="M14 10.5 l1.5 3.4 3.4 1.5 -3.4 1.5 -1.5 3.4 -1.5-3.4 -3.4-1.5 3.4-1.5Z" fill="#C4622D"/>
 <path class="s2" d="M31 30 l1.2 2.7 2.7 1.2 -2.7 1.2 -1.2 2.7 -1.2-2.7 -2.7-1.2 2.7-1.2Z" fill="#1A1A1A"/>
 <circle class="s3" cx="24" cy="9" r="2.1" fill="#FBE8DC" stroke="#C4622D" stroke-width="1.4"/>
