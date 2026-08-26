@@ -114,6 +114,16 @@
   .local-links-social a:active { transform: scale(0.92); }
   .local-links-social svg { width: 21px; height: 21px; }
   .local-links-menu + .local-links-social { margin-top: 2px; }
+
+  /* ── Desktop: menú más ancho, más juegos por fila (solo el menú; los juegos
+     se juegan en su columna de 420px, que es su formato ideal) ── */
+  @media (min-width: 640px) {
+    .nook { max-width: 660px; }
+  }
+  @media (min-width: 900px) {
+    .nook { max-width: 920px; }
+    .activities-grid { grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  }
 </style>
 
 <div class="nook">

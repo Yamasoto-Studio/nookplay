@@ -5,7 +5,10 @@
 
 <style>
   body { background: #F7F2EB !important; display: block !important; padding: 0 !important; }
-  .admin-wrap { max-width: 680px; margin: 0 auto; padding: 24px 16px 60px; }
+  .admin-wrap { max-width: 900px; margin: 0 auto; padding: 24px 16px 60px; }
+  @media (min-width: 760px) {
+    #games-list { display: grid; grid-template-columns: 1fr 1fr; column-gap: 28px; }
+  }
 
   /* Header */
   .admin-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }
