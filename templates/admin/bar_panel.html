@@ -6,6 +6,25 @@
 <style>
   body { background: #F7F2EB !important; display: block !important; padding: 0 !important; }
   .admin-wrap { max-width: 900px; margin: 0 auto; padding: 24px 16px 60px; }
+
+  /* ── Navegación de secciones (pegajosa) ── */
+  .admin-nav { position: sticky; top: 0; z-index: 50; display: flex; gap: 4px; overflow-x: auto;
+    background: rgba(247,242,235,0.92); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    margin: 0 -16px 16px; padding: 10px 16px; border-bottom: 1px solid var(--border); scrollbar-width: none; }
+  .admin-nav::-webkit-scrollbar { display: none; }
+  .admin-nav a { flex-shrink: 0; font-size: 13px; font-weight: 600; color: #6B6059; text-decoration: none;
+    padding: 7px 12px; border-radius: 20px; transition: all .15s; }
+  .admin-nav a:hover { background: #FBE8DC; color: #A8410E; }
+  html { scroll-behavior: smooth; }
+  [id^="sec-"] { scroll-margin-top: 64px; }
+
+  /* ── Desktop: columna lateral de herramientas (QR, código, contenido) ── */
+  @media (min-width: 980px) {
+    .side-card { float: right; clear: right; width: 320px; margin-left: 24px; box-sizing: border-box; }
+    .admin-wrap > .code-card:not(.side-card),
+    .admin-wrap > .form-card:not(.side-card),
+    .admin-wrap > .insights-card { overflow: hidden; }
+  }
   @media (min-width: 760px) {
     #games-list { display: grid; grid-template-columns: 1fr 1fr; column-gap: 28px; }
   }
@@ -184,8 +203,22 @@
     {% endif %}
   </div>
 
+  <!-- Navegación de secciones -->
+  <nav class="admin-nav">
+    {% if es_evento %}
+    {% if admin_role == 'superadmin' %}<a href="#sec-evento">Evento</a>{% endif %}
+    <a href="#sec-contenido">Contenido</a>
+    {% else %}
+    <a href="#sec-codigo">Código</a>
+    {% endif %}
+    <a href="#sec-actividad">Actividad</a>
+    <a href="#sec-mensajes">Mensajes</a>
+    <a href="#sec-ubicacion">Ubicación</a>
+    <a href="#sec-qr">QR</a>
+  </nav>
+
   <!-- QR de acceso: material físico autoservicio -->
-  <div class="code-card">
+  <div class="code-card side-card" id="sec-qr">
     <div class="card-title">📱 Tu QR de Nookplay</div>
     <div style="display:flex; gap:16px; align-items:center; flex-wrap:wrap;">
       <img src="/admin/qr/{{ bar.slug }}.png?size=240" alt="QR de {{ bar.name }}" width="120" height="120" style="border-radius:10px; border:1px solid #EFE7DE; flex-shrink:0; image-rendering: pixelated;">
@@ -245,7 +278,7 @@
 
   {% if admin_role == 'superadmin' %}
   <!-- Tipo de espacio + configuración de evento (solo superadmin) -->
-  <div class="code-card" style="border:1.5px solid var(--border);">
+  <div class="code-card" id="sec-evento" style="border:1.5px solid var(--border);">
     <div class="card-title">Tipo de espacio</div>
     <div style="display:flex; gap:10px; margin:10px 0 4px;">
       <label style="flex:1; display:flex; align-items:center; gap:8px; padding:12px 14px; border:1.5px solid var(--border); border-radius:10px; cursor:pointer; font-size:14px;">
@@ -358,7 +391,7 @@
 
   {% if (bar.space_kind or 'local') != 'evento' %}
   <!-- Código semanal (solo locales; los eventos usan código admin + códigos por día) -->
-  <div class="code-card">
+  <div class="code-card side-card" id="sec-codigo">
     <div class="card-title">Código de esta semana</div>
     <div class="code-boxes" id="code-boxes"></div>
     <div style="text-align:center; margin: 2px 0 8px;">
@@ -536,7 +569,7 @@
 
   {% if es_evento and contenido_hoy %}
   <!-- Contenido de hoy: control editorial del organizador -->
-  <div class="form-card">
+  <div class="form-card side-card" id="sec-contenido">
     <h3>🎲 Contenido de hoy</h3>
     <div class="field-hint" style="margin-bottom:12px;">Prueba cada juego tal como lo verá el asistente. Si una pieza no te convence, <strong>regenérala</strong>: se descarta la de hoy y se crea una nueva (con la temática) al abrir el juego. Máximo 10 regeneraciones al día.</div>
     <div style="display:flex; flex-direction:column; gap:8px;">
@@ -582,7 +615,7 @@
   {% endif %}
 
   <!-- Panel de valor: tu semana en Nookplay -->
-  <div class="insights-card">
+  <div class="insights-card" id="sec-actividad">
     <div class="insights-head">
       <h3 id="lbl-insights-title">📊 {{ 'Actividad en Nookplay' if es_evento else 'Tu semana en Nookplay' }}</h3>
       {% if es_evento and analytics.ventana_evento %}
@@ -714,7 +747,7 @@
   <form id="admin-form">
 
     <!-- Bienvenida -->
-    <div class="form-card">
+    <div class="form-card" id="sec-mensajes">
       <h3>Mensaje de bienvenida</h3>
       <div class="field">
         <label for="welcome_message">Tu mensaje personalizado</label>
@@ -829,7 +862,7 @@
     </div>
 
     <!-- Dirección -->
-    <div class="form-card">
+    <div class="form-card" id="sec-ubicacion">
       <h3>Ubicación</h3>
       <div class="field">
         <label>Dirección</label>
