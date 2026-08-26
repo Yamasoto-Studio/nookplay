@@ -68,6 +68,22 @@
     .hero, .mw-band, .nk-blob { animation: none !important; }
   }
 
+  /* ── Tarjetas de features: 2 col móvil, 3 desktop ── */
+  .nk-cards3 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 8px; }
+  .nk-cards2 { display: grid; grid-template-columns: 1fr; gap: 14px; margin-top: 8px; }
+  .nk-card { background: var(--bg); border: 1px solid var(--border); border-radius: 14px; padding: 18px 14px; min-width: 0; }
+  .nk-card-ico { font-size: 26px; margin-bottom: 10px; }
+  img.nk-card-ico { width: 42px; height: 42px; object-fit: contain; display: block; }
+  .nk-card h3 { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+  .nk-card p { font-size: 13px; color: var(--text-sec); line-height: 1.6; margin: 0; }
+  @media (min-width: 760px) {
+    .nk-cards3 { grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    .nk-cards2 { grid-template-columns: 1fr 1fr; gap: 20px; }
+    .nk-card { padding: 24px 20px; }
+    .nk-card-ico { font-size: 28px; margin-bottom: 12px; }
+    .nk-card h3 { font-size: 16px; }
+  }
+
   .hero {
     background: linear-gradient(120deg, #F7F2EB 0%, #FBE8DC 42%, #F5EAD9 70%, #F7F2EB 100%);
     background-size: 220% 220%;
@@ -573,36 +589,36 @@
     <div class="section-tag">Para eventos</div>
     <h2>Tu evento, con su propio universo de juegos.</h2>
     <p class="section-sub">Festivales, ferias, jornadas. Mientras tu público hace cola o espera entre actividades, juega con contenido creado expresamente para tu evento — nuevo cada día.</p>
-    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 8px;">
-      <div style="background: var(--bg); border: 1px solid var(--border); border-radius: 14px; padding: 24px 20px;">
-        <div style="font-size: 28px; margin-bottom: 12px;">🎨</div>
-        <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 6px;">Temática total</h3>
-        <p style="font-size: 13px; color: var(--text-sec); line-height: 1.6;">Los juegos se ambientan en el universo del evento: sus referencias, su público, su tono. Nada genérico.</p>
+    <div class="nk-cards3">
+      <div class="nk-card">
+        <div class="nk-card-ico">🎨</div>
+        <h3>Temática total</h3>
+        <p>Los juegos se ambientan en el universo del evento: sus referencias, su público, su tono. Nada genérico.</p>
       </div>
-      <div style="background: var(--bg); border: 1px solid var(--border); border-radius: 14px; padding: 24px 20px;">
-        <div style="font-size: 28px; margin-bottom: 12px;">🧠</div>
-        <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 6px;">Datos internos</h3>
-        <p style="font-size: 13px; color: var(--text-sec); line-height: 1.6;">Invitados, salas, anécdotas: los juegos mencionan tu evento por dentro. Lo que hace decir «esto está hecho para nosotros».</p>
+      <div class="nk-card">
+        <div class="nk-card-ico">🧠</div>
+        <h3>Datos internos</h3>
+        <p>Invitados, salas, anécdotas: los juegos mencionan tu evento por dentro. Lo que hace decir «esto está hecho para nosotros».</p>
       </div>
-      <div style="background: var(--bg); border: 1px solid var(--border); border-radius: 14px; padding: 24px 20px;">
-        <div style="font-size: 28px; margin-bottom: 12px;">📅</div>
-        <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 6px;">Tu agenda, dentro</h3>
-        <p style="font-size: 13px; color: var(--text-sec); line-height: 1.6;">Anuncia las citas del evento — torneos, charlas, actuaciones — con su horario y su lugar, integradas en la app.</p>
+      <div class="nk-card">
+        <div class="nk-card-ico">📅</div>
+        <h3>Tu agenda, dentro</h3>
+        <p>Anuncia las citas del evento — torneos, charlas, actuaciones — con su horario y su lugar, integradas en la app.</p>
       </div>
-      <div style="background: var(--bg); border: 1px solid var(--border); border-radius: 14px; padding: 24px 20px;">
-        <div style="font-size: 28px; margin-bottom: 12px;">🎛️</div>
-        <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 6px;">Admin completo</h3>
-        <p style="font-size: 13px; color: var(--text-sec); line-height: 1.6;">Colores, logo, juegos activos y códigos por día para entradas y cartelería. Todo desde tu panel, sin depender de nadie.</p>
+      <div class="nk-card">
+        <div class="nk-card-ico">🎛️</div>
+        <h3>Admin completo</h3>
+        <p>Colores, logo, juegos activos y códigos por día para entradas y cartelería. Todo desde tu panel, sin depender de nadie.</p>
       </div>
-      <div style="background: var(--bg); border: 1px solid var(--border); border-radius: 14px; padding: 24px 20px;">
-        <div style="font-size: 28px; margin-bottom: 12px;">🖨️</div>
-        <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 6px;">Materiales listos</h3>
-        <p style="font-size: 13px; color: var(--text-sec); line-height: 1.6;">El QR y los carteles se generan solos desde el panel, en calidad de imprenta. Imprimir y colgar.</p>
+      <div class="nk-card">
+        <div class="nk-card-ico">🖨️</div>
+        <h3>Materiales listos</h3>
+        <p>El QR y los carteles se generan solos desde el panel, en calidad de imprenta. Imprimir y colgar.</p>
       </div>
-      <div style="background: var(--bg); border: 1px solid var(--border); border-radius: 14px; padding: 24px 20px;">
-        <div style="font-size: 28px; margin-bottom: 12px;">📄</div>
-        <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 6px;">Informe final</h3>
-        <p style="font-size: 13px; color: var(--text-sec); line-height: 1.6;">Al acabar: asistentes que jugaron, partidas, juegos estrella, mejor día y franja. En PDF, listo para tu equipo o tus patrocinadores.</p>
+      <div class="nk-card">
+        <div class="nk-card-ico">📄</div>
+        <h3>Informe final</h3>
+        <p>Al acabar: asistentes que jugaron, partidas, juegos estrella, mejor día y franja. En PDF, listo para tu equipo o tus patrocinadores.</p>
       </div>
     </div>
     <div style="margin-top: 24px; padding: 20px 24px; background: var(--brand-light); border: 1.5px solid var(--brand); border-radius: 14px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
@@ -730,16 +746,16 @@
     <div class="section-tag">Para locales</div>
     <h2>Y en tu bar, cada día.</h2>
     <p class="section-sub">La versión para cafeterías y locales: un juego nuevo cada día para tus clientes de siempre, con tu código en la pizarra. Desde 6,95€/mes, sin permanencia.</p>
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 8px;">
-      <div style="background: var(--bg); border: 1px solid var(--border); border-radius: 14px; padding: 24px 20px;">
-        <div style="font-size: 28px; margin-bottom: 12px;">🎪</div>
-        <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 6px;">En un evento</h3>
-        <p style="font-size: 13px; color: var(--text-sec); line-height: 1.6;">Juegos ambientados en tu temática y tus datos internos, agenda de actividades con horario y lugar, códigos por día, panel completo e informe final con datos. Precio por evento, según días y aforo.</p>
+    <div class="nk-cards2">
+      <div class="nk-card">
+        <div class="nk-card-ico">🎪</div>
+        <h3>En un evento</h3>
+        <p>Juegos ambientados en tu temática y tus datos internos, agenda de actividades con horario y lugar, códigos por día, panel completo e informe final con datos. Precio por evento, según días y aforo.</p>
       </div>
-      <div style="background: var(--bg); border: 1px solid var(--border); border-radius: 14px; padding: 24px 20px;">
-        <div style="font-size: 28px; margin-bottom: 12px;">☕</div>
-        <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 6px;">En un local</h3>
-        <p style="font-size: 13px; color: var(--text-sec); line-height: 1.6;">Los mismos juegos, nuevos cada día, en versión para todos los públicos. Código semanal automático — o el tuyo propio, si prefieres elegirlo. Panel sencillo con tus estadísticas. Desde 6,95€/mes.</p>
+      <div class="nk-card">
+        <div class="nk-card-ico">☕</div>
+        <h3>En un local</h3>
+        <p>Los mismos juegos, nuevos cada día, en versión para todos los públicos. Código semanal automático — o el tuyo propio, si prefieres elegirlo. Panel sencillo con tus estadísticas. Desde 6,95€/mes.</p>
       </div>
     </div>
   </div>
