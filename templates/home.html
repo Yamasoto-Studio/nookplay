@@ -56,8 +56,22 @@
   }
 
   /* ── HERO ── */
+  /* ── Fondos vivos: sutiles, solo transform/gradiente (GPU), accesibles ── */
+  @keyframes nkGradient { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+  @keyframes nkDrift  { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(30px,-24px) scale(1.05)} }
+  @keyframes nkDrift2 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(-26px,20px) scale(.96)} }
+  .nk-blob { position:absolute; border-radius:50%; pointer-events:none; z-index:0;
+    background: radial-gradient(circle at 38% 38%, rgba(196,98,45,.15), rgba(196,98,45,0) 66%); }
+  .nk-blob--b { background: radial-gradient(circle at 60% 42%, rgba(168,65,14,.10), rgba(168,65,14,0) 68%); }
+  .hero > :not(.nk-blob) { position:relative; z-index:1; }
+  @media (prefers-reduced-motion: reduce) {
+    .hero, .mw-band, .nk-blob { animation: none !important; }
+  }
+
   .hero {
-    background: var(--bg);
+    background: linear-gradient(120deg, #F7F2EB 0%, #FBE8DC 42%, #F5EAD9 70%, #F7F2EB 100%);
+    background-size: 220% 220%;
+    animation: nkGradient 24s ease infinite;
     padding: 60px 40px 80px;
     text-align: center;
     position: relative;
@@ -282,7 +296,7 @@
 
   /* ── CTA FINAL ── */
   .cta-section {
-    background: var(--dark);
+    background: linear-gradient(135deg, #171310 0%, #2B1A10 55%, #1A1A1A 100%);
     padding: 80px 40px;
     text-align: center;
   }
@@ -448,6 +462,8 @@
 
 <!-- HERO -->
 <section class="hero" id="hero">
+  <div class="nk-blob" style="width:460px;height:460px;left:-140px;top:-120px;animation:nkDrift 26s ease-in-out infinite;"></div>
+  <div class="nk-blob nk-blob--b" style="width:380px;height:380px;right:-120px;bottom:-100px;animation:nkDrift2 32s ease-in-out infinite;"></div>
   <div class="hero-carousel" id="hero-carousel">
     <img src="/static/landing/home_img_01.webp" alt="Clientes en un café disfrutando de Nookplay" class="active">
     <img src="/static/landing/home_img_02.webp" alt="Pareja compartiendo juego en un local">
@@ -466,31 +482,44 @@
 <div class="section-divider"></div>
 
 <!-- MÍRALO EN ACCIÓN: demo interactiva de personalización -->
-<div style="background: var(--bg);">
-  <div class="section">
-    <div class="section-tag">Míralo en acción</div>
-    <h2>Un juego, tres universos.</h2>
-    <p class="section-sub">Esto es Nookplay: el mismo juego, ambientado para cada espacio. Elige un universo, responde, y luego pruébalo de verdad en la demo.</p>
-
-    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;">
-      <button class="mw-pill active" data-mw="friki" onclick="mwTheme('friki')">🎪 Festival friki</button>
-      <button class="mw-pill" data-mw="mesa" onclick="mwTheme('mesa')">🎲 Feria de juegos de mesa</button>
-      <button class="mw-pill" data-mw="cafe" onclick="mwTheme('cafe')">☕ Cafetería</button>
-    </div>
-
-    <div style="background: var(--white); border: 1px solid var(--border); border-radius: 16px; padding: 24px; max-width: 560px;">
-      <div style="font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #A8410E; margin-bottom: 10px;">La Trivia · <span id="mw-ctx"></span></div>
-      <div id="mw-q" style="font-size: 16px; font-weight: 600; line-height: 1.5; margin-bottom: 14px;"></div>
-      <div id="mw-opts" style="display:flex; flex-direction:column; gap:8px;"></div>
-      <div id="mw-fb" style="font-size: 13px; line-height: 1.5; color: var(--text-sec); margin-top: 12px; min-height: 20px;"></div>
-    </div>
-    <div style="margin-top: 16px;">
-      <a href="/demo" style="font-size: 14px; font-weight: 700; color: #A8410E; text-decoration: none;">▶️ Juega la demo completa →</a>
+<div class="mw-band">
+  <div class="nk-blob nk-blob--b" style="width:440px;height:440px;right:-150px;top:-130px;animation:nkDrift 28s ease-in-out infinite;"></div>
+  <div class="section" style="position:relative; z-index:1;">
+    <div class="mw-grid">
+      <div>
+        <div class="section-tag">Míralo en acción</div>
+        <h2>Un juego, tres universos.</h2>
+        <p class="section-sub" style="margin-bottom:20px;">Esto es Nookplay: el mismo juego, ambientado para cada espacio. La IA escribe el contenido cada mañana con la temática que tú eliges — aquí tienes tres ejemplos congelados para que lo pruebes tú.</p>
+        <a href="/demo" class="mw-demo-link">▶️ Juega la demo completa</a>
+      </div>
+      <div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;">
+          <button class="mw-pill active" data-mw="friki" onclick="mwTheme('friki')">🎪 Festival friki</button>
+          <button class="mw-pill" data-mw="mesa" onclick="mwTheme('mesa')">🎲 Feria de juegos de mesa</button>
+          <button class="mw-pill" data-mw="cafe" onclick="mwTheme('cafe')">☕ Cafetería</button>
+        </div>
+        <div style="background: var(--white); border: 1px solid var(--border); border-radius: 16px; padding: 24px; box-shadow: 0 6px 24px rgba(120,70,30,0.08);">
+          <div style="font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #A8410E; margin-bottom: 10px;">La Trivia · <span id="mw-ctx"></span></div>
+          <div id="mw-q" style="font-size: 16px; font-weight: 600; line-height: 1.5; margin-bottom: 14px;"></div>
+          <div id="mw-opts" style="display:flex; flex-direction:column; gap:8px;"></div>
+          <div id="mw-fb" style="font-size: 13px; line-height: 1.5; color: var(--text-sec); margin-top: 12px; min-height: 20px;"></div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
 
 <style>
+  .mw-band { position: relative; overflow: hidden;
+    background: linear-gradient(135deg, #F2E2CF 0%, #FBEFDF 48%, #EFE8DC 100%);
+    background-size: 200% 200%; animation: nkGradient 30s ease infinite; }
+  .mw-grid { display: grid; grid-template-columns: 1fr; gap: 28px; }
+  @media (min-width: 900px) {
+    .mw-grid { grid-template-columns: 0.85fr 1.15fr; gap: 56px; align-items: center; }
+  }
+  .mw-demo-link { display: inline-block; font-size: 14px; font-weight: 700; color: #A8410E; text-decoration: none;
+    border: 1.5px solid #E8C4AC; border-radius: 10px; padding: 11px 18px; background: rgba(255,255,255,0.55); transition: all 0.15s; }
+  .mw-demo-link:hover { background: #fff; border-color: #C4622D; }
   .mw-pill { font-family: inherit; font-size: 13px; font-weight: 600; padding: 9px 14px; border-radius: 20px; border: 1.5px solid var(--border); background: var(--white); cursor: pointer; transition: all 0.15s; }
   .mw-pill.active { background: #FBE8DC; border-color: #C4622D; color: #A8410E; }
   .mw-opt { font-family: inherit; text-align: left; font-size: 14px; padding: 11px 14px; border-radius: 10px; border: 1.5px solid var(--border); background: var(--bg); cursor: pointer; transition: all 0.15s; }
