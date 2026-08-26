@@ -4276,6 +4276,7 @@ def equilibrio_api():
 @app.route('/api/contact', methods=['POST'])
 def contact_api():
     data = request.get_json()
+    tipo = data.get('tipo', '').strip()[:20]
     nombre = data.get('nombre', '').strip()
     negocio = data.get('negocio', '').strip()
     ubicacion = data.get('ubicacion', '').strip()
@@ -4295,6 +4296,7 @@ def contact_api():
 
         body = f"""Nueva solicitud de Nookplay
 
+Tipo: {tipo or 'Sin especificar'}
 Nombre: {nombre}
 Negocio: {negocio}
 Ubicación: {ubicacion}
@@ -4307,7 +4309,7 @@ Mensaje:
         msg = MIMEMultipart()
         msg['From'] = smtp_user or to_email
         msg['To'] = to_email
-        msg['Subject'] = f'Nueva solicitud Nookplay — {negocio or nombre}'
+        msg['Subject'] = f"Nueva solicitud Nookplay{(' [' + tipo + ']') if tipo else ''} — {negocio or nombre}"
         msg['Reply-To'] = email
         msg.attach(MIMEText(body, 'plain', 'utf-8'))
 

@@ -465,6 +465,79 @@
 
 <div class="section-divider"></div>
 
+<!-- MÍRALO EN ACCIÓN: demo interactiva de personalización -->
+<div style="background: var(--bg);">
+  <div class="section">
+    <div class="section-tag">Míralo en acción</div>
+    <h2>Un juego, tres universos.</h2>
+    <p class="section-sub">Esto es Nookplay: el mismo juego, ambientado para cada espacio. Elige un universo, responde, y luego pruébalo de verdad en la demo.</p>
+
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;">
+      <button class="mw-pill active" data-mw="friki" onclick="mwTheme('friki')">🎪 Festival friki</button>
+      <button class="mw-pill" data-mw="mesa" onclick="mwTheme('mesa')">🎲 Feria de juegos de mesa</button>
+      <button class="mw-pill" data-mw="cafe" onclick="mwTheme('cafe')">☕ Cafetería</button>
+    </div>
+
+    <div style="background: var(--white); border: 1px solid var(--border); border-radius: 16px; padding: 24px; max-width: 560px;">
+      <div style="font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #A8410E; margin-bottom: 10px;">La Trivia · <span id="mw-ctx"></span></div>
+      <div id="mw-q" style="font-size: 16px; font-weight: 600; line-height: 1.5; margin-bottom: 14px;"></div>
+      <div id="mw-opts" style="display:flex; flex-direction:column; gap:8px;"></div>
+      <div id="mw-fb" style="font-size: 13px; line-height: 1.5; color: var(--text-sec); margin-top: 12px; min-height: 20px;"></div>
+    </div>
+    <div style="margin-top: 16px;">
+      <a href="/demo" style="font-size: 14px; font-weight: 700; color: #A8410E; text-decoration: none;">▶️ Juega la demo completa →</a>
+    </div>
+  </div>
+</div>
+
+<style>
+  .mw-pill { font-family: inherit; font-size: 13px; font-weight: 600; padding: 9px 14px; border-radius: 20px; border: 1.5px solid var(--border); background: var(--white); cursor: pointer; transition: all 0.15s; }
+  .mw-pill.active { background: #FBE8DC; border-color: #C4622D; color: #A8410E; }
+  .mw-opt { font-family: inherit; text-align: left; font-size: 14px; padding: 11px 14px; border-radius: 10px; border: 1.5px solid var(--border); background: var(--bg); cursor: pointer; transition: all 0.15s; }
+  .mw-opt:hover { border-color: #C4622D; }
+  .mw-opt.ok { background: #E8F5E9; border-color: #66BB6A; font-weight: 700; }
+  .mw-opt.ko { background: #FDECEA; border-color: #EF9A9A; }
+</style>
+<script>
+  const MW = {
+    friki: { ctx: 'en un festival friki',
+      q: '¿Cómo se llama la técnica con la que Goku se teletransporta en Dragon Ball?',
+      opts: ['Kaio-ken', 'Teletransportación instantánea', 'Genkidama', 'Kamehameha'], ok: 1,
+      fb: 'La aprendió de los habitantes del planeta Yardrat. ✅ Y así con vuestros invitados, salas y guiños.' },
+    mesa: { ctx: 'en una feria de juegos de mesa',
+      q: 'En el ajedrez, ¿qué pieza solo puede moverse en diagonal?',
+      opts: ['La torre', 'El caballo', 'El alfil', 'La dama'], ok: 2,
+      fb: 'El alfil vive y muere en su color. ✅ Contenido jugón para público jugón.' },
+    cafe: { ctx: 'en tu cafetería',
+      q: '¿Cuál es el único país del mundo cuya bandera no es rectangular ni cuadrada?',
+      opts: ['Suiza', 'Nepal', 'Vaticano', 'Bután'], ok: 1,
+      fb: 'La de Nepal son dos triángulos apilados. ✅ Cultura general para acompañar el café.' }
+  };
+  let mwCur = 'friki';
+  function mwTheme(k) {
+    mwCur = k;
+    document.querySelectorAll('.mw-pill').forEach(p => p.classList.toggle('active', p.dataset.mw === k));
+    const d = MW[k];
+    document.getElementById('mw-ctx').textContent = d.ctx;
+    document.getElementById('mw-q').textContent = d.q;
+    document.getElementById('mw-fb').textContent = '';
+    document.getElementById('mw-opts').innerHTML = d.opts.map((o, i) =>
+      '<button class="mw-opt" onclick="mwPick(' + i + ', this)">' + o + '</button>').join('');
+  }
+  function mwPick(i, el) {
+    const d = MW[mwCur];
+    document.querySelectorAll('.mw-opt').forEach((b, j) => {
+      b.disabled = true;
+      if (j === d.ok) b.classList.add('ok');
+    });
+    if (i !== d.ok) el.classList.add('ko');
+    document.getElementById('mw-fb').textContent = d.fb;
+  }
+  mwTheme('friki');
+</script>
+
+<div class="section-divider"></div>
+
 <!-- EVENTOS -->
 <div style="background: var(--white);">
   <div class="section">
@@ -621,7 +694,7 @@
   </div>
 </div>
 
-<!-- EVENTOS -->
+<!-- LOCALES -->
 <div class="section-divider"></div>
 <div style="background: var(--white);">
   <div class="section">
@@ -711,9 +784,17 @@ window.addEventListener('scroll', () => {
       <button onclick="closeContactModal()" style="background:transparent;border:none;font-size:22px;cursor:pointer;color:#A89B91;padding:0;">✕</button>
     </div>
     <div id="contact-form-wrap">
-      <p style="font-size:14px;color:#6B6059;margin-bottom:20px;line-height:1.5;">Cuéntanos un poco sobre tu negocio o evento y nos ponemos en contacto contigo.</p>
+      <p style="font-size:14px;color:#6B6059;margin-bottom:20px;line-height:1.5;">Cuéntanos sobre tu evento o tu local y nos ponemos en contacto contigo.</p>
+      <div class="contact-field">
+        <label>¿Para qué lo quieres?</label>
+        <div style="display:flex; gap:8px;">
+          <label style="flex:1; text-align:center; border:1.5px solid #E5DDD5; border-radius:8px; padding:10px 6px; cursor:pointer; font-size:13px; font-weight:600;"><input type="radio" name="cf-tipo" value="Evento" style="margin-right:5px; accent-color:#C4622D;">🎪 Un evento</label>
+          <label style="flex:1; text-align:center; border:1.5px solid #E5DDD5; border-radius:8px; padding:10px 6px; cursor:pointer; font-size:13px; font-weight:600;"><input type="radio" name="cf-tipo" value="Local" style="margin-right:5px; accent-color:#C4622D;">☕ Un local</label>
+          <label style="flex:1; text-align:center; border:1.5px solid #E5DDD5; border-radius:8px; padding:10px 6px; cursor:pointer; font-size:13px; font-weight:600;"><input type="radio" name="cf-tipo" value="Otro" style="margin-right:5px; accent-color:#C4622D;">✨ Otra cosa</label>
+        </div>
+      </div>
       <div class="contact-field"><label>Tu nombre *</label><input type="text" id="cf-nombre" placeholder="Nombre y apellido"></div>
-      <div class="contact-field"><label>Nombre del negocio o evento *</label><input type="text" id="cf-negocio" placeholder="Bar, cafetería, evento..."></div>
+      <div class="contact-field"><label>Nombre del evento o del local *</label><input type="text" id="cf-negocio" placeholder="Festival, feria, cafetería..."></div>
       <div class="contact-field"><label>Ubicación *</label><input type="text" id="cf-ubicacion" placeholder="Ciudad o municipio"></div>
       <div class="contact-field"><label>Teléfono</label><input type="tel" id="cf-telefono" placeholder="+34 600 000 000"></div>
       <div class="contact-field"><label>Email de contacto *</label><input type="email" id="cf-email" placeholder="tu@email.com"></div>
@@ -726,7 +807,7 @@ window.addEventListener('scroll', () => {
       </a>
     </div>
     <div id="contact-success" style="display:none;text-align:center;padding:20px 0;">
-      <span style="font-size:48px;display:block;margin-bottom:12px;">☕</span>
+      <span style="font-size:48px;display:block;margin-bottom:12px;">🎲</span>
       <strong style="font-size:16px;">¡Recibido!</strong><br>
       <span style="font-size:14px;color:#6B6059;line-height:1.6;">Nos pondremos en contacto contigo en breve.<br>nookplay@yamasoto.com</span>
     </div>
@@ -745,6 +826,8 @@ function closeContactModal(e) {
   }
 }
 async function submitContact() {
+  const _tipoEl = document.querySelector('input[name="cf-tipo"]:checked');
+  const tipo = _tipoEl ? _tipoEl.value : '';
   const nombre = document.getElementById('cf-nombre').value.trim();
   const negocio = document.getElementById('cf-negocio').value.trim();
   const ubicacion = document.getElementById('cf-ubicacion').value.trim();
@@ -757,7 +840,7 @@ async function submitContact() {
   try {
     const res = await fetch('/api/contact', {
       method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({nombre, negocio, ubicacion, telefono, email, mensaje})
+      body: JSON.stringify({tipo, nombre, negocio, ubicacion, telefono, email, mensaje})
     });
     const data = await res.json();
     if (data.ok) {
