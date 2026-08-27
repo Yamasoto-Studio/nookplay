@@ -607,15 +607,17 @@ async function showMenu() {
     discoverBtn.style.display = hasHidden ? 'block' : 'none';
   }
 
-  // Insertar banner de productos entre la 2ª y 3ª tarjeta del grid
-  // grid-column span 2 para que ocupe el ancho completo
+  // Insertar banner de productos tras la primera fila del grid:
+  // móvil (2 col) → tras el 2º juego; desktop (4 col) → tras el 4º.
   const promoBanner = document.getElementById('promo-banner');
   if (promoBanner && PRODUCTS && PRODUCTS.length > 0) {
     promoBanner.style.gridColumn = '1 / -1';
     promoBanner.style.display = 'block';
     const cards = list.querySelectorAll('.activity-card-grid');
-    if (cards.length >= 2) {
-      cards[1].insertAdjacentElement('afterend', promoBanner);
+    const filaCompleta = window.matchMedia('(min-width: 900px)').matches ? 4 : 2;
+    const pos = Math.min(filaCompleta, cards.length) - 1;
+    if (pos >= 0) {
+      cards[pos].insertAdjacentElement('afterend', promoBanner);
     } else {
       list.appendChild(promoBanner);
     }
