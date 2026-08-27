@@ -1561,8 +1561,13 @@ def admin_save():
             # Recuperar image_path existente si no se envía nueva
             import os as _os
             pos = p.get('position', 0)
-            img_path = f"/static/clientes/{bar_slug}/product_{pos}.webp"
-            image_path = img_path if _os.path.exists(img_path.lstrip('/')) else ''
+            # Prioridad: media persistente (/data); respaldo: assets commiteados en el repo
+            if _os.path.exists(f"{MEDIA_ROOT}/{bar_slug}/product_{pos}.webp"):
+                image_path = f"/media/{bar_slug}/product_{pos}.webp"
+            elif _os.path.exists(f"static/clientes/{bar_slug}/product_{pos}.webp"):
+                image_path = f"/static/clientes/{bar_slug}/product_{pos}.webp"
+            else:
+                image_path = ''
             db.execute(
                 "INSERT INTO bar_products (bar_id, position, title, description, price, image_path, active) VALUES (?,?,?,?,?,?,1)",
                 (bar['id'], pos, p['title'], p.get('description',''), p.get('price',''), image_path)
