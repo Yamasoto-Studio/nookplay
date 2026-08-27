@@ -1384,8 +1384,11 @@ async function uploadLogo(input) {
   if (data.ok) {
     statusEl.textContent = '✅ Logo actualizado.';
     statusEl.style.color = '#22aa55';
+    const nuevaSrc = (data.path || '/media/{{ bar.slug }}/logo_header.png') + '?t=' + Date.now();
     const heroImg = document.querySelector('.admin-bar-logo img');
-    if (heroImg) { heroImg.style.display = ''; heroImg.src = (data.path || '/media/{{ bar.slug }}/logo_header.png') + '?t=' + Date.now(); }
+    if (heroImg) { heroImg.style.display = ''; heroImg.src = nuevaSrc; }
+    const prevImg = input.closest('.field').querySelector('img');
+    if (prevImg) { prevImg.style.display = 'block'; prevImg.dataset.fb = ''; prevImg.src = nuevaSrc; }
   } else {
     statusEl.textContent = '❌ Error: ' + (data.error || 'Inténtalo de nuevo');
     statusEl.style.color = '#cc2222';
@@ -1558,11 +1561,16 @@ async function saveChanges() {
     body: JSON.stringify({ bar_slug: '{{ bar.slug }}', ...data })
   });
 
-  const result = await res.json();
-  if (result.ok) {
-    const el = document.getElementById('save-success');
-    el.style.display = 'block';
-    setTimeout(() => el.style.display = 'none', 3000);
+  let result = null;
+  try { result = await res.json(); } catch(e) {}
+  const btn = document.querySelector('.btn-save-floating');
+  const el = document.getElementById('save-success');
+  if (result && result.ok) {
+    if (btn) { btn.textContent = '✅ Guardado'; setTimeout(() => btn.textContent = '💾 Guardar', 2500); }
+    if (el) { el.textContent = '✅ Cambios guardados'; el.style.color = '#22aa55'; el.style.display = 'block'; setTimeout(() => el.style.display = 'none', 3000); }
+  } else {
+    if (btn) { btn.textContent = '❌ Error al guardar'; setTimeout(() => btn.textContent = '💾 Guardar', 3500); }
+    if (el) { el.textContent = '❌ No se pudo guardar: ' + ((result && result.error) || 'error de red o sesión'); el.style.color = '#cc2222'; el.style.display = 'block'; setTimeout(() => el.style.display = 'none', 5000); }
   }
 }
 </script>
