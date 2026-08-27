@@ -1137,6 +1137,13 @@ def calcular_analytics_bar(db, bar_slug, ventana=None):
     a['people_historico'] = db.execute(
         "SELECT COUNT(DISTINCT device_id) n FROM plays WHERE bar_slug=? AND device_id!=''",
         (bar_slug,)).fetchone()['n']
+    _top_hist = db.execute(
+        "SELECT game_type, COUNT(*) n FROM plays WHERE bar_slug = ? GROUP BY game_type ORDER BY n DESC LIMIT 5",
+        (bar_slug,)
+    ).fetchall()
+    a['top_historico'] = [
+        {'name': GAME_NOMBRES.get(r['game_type'], r['game_type']), 'count': r['n']} for r in _top_hist
+    ]
 
     if a['week'] == 0:
         return a

@@ -326,6 +326,11 @@
     {% if analytics.total_historico and analytics.total_historico > 0 %}
     <div class="insights-history">
       Desde el inicio: <b>{{ "{:,}".format(analytics.total_historico).replace(",", ".") }}</b> {{ 'partida' if analytics.total_historico == 1 else 'partidas' }}{% if analytics.people_historico and analytics.people_historico > 0 %} · <b>{{ "{:,}".format(analytics.people_historico).replace(",", ".") }}</b> {{ 'persona' if analytics.people_historico == 1 else 'personas' }}{% endif %}
+      {% if analytics.top_historico %}
+      <div style="font-size:12px; color:var(--text-muted); margin-top:6px; font-weight:400;">
+        {% for g in analytics.top_historico %}{{ g.name }} ×{{ g.count }}{% if not loop.last %} · {% endif %}{% endfor %}
+      </div>
+      {% endif %}
     </div>
     {% endif %}
   </div>
