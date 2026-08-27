@@ -269,22 +269,12 @@
     }
   </script>
 
-  {% if admin_role == 'superadmin' %}
-  <!-- Tipo de espacio + configuración de evento (solo superadmin) -->
+  {% if admin_role == 'superadmin' and es_evento %}
+  <!-- Configuración del evento (solo superadmin; el tipo se fija al crear el espacio) -->
   <div class="code-card" id="sec-evento" style="border:1.5px solid var(--border);">
-    <div class="card-title">Tipo de espacio</div>
-    <div style="display:flex; gap:10px; margin:10px 0 4px;">
-      <label style="flex:1; display:flex; align-items:center; gap:8px; padding:12px 14px; border:1.5px solid var(--border); border-radius:10px; cursor:pointer; font-size:14px;">
-        <input type="radio" name="space_kind" value="local" onchange="onSpaceKindChange()" {% if (bar.space_kind or 'local') != 'evento' %}checked{% endif %}>
-        <span>🏠 Local <span style="color:var(--text-muted); font-size:12px;">(bar, cafetería)</span></span>
-      </label>
-      <label style="flex:1; display:flex; align-items:center; gap:8px; padding:12px 14px; border:1.5px solid var(--border); border-radius:10px; cursor:pointer; font-size:14px;">
-        <input type="radio" name="space_kind" value="evento" onchange="onSpaceKindChange()" {% if (bar.space_kind or 'local') == 'evento' %}checked{% endif %}>
-        <span>🎪 Evento <span style="color:var(--text-muted); font-size:12px;">(festival, feria)</span></span>
-      </label>
-    </div>
+    <div class="card-title">🎪 Configuración del evento</div>
 
-    <div id="event-config" style="display:none; margin-top:16px; padding-top:16px; border-top:1px solid var(--border);">
+    <div id="event-config" style="display:block; margin-top:8px;">
       <div style="margin-bottom:14px;">
         <label for="event_theme" style="display:block; font-size:13px; font-weight:600; margin-bottom:5px;">Temática del evento</label>
         <textarea id="event_theme" name="event_theme" rows="3" placeholder="Ej: Evento de manga, anime y cómic. Público friki, otaku y gamer. Referencias a series de anime, videojuegos, cultura japonesa y superhéroes. Tono desenfadado y cómplice." style="width:100%; box-sizing:border-box; font-family:inherit; font-size:14px; padding:10px; border:1.5px solid var(--border); border-radius:10px; resize:vertical;">{{ bar.event_theme or '' }}</textarea>
@@ -1225,11 +1215,11 @@
   }
   // Mostrar/ocultar configuración de evento según el tipo de espacio
   // y adaptar las etiquetas del formulario (local ↔ evento) en vivo.
+  const IS_SUPERADMIN = {{ 'true' if admin_role == 'superadmin' else 'false' }};
+
   function onSpaceKindChange() {
-    const sel = document.querySelector('input[name="space_kind"]:checked');
-    const cfg = document.getElementById('event-config');
-    const esEvento = !!(sel && sel.value === 'evento');
-    if (cfg) cfg.style.display = esEvento ? 'block' : 'none';
+    // El tipo es fijo desde el alta: etiquetas según el tipo real del espacio.
+    const esEvento = {{ 'true' if es_evento else 'false' }};
 
     const T = {
       linksTitle:  esEvento ? 'Enlaces del evento' : 'Enlaces de tu local',
@@ -1529,9 +1519,8 @@ async function saveChanges() {
   };
 
   // Campos de evento (solo presentes en el DOM si eres superadmin)
-  const _sk = document.querySelector('input[name="space_kind"]:checked');
-  if (_sk) {
-    data.space_kind = _sk.value;
+  if (IS_SUPERADMIN) {
+    data.space_kind = {{ "'evento'" if es_evento else "'local'" }};
     const _theme = document.getElementById('event_theme');
     const _start = document.getElementById('event_start');
     const _end = document.getElementById('event_end');

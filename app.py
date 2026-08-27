@@ -1513,7 +1513,8 @@ def admin_save():
 
     # Config de evento: solo superadmin puede cambiar tipo de espacio y su config
     if session.get('admin_role') == 'superadmin' and 'space_kind' in data:
-        _sk = 'evento' if data.get('space_kind') == 'evento' else 'local'
+        # El tipo es INMUTABLE desde el alta: se ignora cualquier intento de cambio.
+        _sk = (bar['space_kind'] or 'local')
         try:
             _pool = int(data.get('event_pool_size', 1) or 1)
         except (TypeError, ValueError):
@@ -4677,6 +4678,9 @@ def admin_create_bar():
     email = data.get('email', '').strip().lower()
     password = data.get('password', '').strip()
     color = data.get('color_primary', '#C4622D')
+    space_kind = data.get('space_kind')
+    if space_kind not in ('local', 'evento'):
+        return jsonify({'ok': False, 'error': 'Elige si es un evento o un local'})
     if not all([name, slug, city, email, password]):
         return jsonify({'ok': False, 'error': 'Faltan campos obligatorios'})
     import random as _random
@@ -4696,8 +4700,9 @@ def admin_create_bar():
         except: pass
 
         db.execute(
-            "INSERT INTO bars (slug, name, city, province, address, zip_code, latitude, longitude, plan, plan_status, color_primary, color_primary_text, color_bg, color_bg_subtle, color_accent_dark, active) VALUES (?,?,?,?,?,?,?,?,?,'active',?,'#FFFFFF',?,'#F0EBE3','#1A1A1A',1)",
-            (slug, name, city, province, address, zip_code, latitude, longitude, plan, color, color_bg)
+            "INSERT INTO bars (slug, name, city, province, address, zip_code, latitude, longitude, plan, plan_status, color_primary, color_primary_text, color_bg, color_bg_subtle, color_accent_dark, active, space_kind, event_pool_size, event_fan_level) VALUES (?,?,?,?,?,?,?,?,?,'active',?,'#FFFFFF',?,'#F0EBE3','#1A1A1A',1,?,?,?)",
+            (slug, name, city, province, address, zip_code, latitude, longitude, plan, color, color_bg,
+             space_kind, 3 if space_kind == 'evento' else 1, 'fan')
         )
         bar = db.execute("SELECT id FROM bars WHERE slug = ?", (slug,)).fetchone()
         bar_id = bar['id']
@@ -4706,8 +4711,13 @@ def admin_create_bar():
         monday = today_d - timedelta(days=today_d.weekday())
         sunday = monday + timedelta(days=6)
         db.execute("UPDATE bars SET access_code = ? WHERE id = ?", (new_code, bar_id))
-        db.execute("INSERT INTO access_codes (bar_id, code, valid_from, valid_until) VALUES (?,?,?,?)",
-                  (bar_id, new_code, str(monday), str(sunday)))
+        if space_kind == 'evento':
+            # Eventos: código admin permanente (ventana centinela), no semanal
+            db.execute("INSERT INTO access_codes (bar_id, code, valid_from, valid_until) VALUES (?,?,?,?)",
+                      (bar_id, new_code, '2000-01-01', '2099-12-31'))
+        else:
+            db.execute("INSERT INTO access_codes (bar_id, code, valid_from, valid_until) VALUES (?,?,?,?)",
+                      (bar_id, new_code, str(monday), str(sunday)))
         db.execute(
             "INSERT INTO admin_users (email, password_hash, role, bar_slug) VALUES (?,?,?,?)",
             (email, hash_password(password), 'bar_admin', slug)
