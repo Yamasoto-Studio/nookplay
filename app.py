@@ -12,6 +12,16 @@ import string
 import time
 
 app = Flask(__name__)
+
+@app.after_request
+def _no_cache_admin(resp):
+    """El panel de admin NUNCA se cachea: cada visita trae el HTML y el JS del último deploy.
+    (Sin esto, el navegador puede servir el panel entero desde caché durante días.)"""
+    from flask import request as _rq
+    if _rq.path.startswith('/admin'):
+        resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        resp.headers['Pragma'] = 'no-cache'
+    return resp
 app.secret_key = os.environ.get('SECRET_KEY', 'nookplay-secret-2026')
 app.config['MAX_CONTENT_LENGTH'] = 8 * 1024 * 1024  # 8 MB máx. por subida
 
