@@ -838,7 +838,7 @@
       <div class="field">
         <label>Imagen actual</label>
         <img src="/media/{{ bar.slug }}/logo_header.png" data-fb="/static/clientes/{{ bar.slug }}/logo_header.png" alt="Logo" style="max-height:60px; display:block; margin-bottom:8px;" onerror="if(this.dataset.fb){this.src=this.dataset.fb;this.dataset.fb='';}else{this.style.display='none';}">
-        <input type="file" id="logo-file" accept="image/*" onchange="uploadLogo(this)">
+        <input type="file" id="logo-file" accept="image/*" onclick="this.value=''" onchange="uploadLogo(this)">
         <div class="field-hint">PNG o JPG. Recomendado: ancho máximo 800px, fondo transparente.</div>
         <div id="logo-status" style="font-size:13px; margin-top:6px;"></div>
       </div>
@@ -1375,13 +1375,24 @@ async function uploadLogo(input) {
   const file = input.files[0];
   if (!file) return;
   const statusEl = document.getElementById('logo-status');
-  statusEl.textContent = 'Subiendo...';
-  const formData = new FormData();
-  formData.append('logo', file);
-  formData.append('bar_slug', '{{ bar.slug }}');
-  const res = await fetch('/admin/api/upload-logo', { method: 'POST', body: formData });
-  const data = await res.json();
-  if (data.ok) {
+  const setSt = (msg, color) => { if (statusEl) { statusEl.textContent = msg; statusEl.style.color = color || '#6B6059'; } };
+  setSt('Subiendo...');
+  let res, data = null;
+  try {
+    const formData = new FormData();
+    formData.append('logo', file);
+    formData.append('bar_slug', '{{ bar.slug }}');
+    res = await fetch('/admin/api/upload-logo', { method: 'POST', body: formData });
+    try { data = await res.json(); } catch(e) {}
+    if (!res.ok && !(data && data.ok)) {
+      setSt('❌ Error del servidor (HTTP ' + res.status + ')' + ((data && data.error) ? ': ' + data.error : ''), '#cc2222');
+      return;
+    }
+  } catch(e) {
+    setSt('❌ Error de red: ' + e.message, '#cc2222');
+    return;
+  }
+  if (data && data.ok) {
     statusEl.textContent = '✅ Logo actualizado.';
     statusEl.style.color = '#22aa55';
     const nuevaSrc = (data.path || '/media/{{ bar.slug }}/logo_header.png') + '?t=' + Date.now();
