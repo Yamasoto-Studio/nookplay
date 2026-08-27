@@ -1121,6 +1121,7 @@ def calcular_analytics_bar(db, bar_slug, ventana=None):
         'ventana_evento': False,  # True si las métricas son de la ventana del evento
     }
     a['ventana_evento'] = bool(es_ventana)
+    a['evento_futuro'] = bool(es_ventana) and v_desde > hoy
 
     # Volumen semana actual y hoy
     a['week'] = db.execute(

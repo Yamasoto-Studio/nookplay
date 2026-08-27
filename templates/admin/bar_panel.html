@@ -198,17 +198,137 @@
 
   <!-- Navegación de secciones -->
   <nav class="admin-nav">
+    <a href="#sec-actividad">Actividad</a>
     {% if es_evento %}
     {% if admin_role == 'superadmin' %}<a href="#sec-evento">Evento</a>{% endif %}
     <a href="#sec-contenido">Contenido</a>
     {% else %}
     <a href="#sec-codigo">Código</a>
     {% endif %}
-    <a href="#sec-actividad">Actividad</a>
-    <a href="#sec-mensajes">Mensajes</a>
+        <a href="#sec-mensajes">Mensajes</a>
     <a href="#sec-ubicacion">Ubicación</a>
     <a href="#sec-qr">QR</a>
   </nav>
+
+  <!-- Panel de valor: tu semana en Nookplay -->
+  <div class="insights-card" id="sec-actividad">
+    <div class="insights-head">
+      <h3 id="lbl-insights-title">📊 {{ 'Actividad en Nookplay' if es_evento else 'Tu semana en Nookplay' }}</h3>
+      {% if es_evento and analytics.ventana_evento %}
+      <a href="/admin/informe/{{ bar.slug }}" target="_blank" rel="noopener"
+         style="display:inline-block; margin-bottom:12px; background:transparent; color:#A8410E; border:1.5px solid #E8C4AC; border-radius:8px; padding:8px 14px; font-size:13px; font-weight:600; text-decoration:none;">📄 Informe del evento</a>
+      {% endif %}
+      {% if analytics.has_data and analytics.trend_pct is not none %}
+        {% if analytics.trend_dir == 'up' %}
+          <span class="insights-trend up">↑ {{ analytics.trend_pct }}% vs. semana pasada</span>
+        {% elif analytics.trend_dir == 'down' %}
+          <span class="insights-trend down">↓ {{ analytics.trend_pct }}% vs. semana pasada</span>
+        {% else %}
+          <span class="insights-trend flat">≈ estable</span>
+        {% endif %}
+      {% endif %}
+    </div>
+
+    {% if analytics.has_data %}
+      {% if analytics.has_device_data %}
+      <div class="insights-hero-duo">
+        <div class="insights-hero-item">
+          <div class="n">{{ analytics.week }}</div>
+          <div class="l">{{ 'partidas<br>durante el evento'|safe if analytics.ventana_evento else 'partidas<br>esta semana'|safe }}</div>
+        </div>
+        <div class="insights-hero-item">
+          <div class="n">{{ analytics.people_week }}</div>
+          <div class="l">{{ 'asistentes<br>distintos'|safe if analytics.ventana_evento else 'personas<br>distintas'|safe }}</div>
+        </div>
+      </div>
+      {% else %}
+      <div class="insights-hero">
+        <div class="insights-hero-num">{{ analytics.week }}</div>
+        <div class="insights-hero-lbl">{{ 'partidas durante el evento' if analytics.ventana_evento else 'partidas esta semana' }} · {{ analytics.today }} hoy</div>
+      </div>
+      {% endif %}
+
+      {% if analytics.daily %}
+      <div class="insights-chart" id="insights-chart" data-max="{{ analytics.best_day_count }}">
+        {% for d in analytics.daily %}
+          <div class="insights-bar-col">
+            <span class="insights-bar-val">{{ d.count if d.count else '' }}</span>
+            <div class="insights-bar{% if loop.last %} today{% endif %}" data-count="{{ d.count }}"></div>
+            <span class="insights-bar-day">{{ d.dia }}</span>
+          </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <div class="insights-grid">
+        {% if analytics.best_day %}
+        <div class="insight-tile">
+          <div class="insight-tile-ico">📅</div>
+          <div class="insight-tile-val">{{ analytics.best_day }}</div>
+          <div class="insight-tile-lbl">tu día más activo</div>
+        </div>
+        {% endif %}
+        {% if analytics.has_hour_data %}
+        <div class="insight-tile">
+          <div class="insight-tile-ico">🕐</div>
+          <div class="insight-tile-val">{{ analytics.best_hour }}</div>
+          <div class="insight-tile-lbl">franja con más juego</div>
+        </div>
+        {% endif %}
+        {% if analytics.top_game_name %}
+        <div class="insight-tile">
+          <div class="insight-tile-ico">🎯</div>
+          <div class="insight-tile-val">{{ analytics.top_game_name }}</div>
+          <div class="insight-tile-lbl">{{ 'el favorito de los asistentes' if analytics.ventana_evento else 'el favorito de tus clientes' }}</div>
+        </div>
+        {% endif %}
+        <div class="insight-tile">
+          <div class="insight-tile-ico">📊</div>
+          <div class="insight-tile-val">{{ analytics.avg_day }} / día</div>
+          <div class="insight-tile-lbl">media en {{ analytics.active_days }} {{ 'día activo' if analytics.active_days == 1 else 'días activos' }}</div>
+        </div>
+      </div>
+
+      {% if analytics.top_games and analytics.top_games|length > 1 %}
+      <div class="insights-top3">
+        <div class="insights-top3-h">{{ 'Juegos más jugados del evento' if analytics.ventana_evento else 'Juegos más jugados esta semana' }}</div>
+        {% for g in analytics.top_games %}
+        <div class="insights-top3-row">
+          <span class="insights-top3-rank">{{ loop.index }}</span>
+          <span class="insights-top3-name">{{ g.name }}</span>
+          <span class="insights-top3-count">{{ g.count }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% if not analytics.has_hour_data %}
+      <div class="insights-hint-hour">Los datos por franja horaria aparecerán según se vaya jugando.</div>
+      {% endif %}
+    {% else %}
+      <div class="insights-empty">
+        <span class="big">🌱</span>
+        {% if analytics.ventana_evento %}
+        {% if analytics.evento_futuro %}
+        🎪 El evento aún no ha empezado.<br>
+        Estas estadísticas medirán los días del evento: partidas, asistentes, horas punta y juego estrella — en directo cada día, y con informe final para compartir. Las partidas de prueba de estos días no cuentan (las ves abajo, en el total desde el inicio).
+        {% else %}
+        Aún no hay partidas del evento.<br>
+        En cuanto los asistentes empiecen a jugar, aquí verás la actividad por día, las horas punta y qué juego engancha más.
+        {% endif %}
+        {% else %}
+        Aún no hay partidas esta semana.<br>
+        En cuanto tus clientes empiecen a jugar, aquí verás qué días y horas funcionan mejor y qué juego engancha más.
+        {% endif %}
+      </div>
+    {% endif %}
+
+    {% if analytics.total_historico and analytics.total_historico > 0 %}
+    <div class="insights-history">
+      Desde el inicio: <b>{{ "{:,}".format(analytics.total_historico).replace(",", ".") }}</b> {{ 'partida' if analytics.total_historico == 1 else 'partidas' }}{% if analytics.people_historico and analytics.people_historico > 0 %} · <b>{{ "{:,}".format(analytics.people_historico).replace(",", ".") }}</b> {{ 'persona' if analytics.people_historico == 1 else 'personas' }}{% endif %}
+    </div>
+    {% endif %}
+  </div>
 
   <!-- QR de acceso: material físico autoservicio -->
   <div class="code-card side-card" id="sec-qr">
@@ -596,121 +716,6 @@
     }
   </script>
   {% endif %}
-
-  <!-- Panel de valor: tu semana en Nookplay -->
-  <div class="insights-card" id="sec-actividad">
-    <div class="insights-head">
-      <h3 id="lbl-insights-title">📊 {{ 'Actividad en Nookplay' if es_evento else 'Tu semana en Nookplay' }}</h3>
-      {% if es_evento and analytics.ventana_evento %}
-      <a href="/admin/informe/{{ bar.slug }}" target="_blank" rel="noopener"
-         style="display:inline-block; margin-bottom:12px; background:transparent; color:#A8410E; border:1.5px solid #E8C4AC; border-radius:8px; padding:8px 14px; font-size:13px; font-weight:600; text-decoration:none;">📄 Informe del evento</a>
-      {% endif %}
-      {% if analytics.has_data and analytics.trend_pct is not none %}
-        {% if analytics.trend_dir == 'up' %}
-          <span class="insights-trend up">↑ {{ analytics.trend_pct }}% vs. semana pasada</span>
-        {% elif analytics.trend_dir == 'down' %}
-          <span class="insights-trend down">↓ {{ analytics.trend_pct }}% vs. semana pasada</span>
-        {% else %}
-          <span class="insights-trend flat">≈ estable</span>
-        {% endif %}
-      {% endif %}
-    </div>
-
-    {% if analytics.has_data %}
-      {% if analytics.has_device_data %}
-      <div class="insights-hero-duo">
-        <div class="insights-hero-item">
-          <div class="n">{{ analytics.week }}</div>
-          <div class="l">{{ 'partidas<br>durante el evento'|safe if analytics.ventana_evento else 'partidas<br>esta semana'|safe }}</div>
-        </div>
-        <div class="insights-hero-item">
-          <div class="n">{{ analytics.people_week }}</div>
-          <div class="l">{{ 'asistentes<br>distintos'|safe if analytics.ventana_evento else 'personas<br>distintas'|safe }}</div>
-        </div>
-      </div>
-      {% else %}
-      <div class="insights-hero">
-        <div class="insights-hero-num">{{ analytics.week }}</div>
-        <div class="insights-hero-lbl">{{ 'partidas durante el evento' if analytics.ventana_evento else 'partidas esta semana' }} · {{ analytics.today }} hoy</div>
-      </div>
-      {% endif %}
-
-      {% if analytics.daily %}
-      <div class="insights-chart" id="insights-chart" data-max="{{ analytics.best_day_count }}">
-        {% for d in analytics.daily %}
-          <div class="insights-bar-col">
-            <span class="insights-bar-val">{{ d.count if d.count else '' }}</span>
-            <div class="insights-bar{% if loop.last %} today{% endif %}" data-count="{{ d.count }}"></div>
-            <span class="insights-bar-day">{{ d.dia }}</span>
-          </div>
-        {% endfor %}
-      </div>
-      {% endif %}
-
-      <div class="insights-grid">
-        {% if analytics.best_day %}
-        <div class="insight-tile">
-          <div class="insight-tile-ico">📅</div>
-          <div class="insight-tile-val">{{ analytics.best_day }}</div>
-          <div class="insight-tile-lbl">tu día más activo</div>
-        </div>
-        {% endif %}
-        {% if analytics.has_hour_data %}
-        <div class="insight-tile">
-          <div class="insight-tile-ico">🕐</div>
-          <div class="insight-tile-val">{{ analytics.best_hour }}</div>
-          <div class="insight-tile-lbl">franja con más juego</div>
-        </div>
-        {% endif %}
-        {% if analytics.top_game_name %}
-        <div class="insight-tile">
-          <div class="insight-tile-ico">🎯</div>
-          <div class="insight-tile-val">{{ analytics.top_game_name }}</div>
-          <div class="insight-tile-lbl">{{ 'el favorito de los asistentes' if analytics.ventana_evento else 'el favorito de tus clientes' }}</div>
-        </div>
-        {% endif %}
-        <div class="insight-tile">
-          <div class="insight-tile-ico">📊</div>
-          <div class="insight-tile-val">{{ analytics.avg_day }} / día</div>
-          <div class="insight-tile-lbl">media en {{ analytics.active_days }} {{ 'día activo' if analytics.active_days == 1 else 'días activos' }}</div>
-        </div>
-      </div>
-
-      {% if analytics.top_games and analytics.top_games|length > 1 %}
-      <div class="insights-top3">
-        <div class="insights-top3-h">{{ 'Juegos más jugados del evento' if analytics.ventana_evento else 'Juegos más jugados esta semana' }}</div>
-        {% for g in analytics.top_games %}
-        <div class="insights-top3-row">
-          <span class="insights-top3-rank">{{ loop.index }}</span>
-          <span class="insights-top3-name">{{ g.name }}</span>
-          <span class="insights-top3-count">{{ g.count }}</span>
-        </div>
-        {% endfor %}
-      </div>
-      {% endif %}
-
-      {% if not analytics.has_hour_data %}
-      <div class="insights-hint-hour">Los datos por franja horaria aparecerán según se vaya jugando.</div>
-      {% endif %}
-    {% else %}
-      <div class="insights-empty">
-        <span class="big">🌱</span>
-        {% if analytics.ventana_evento %}
-        Aún no hay partidas del evento.<br>
-        En cuanto los asistentes empiecen a jugar, aquí verás la actividad por día, las horas punta y qué juego engancha más.
-        {% else %}
-        Aún no hay partidas esta semana.<br>
-        En cuanto tus clientes empiecen a jugar, aquí verás qué días y horas funcionan mejor y qué juego engancha más.
-        {% endif %}
-      </div>
-    {% endif %}
-
-    {% if analytics.total_historico and analytics.total_historico > 0 %}
-    <div class="insights-history">
-      Desde el inicio: <b>{{ "{:,}".format(analytics.total_historico).replace(",", ".") }}</b> {{ 'partida' if analytics.total_historico == 1 else 'partidas' }}{% if analytics.people_historico and analytics.people_historico > 0 %} · <b>{{ "{:,}".format(analytics.people_historico).replace(",", ".") }}</b> {{ 'persona' if analytics.people_historico == 1 else 'personas' }}{% endif %}
-    </div>
-    {% endif %}
-  </div>
 
   <script>
     // Dibuja las alturas del mini-gráfico de barras proporcionalmente
