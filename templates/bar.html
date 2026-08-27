@@ -134,7 +134,7 @@
   </div>
 
   <div class="bar-hero">
-    <img class="bar-hero-logo" src="/static/clientes/{{ bar.slug }}/logo_header.png" alt="{{ bar.name }}" onerror="this.style.display='none'">
+    <img class="bar-hero-logo" src="/media/{{ bar.slug }}/logo_header.png" data-fb="/static/clientes/{{ bar.slug }}/logo_header.png" alt="{{ bar.name }}" onerror="if(this.dataset.fb){this.src=this.dataset.fb;this.dataset.fb='';}else{this.style.display='none';}">
   </div>
 
   <div class="nook-content">
@@ -401,7 +401,7 @@ function initPromoCarousel() {
   track.innerHTML = PRODUCTS.map(p => `
     <div class="promo-item">
       ${p.image_path
-        ? `<img src="${p.image_path}" alt="${p.title}" class="promo-img" onerror="this.style.display='none'">`
+        ? `<img src="${p.image_path}" alt="${p.title}" class="promo-img" onerror="if(this.dataset.fb){this.src=this.dataset.fb;this.dataset.fb='';}else{this.style.display='none';}">`
         : '<div class="promo-img-placeholder"></div>'}
       <div class="promo-info">
         <div class="promo-title">${p.title}</div>

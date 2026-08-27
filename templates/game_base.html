@@ -82,7 +82,7 @@ function showResultPromo() {
     <div class="result-promo-wrap">
       <div class="promo-label">✨ Mientras estás aquí</div>
       <div class="promo-item">
-        ${p.image_path ? `<img src="${p.image_path}" alt="${p.title}" class="promo-img" onerror="this.style.display='none'">` : ''}
+        ${p.image_path ? `<img src="${p.image_path}" alt="${p.title}" class="promo-img" onerror="if(this.dataset.fb){this.src=this.dataset.fb;this.dataset.fb='';}else{this.style.display='none';}">` : ''}
         <div class="promo-info">
           <div class="promo-title">${p.title}</div>
           ${p.description ? `<div class="promo-desc">${p.description}</div>` : ''}
@@ -100,9 +100,9 @@ function showResultPromo() {
   </div>
   <div class="bar-hero">
     <img class="bar-hero-logo"
-      src="/static/clientes/{{ bar.slug }}/logo_header.png"
+      src="/media/{{ bar.slug }}/logo_header.png" data-fb="/static/clientes/{{ bar.slug }}/logo_header.png"
       alt="{{ bar.name }}"
-      onerror="this.style.display='none'">
+      onerror="if(this.dataset.fb){this.src=this.dataset.fb;this.dataset.fb='';}else{this.style.display='none';}">
   </div>
   <div class="nook-content">
     <div class="nook-card">

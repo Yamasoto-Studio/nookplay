@@ -4538,6 +4538,21 @@ def og_image():
 # Run
 # --------------------------------------------------------------------------
 
+MEDIA_ROOT = '/data/media'  # volumen persistente: sobrevive a los deploys (misma regla que la BD)
+
+def _slug_seguro(s):
+    import re as _re
+    return bool(s) and bool(_re.fullmatch(r'[a-z0-9\-_]{1,60}', s))
+
+@app.route('/media/<bar_slug>/<path:filename>')
+def serve_media(bar_slug, filename):
+    """Sirve logos e imágenes subidos desde el panel (guardados en /data/media)."""
+    if not _slug_seguro(bar_slug):
+        return ('', 404)
+    from flask import send_from_directory
+    return send_from_directory(f'{MEDIA_ROOT}/{bar_slug}', filename)
+
+
 @app.route('/admin/api/upload-logo', methods=['POST'])
 @admin_required
 def admin_upload_logo():
@@ -4549,11 +4564,13 @@ def admin_upload_logo():
     file = request.files['logo']
     if file.filename == '':
         return jsonify({'ok': False, 'error': 'Empty filename'})
+    if not _slug_seguro(bar_slug):
+        return jsonify({'ok': False, 'error': 'Slug no válido'})
     import os as _os
-    folder = f'static/clientes/{bar_slug}'
+    folder = f'{MEDIA_ROOT}/{bar_slug}'
     _os.makedirs(folder, exist_ok=True)
     file.save(f'{folder}/logo_header.png')
-    return jsonify({'ok': True})
+    return jsonify({'ok': True, 'path': f'/media/{bar_slug}/logo_header.png'})
 
 
 @app.route('/admin/api/upload-product-image', methods=['POST'])
@@ -4572,7 +4589,7 @@ def admin_upload_product_image():
         from PIL import Image as _Image
         import io as _io
         import os as _os
-        folder = f'static/clientes/{bar_slug}'
+        folder = f'{MEDIA_ROOT}/{bar_slug}'
         _os.makedirs(folder, exist_ok=True)
         img = _Image.open(file.stream).convert('RGB')
         # Redimensionar a máximo 600px manteniendo ratio
@@ -4583,7 +4600,7 @@ def admin_upload_product_image():
             img = img.resize(new_size, _Image.LANCZOS)
         out_path = f'{folder}/product_{position}.webp'
         img.save(out_path, 'WEBP', quality=82, method=6)
-        return jsonify({'ok': True, 'path': f'/{out_path}'})
+        return jsonify({'ok': True, 'path': f'/media/{bar_slug}/product_{position}.webp'})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)})
 
