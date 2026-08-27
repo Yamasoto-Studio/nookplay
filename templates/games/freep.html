@@ -445,7 +445,7 @@ html, body { overscroll-behavior: none; }
 
     <button class="fp-btn go" onclick="rematch()" style="width:100%;margin-top:16px;">↻ Revancha</button>
     <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
-    <div class="tomorrow">{{ bar.tomorrow_message or 'Vuelve a tomar un café.' }}</div>
+    <div class="tomorrow">{{ bar.tomorrow_message or ('Vuelve mañana: hay juego nuevo.' if (bar.space_kind or 'local') == 'evento' else 'Vuelve a tomar un café.') }}</div>
   </div>
 </div>
 

@@ -57,6 +57,7 @@
   .demo-wall-card p { font-size: 14px; color: var(--text-secondary); line-height: 1.55; margin-bottom: 12px; }
   .demo-wall-card .demo-wall-foot { font-weight: 700; color: var(--text); }
   .demo-wall-card .btn-primary { width: 100%; margin-top: 6px; }
+  .demo-wall-link { display: block; margin-top: 12px; font-size: 13px; font-weight: 600; color: #A8410E; text-decoration: none; }
 
   /* Separador de grupo en el menú (juegos a dobles) */
   .grid-divider {
@@ -661,11 +662,11 @@ function showScreen(id) {
 <div class="demo-wall-overlay" id="demo-wall" onclick="hideDemoWall()">
   <div class="demo-wall-card" onclick="event.stopPropagation()">
     <div class="demo-wall-emoji">🔒</div>
-    <h3>Este juego está bloqueado en la demo</h3>
-    <p>Lo que estás viendo es un <strong>ejemplo</strong> de lo que sería Nookplay en tu negocio: más de 20 juegos y pasatiempos que <strong>cambian cada día</strong>, listos para que tus clientes jueguen gratis mientras esperan.</p>
-    <p>Una forma sencilla de amenizar la espera, fidelizar y dejar buen sabor de boca, sin que tengas que hacer nada.</p>
-    <p class="demo-wall-foot">En tu local estarían todos desbloqueados.</p>
+    <h3>Este juego está cerrado en la demo</h3>
+    <p>Nookplay es una plataforma de <strong>juegos personalizables</strong> generados con IA: más de 25 juegos que <strong>se renuevan cada mañana</strong>. En la demo dejamos abiertos unos cuantos — y mañana serán nuevos.</p>
+    <p>En un <strong>evento o un local reales</strong>, todos los juegos están abiertos y ambientados con su temática, sus colores y su identidad.</p>
     <button class="btn-primary" onclick="hideDemoWall()">Seguir probando la demo</button>
+    <a class="demo-wall-link" href="/" target="_blank" rel="noopener">Descubre Nookplay para tu evento o local →</a>
   </div>
 </div>
 

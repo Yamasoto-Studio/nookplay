@@ -141,7 +141,7 @@
 
   <button class="btn-share" onclick="doShare()">📤 Compartir</button>
   <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
-  <div class="tomorrow">Mañana, una nueva letra imposible.<br>{{ bar.tomorrow_message or 'Vuelve a tomar un café.' }}</div>
+  <div class="tomorrow">Mañana, una nueva letra imposible.<br>{{ bar.tomorrow_message or ('Vuelve mañana: hay juego nuevo.' if (bar.space_kind or 'local') == 'evento' else 'Vuelve a tomar un café.') }}</div>
 </div>
 
 <script>

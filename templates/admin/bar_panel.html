@@ -738,8 +738,8 @@
       </div>
       <div class="field">
         <label for="tomorrow_message">Frase de despedida</label>
-        <input type="text" id="tomorrow_message" name="tomorrow_message" value="{{ bar.tomorrow_message or '' }}" placeholder="Vuelve a tomar un café.">
-        <div class="field-hint">Aparece al final de cada juego. Si lo dejas vacío: "Vuelve a tomar un café."</div>
+        <input type="text" id="tomorrow_message" name="tomorrow_message" value="{{ bar.tomorrow_message or '' }}" placeholder="{{ 'Vuelve mañana: hay juego nuevo.' if es_evento else 'Vuelve a tomar un café.' }}">
+        <div class="field-hint">Aparece al final de cada juego. Si lo dejas vacío: "{{ 'Vuelve mañana: hay juego nuevo.' if es_evento else 'Vuelve a tomar un café.' }}"</div>
         <div class="field-hint">Aparece al entrar al juego. Solo la primera parte — "Elige tu pasatiempo de hoy." se añade automáticamente.</div>
       </div>
     </div>

@@ -170,7 +170,7 @@ html, body { overscroll-behavior: none; }
     </div>
     <button class="btn-primary" onclick="location.reload()" style="width:100%; margin-top:8px;">↻ Jugar otra vez</button>
     <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
-    <div class="tomorrow">{{ bar.tomorrow_message or 'Vuelve a tomar un café.' }}</div>
+    <div class="tomorrow">{{ bar.tomorrow_message or ('Vuelve mañana: hay juego nuevo.' if (bar.space_kind or 'local') == 'evento' else 'Vuelve a tomar un café.') }}</div>
   </div>
 </div>
 
