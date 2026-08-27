@@ -1536,7 +1536,7 @@ async function saveChanges() {
 
   // Campos de evento (solo presentes en el DOM si eres superadmin)
   if (IS_SUPERADMIN) {
-    data.space_kind = {{ "'evento'" if es_evento else "'local'" }};
+    data.space_kind = {{ ('evento' if es_evento else 'local')|tojson }};
     const _theme = document.getElementById('event_theme');
     const _start = document.getElementById('event_start');
     const _end = document.getElementById('event_end');
