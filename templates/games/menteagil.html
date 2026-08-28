@@ -182,16 +182,19 @@ function showScreen(id) {
 }
 
 function renderPregunta(idx) {
+  const TOTAL = gameData.preguntas.length;
   const p = gameData.preguntas[idx];
+  if (!p) { finalizarQuiz(); return; }
   seleccionActual = null;
 
-  document.getElementById('ma-num').textContent = `Pregunta ${idx + 1} de 3`;
+  document.getElementById('ma-num').textContent = `Pregunta ${idx + 1} de ${TOTAL}`;
   document.getElementById('ma-tipo').textContent = p.tipo || 'Ejercicio';
   document.getElementById('ma-curiosidad').textContent = p.enunciado;
 
   // Actualizar progreso
   for (let i = 0; i < 3; i++) {
     const dot = document.getElementById(`dot-${i}`);
+    dot.style.display = (i < TOTAL) ? '' : 'none';
     dot.className = 'ma-prog-dot';
     if (i < idx) {
       const r = respuestas[i];
@@ -256,7 +259,7 @@ function confirmar() {
   // Botón para avanzar — siempre manual, para dar tiempo a leer la explicación
   const btnSig = document.getElementById('btn-siguiente');
   btnSig.style.display = 'block';
-  if (preguntaActual < 2) {
+  if (preguntaActual < gameData.preguntas.length - 1) {
     btnSig.textContent = 'Siguiente pregunta →';
   } else {
     btnSig.textContent = 'Ver resultado final →';
@@ -264,7 +267,7 @@ function confirmar() {
 }
 
 function siguiente() {
-  if (preguntaActual < 2) {
+  if (preguntaActual < gameData.preguntas.length - 1) {
     preguntaActual++;
     renderPregunta(preguntaActual);
   } else {

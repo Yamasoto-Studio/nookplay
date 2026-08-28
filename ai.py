@@ -1977,7 +1977,23 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
   }
 }"""
 
-    return _post_ia(prompt, 1100, api_key)
+    # Validación estricta: exactamente 3 preguntas bien formadas (reintento si no)
+    import json as _json
+    raw = None
+    for _intento in range(2):
+        raw = _post_ia(prompt, 1100, api_key)
+        try:
+            obj = _parse_ia_json(raw)
+            pr = [p for p in (obj.get('preguntas') or [])
+                  if p.get('enunciado') and isinstance(p.get('opciones'), list)
+                  and len(p['opciones']) == 4 and isinstance(p.get('correcta'), int)
+                  and 0 <= p['correcta'] <= 3 and p.get('explicacion')]
+            if len(pr) >= 3:
+                obj['preguntas'] = pr[:3]
+                return _json.dumps(obj, ensure_ascii=False)
+        except Exception:
+            pass
+    return raw  # último recurso: el cliente ya tolera menos de 3
 
 
 # ─────────────────────────────────────────────────────────────────────────────
