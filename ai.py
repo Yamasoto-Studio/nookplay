@@ -1397,6 +1397,71 @@ IMPORTANTE: "correcta" es la posición 1-indexada (1 = primera opción). "respue
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# La Reseña generator (humor: reseñas 5⭐ de cosas cotidianas)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def generate_resena(bar_slug, evitar=None):
+    api_key = os.environ.get('ANTHROPIC_API_KEY')
+    prompt = """Eres el redactor de LA RESEÑA, un juego de humor: reseñas de 5 estrellas absurdamente serias sobre objetos o situaciones COTIDIANOS del universo indicado, y el jugador adivina qué se está reseñando.
+
+REGLAS DE ORO:
+1. Genera 4 reseñas. Cada una habla de un objeto o situación cotidiana SIN nombrarla jamás (ni con sinónimos obvios).
+2. Tono: solemnidad ridícula de reseña de 5 estrellas — épica desproporcionada, gratitud trascendental por lo doméstico. El humor nace del contraste.
+3. Pistas justas: adivinable releyendo con atención, nunca obvia a la primera.
+4. 4 opciones plausibles del mismo mundo; solo UNA encaja con TODOS los detalles de la reseña.
+5. "cierre": un remate de 1 frase, mostrado al resolver, que remata la broma.
+6. Los 4 objetos deben ser variados entre sí (no cuatro cosas de la misma categoría).
+
+Responde SOLO con este JSON:
+{
+  "resenas": [
+    {"texto": "⭐⭐⭐⭐⭐ — Reseña de 3-4 frases.", "opciones": ["...","...","...","..."], "respuesta": "texto EXACTO de la opción correcta", "correcta": 1, "cierre": "Remate gracioso de 1 frase."}
+  ],
+  "objetos": ["nombre corto del objeto 1", "objeto 2", "objeto 3", "objeto 4"],
+  "mensajes": {"0": "…", "1": "…", "2": "…", "3": "…", "4": "…"}
+}
+IMPORTANTE: "correcta" es 1-indexada (1 = primera opción) y "respuesta" repite LITERALMENTE el texto de esa opción — reseña, opciones, respuesta y cierre deben señalar todos el MISMO objeto.""" + _bloque_evitar(evitar)
+
+    import json as _json
+    def _norm(s):
+        return ' '.join(str(s).lower().split())
+    raw = None
+    for _intento in range(2):
+        raw = _post_ia(prompt, 1600, api_key)
+        try:
+            obj = _parse_ia_json(raw)
+            rs = []
+            for r in (obj.get('resenas') or []):
+                ops = r.get('opciones') or []
+                if not (r.get('texto') and isinstance(ops, list) and len(ops) == 4):
+                    continue
+                resp = _norm(r.get('respuesta', ''))
+                idx = next((i for i, o in enumerate(ops) if _norm(o) == resp), None)
+                if idx is None and resp:
+                    idx = next((i for i, o in enumerate(ops) if resp in _norm(o) or _norm(o) in resp), None)
+                if idx is None:
+                    c = r.get('correcta')
+                    idx = (c - 1) if isinstance(c, int) and 1 <= c <= 4 else None
+                if idx is None:
+                    continue
+                r['correcta'] = idx + 1
+                rs.append(r)
+            if len(rs) >= 3:
+                obj['resenas'] = rs[:4]
+                if not isinstance(obj.get('objetos'), list) or len(obj['objetos']) < len(obj['resenas']):
+                    obj['objetos'] = [x['opciones'][x['correcta'] - 1][:60] for x in obj['resenas']]
+                msgs = obj.get('mensajes') or {}
+                if not all(str(k) in msgs for k in range(5)):
+                    obj['mensajes'] = {'0': '0 de 4 — Las estrellas te han nublado. ⭐', '1': '1 de 4 — Reseñista en prácticas.',
+                                       '2': '2 de 4 — Lector de medias verdades.', '3': '3 de 4 — Ojo crítico notable. 👏',
+                                       '4': '4 de 4 — Crítico legendario. 🏆'}
+                return _json.dumps(obj, ensure_ascii=False)
+        except Exception:
+            pass
+    return raw
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # El Vestuario generator
 # ─────────────────────────────────────────────────────────────────────────────
 

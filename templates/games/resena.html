@@ -1,0 +1,191 @@
+{% extends "game_base.html" %}
+{% block title %}La Reseña — {{ bar.name }}{% endblock %}
+{% block og_title %}⭐⭐⭐⭐⭐ ¿Qué se está reseñando? — {{ bar.name }}{% endblock %}
+{% block og_description %}Reseñas de 5 estrellas absurdamente serias. ¿Adivinas qué describen? Juega en {{ bar.name }} con Nookplay.{% endblock %}
+{% block og_url %}/{{ bar.slug }}/resena{% endblock %}
+
+{% block game_content %}
+<style>
+.re-progreso { display: flex; gap: 6px; margin-bottom: 20px; justify-content: center; }
+.re-dot { height: 5px; flex: 1; border-radius: 3px; background: var(--border); max-width: 60px; transition: background 0.3s; }
+.re-dot.activa { background: var(--bar-primary); }
+.re-dot.ok { background: #2E7D32; }
+.re-dot.ko { background: #C0392B; }
+.re-num { font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); text-align: center; margin-bottom: 14px; }
+.re-card { background: var(--bar-bg-subtle); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 20px 18px; margin-bottom: 18px; }
+.re-stars { font-size: 20px; letter-spacing: 2px; margin-bottom: 10px; }
+.re-texto { font-size: 16px; line-height: 1.7; color: var(--text); font-style: italic; }
+.re-opciones { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+.re-op { text-align: left; font-family: inherit; font-size: 15px; padding: 13px 15px; border-radius: var(--radius-sm); border: 1.5px solid var(--border); background: white; cursor: pointer; transition: all 0.15s; line-height: 1.4; }
+.re-op:hover { border-color: var(--bar-primary); }
+.re-op.sel { border-color: var(--bar-primary); background: var(--bar-bg-subtle); font-weight: 600; }
+.re-op.ok { border-color: #2E7D32; background: #E8F5E9; font-weight: 700; }
+.re-op.ko { border-color: #C0392B; background: #FDECEA; }
+.re-op:disabled { cursor: default; }
+.re-cierre { font-size: 14px; line-height: 1.6; color: var(--text-sec); background: var(--bar-bg-subtle); border-left: 3px solid var(--bar-primary); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: 12px 14px; margin-bottom: 14px; display: none; }
+.re-resultado { text-align: center; margin-bottom: 8px; }
+.re-score { font-size: 52px; font-weight: 800; color: var(--bar-primary); line-height: 1; }
+.re-score-de { font-size: 15px; color: var(--text-muted); margin-top: 2px; margin-bottom: 10px; }
+.re-msg { font-size: 16px; font-weight: 600; margin-bottom: 18px; }
+.re-repaso { display: flex; flex-direction: column; gap: 8px; text-align: left; margin-bottom: 18px; }
+.re-repaso-item { font-size: 14px; padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border); }
+.re-repaso-item.ok { background: #E8F5E9; }
+.re-repaso-item.ko { background: #FDECEA; }
+</style>
+
+<!-- CARGANDO -->
+<div class="screen active" id="s-loading">
+  <div class="loading-spinner"></div>
+  <p style="text-align:center; color:var(--text-muted);">Desempolvando reseñas...</p>
+</div>
+
+<!-- JUEGO -->
+<div class="screen" id="s-juego">
+  <div class="re-progreso" id="re-dots">
+    <div class="re-dot" id="redot-0"></div><div class="re-dot" id="redot-1"></div>
+    <div class="re-dot" id="redot-2"></div><div class="re-dot" id="redot-3"></div>
+  </div>
+  <div class="re-num" id="re-num"></div>
+  <div class="re-card">
+    <div class="re-stars">⭐⭐⭐⭐⭐</div>
+    <div class="re-texto" id="re-texto"></div>
+  </div>
+  <p style="font-size:13px; color:var(--text-muted); margin-bottom:10px;">¿Qué se está reseñando?</p>
+  <div class="re-opciones" id="re-opciones"></div>
+  <div class="re-cierre" id="re-cierre"></div>
+  <button class="btn-primary" id="btn-sig" onclick="siguiente()" style="display:none; width:100%;">Siguiente reseña →</button>
+</div>
+
+<!-- RESULTADO -->
+<div class="screen" id="s-result">
+  <div class="re-resultado">
+    <div class="re-score" id="r-score"></div>
+    <div class="re-score-de" id="r-de"></div>
+    <div class="re-msg" id="r-msg"></div>
+  </div>
+  <div class="re-repaso" id="r-repaso"></div>
+  <button class="btn-primary" onclick="doShare()" style="width:100%; margin-bottom:10px;">📤 Compartir resultado</button>
+  <div class="tomorrow-msg">{{ bar.tomorrow_message or ('Vuelve mañana: hay juego nuevo.' if (bar.space_kind or 'local') == 'evento' else 'Vuelve a tomar un café.') }}</div>
+</div>
+
+<script>
+const BAR_SLUG = "{{ bar.slug }}";
+const BAR_NAME = {{ bar.name|tojson }};
+const CODE = new URLSearchParams(window.location.search).get('code') || '';
+
+let gameData = null, ronda = 0, sel = null, resultados = [];
+
+async function init() {
+  try {
+    const res = await fetch('/api/resena', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG })
+    });
+    gameData = await res.json();
+    // Saneado en carga: solo reseñas completas y coherentes
+    gameData.resenas = (gameData.resenas || []).filter(r =>
+      r && r.texto && Array.isArray(r.opciones) && r.opciones.length >= 2 &&
+      Number.isInteger(r.correcta) && r.correcta >= 1 && r.correcta <= r.opciones.length
+    ).slice(0, 4);
+    if (gameData.resenas.length === 0) throw new Error('sin reseñas válidas');
+    renderRonda(0);
+    showScreen('s-juego');
+  } catch(e) {
+    document.getElementById('s-loading').innerHTML = `
+      <div class="error-msg">No se pudo cargar el juego.<br>
+      <button class="btn-secondary" onclick="location.reload()">Reintentar</button></div>`;
+  }
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function renderRonda(idx) {
+  const TOTAL = gameData.resenas.length;
+  const r = gameData.resenas[idx];
+  if (!r) { finalizar(); return; }
+  sel = null;
+  document.getElementById('re-num').textContent = `Reseña ${idx + 1} de ${TOTAL}`;
+  document.getElementById('re-texto').textContent = r.texto.replace(/^⭐+\s*[—-]?\s*/, '');
+  for (let i = 0; i < 4; i++) {
+    const d = document.getElementById(`redot-${i}`);
+    d.style.display = (i < TOTAL) ? '' : 'none';
+    d.className = 're-dot' + (i < idx ? (resultados[i] ? ' ok' : ' ko') : (i === idx ? ' activa' : ''));
+  }
+  document.getElementById('re-cierre').style.display = 'none';
+  document.getElementById('btn-sig').style.display = 'none';
+  document.getElementById('re-opciones').innerHTML = r.opciones.map((op, i) =>
+    `<button class="re-op" id="reop-${i}" onclick="elegir(${i})">${op}</button>`).join('');
+}
+
+function elegir(i) {
+  if (sel !== null) return;
+  sel = i;
+  const r = gameData.resenas[ronda];
+  const ok = (i === r.correcta - 1);
+  resultados[ronda] = ok;
+  document.querySelectorAll('.re-op').forEach((b, j) => {
+    b.disabled = true;
+    if (j === r.correcta - 1) b.classList.add('ok');
+  });
+  if (!ok) document.getElementById(`reop-${i}`).classList.add('ko');
+  document.getElementById(`redot-${ronda}`).className = 're-dot ' + (ok ? 'ok' : 'ko');
+  const cierre = document.getElementById('re-cierre');
+  cierre.textContent = r.cierre || '';
+  if (r.cierre) cierre.style.display = 'block';
+  const btn = document.getElementById('btn-sig');
+  btn.textContent = (ronda < gameData.resenas.length - 1) ? 'Siguiente reseña →' : 'Ver mi nota de crítico →';
+  btn.style.display = 'block';
+}
+
+function siguiente() {
+  if (ronda < gameData.resenas.length - 1) {
+    ronda++;
+    renderRonda(ronda);
+  } else {
+    finalizar();
+  }
+}
+
+async function finalizar() {
+  const TOTAL = gameData.resenas.length;
+  const score = resultados.filter(Boolean).length;
+
+  try {
+    await fetch('/api/play', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG, correct: score > 0, game_type: 'resena', choice: score, elapsed: 0 })
+    });
+  } catch(e) {}
+
+  document.getElementById('r-score').textContent = score;
+  document.getElementById('r-de').textContent = `de ${TOTAL} reseñas descifradas`;
+  const msgs = gameData.mensajes || {};
+  document.getElementById('r-msg').textContent = msgs[String(score)] || `${score} de ${TOTAL} — ¡Gracias por jugar!`;
+  document.getElementById('r-repaso').innerHTML = gameData.resenas.map((r, i) => `
+    <div class="re-repaso-item ${resultados[i] ? 'ok' : 'ko'}">
+      ${resultados[i] ? '✓' : '✗'} Era: <strong>${r.opciones[r.correcta - 1]}</strong>
+    </div>`).join('');
+  showScreen('s-result');
+}
+
+function doShare() {
+  const TOTAL = gameData.resenas.length;
+  const score = resultados.filter(Boolean).length;
+  const grid = resultados.map(ok => ok ? '🟩' : '🟥').join('');
+  const texto = `⭐ La Reseña · ${BAR_NAME}\n${grid} ${score}/${TOTAL}\nReseñas de 5 estrellas… ¿adivinas TÚ qué se reseña?\n👉 nookplay.app/${BAR_SLUG}`;
+  if (navigator.share) {
+    navigator.share({ text: texto }).catch(() => {});
+  } else {
+    navigator.clipboard.writeText(texto).then(() => alert('¡Copiado! Pégalo donde quieras.')).catch(() => {});
+  }
+}
+
+init();
+</script>
+{% endblock %}

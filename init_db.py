@@ -334,6 +334,16 @@ if not veredicto_exists:
     db.commit()
     print('Juego El Veredicto añadido.')
 
+# Añadir resena si no existe
+resena_exists = db.execute("SELECT id FROM games WHERE slug = 'resena'").fetchone()
+if not resena_exists:
+    db.execute(
+        "INSERT INTO games (slug, name, description, icon, plan_min, position) VALUES (?,?,?,?,?,?)",
+        ('resena', 'La Reseña', '⭐⭐⭐⭐⭐ ¿Qué se está reseñando?', '/static/games/resena.webp', 'starter_free', 30)
+    )
+    db.commit()
+    print('Juego La Reseña añadido.')
+
 # Añadir perfil si no existe
 perfil_exists = db.execute("SELECT id FROM games WHERE slug = 'perfil'").fetchone()
 if not perfil_exists:
