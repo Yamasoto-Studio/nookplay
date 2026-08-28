@@ -1413,7 +1413,13 @@ def admin_bar(bar_slug):
     pct_correct = round((correct_week / stats_week * 100)) if stats_week > 0 else 0
     # Analytics: los eventos miden su ventana (event_start→event_end); los bares, la semana
     if (bar['space_kind'] or 'local') == 'evento' and bar['event_start'] and bar['event_end']:
-        analytics = calcular_analytics_bar(db, bar_slug, ventana=(bar['event_start'], bar['event_end']))
+        if str(date.today()) < bar['event_start']:
+            # Antes del evento: las gráficas muestran la actividad de pruebas (vista semanal)
+            analytics = calcular_analytics_bar(db, bar_slug)
+            analytics['evento_futuro'] = True
+            analytics['evento_inicio'] = bar['event_start']
+        else:
+            analytics = calcular_analytics_bar(db, bar_slug, ventana=(bar['event_start'], bar['event_end']))
     else:
         analytics = calcular_analytics_bar(db, bar_slug)
 

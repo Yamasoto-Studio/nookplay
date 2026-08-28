@@ -214,7 +214,12 @@
   <div class="insights-card" id="sec-actividad">
     <div class="insights-head">
       <h3 id="lbl-insights-title">📊 {{ 'Actividad en Nookplay' if es_evento else 'Tu semana en Nookplay' }}</h3>
-      {% if es_evento and analytics.ventana_evento %}
+      {% if analytics.evento_futuro %}
+      <div style="background:#FBE8DC; border:1px solid #E8C4AC; border-radius:10px; padding:10px 14px; font-size:13px; color:#7A4A20; margin-bottom:12px;">
+        🎪 <strong>Modo previo:</strong> el evento empieza el <strong>{{ analytics.evento_inicio }}</strong>. Estas gráficas muestran tu actividad de pruebas; el día 1 pasarán solas a medir el evento (y su informe final).
+      </div>
+      {% endif %}
+      {% if es_evento and (analytics.ventana_evento or analytics.evento_futuro) %}
       <a href="/admin/informe/{{ bar.slug }}" target="_blank" rel="noopener"
          style="display:inline-block; margin-bottom:12px; background:transparent; color:#A8410E; border:1.5px solid #E8C4AC; border-radius:8px; padding:8px 14px; font-size:13px; font-weight:600; text-decoration:none;">📄 Informe del evento</a>
       {% endif %}
@@ -310,8 +315,8 @@
         <span class="big">🌱</span>
         {% if analytics.ventana_evento %}
         {% if analytics.evento_futuro %}
-        🎪 El evento aún no ha empezado.<br>
-        Estas estadísticas medirán los días del evento: partidas, asistentes, horas punta y juego estrella — en directo cada día, y con informe final para compartir. Las partidas de prueba de estos días no cuentan (las ves abajo, en el total desde el inicio).
+        Aún no hay partidas de prueba esta semana.<br>
+        Juega algo desde «Contenido de hoy» y verás las gráficas en marcha — tal como se verán durante el evento.
         {% else %}
         Aún no hay partidas del evento.<br>
         En cuanto los asistentes empiecen a jugar, aquí verás la actividad por día, las horas punta y qué juego engancha más.
