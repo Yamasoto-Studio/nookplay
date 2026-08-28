@@ -167,6 +167,12 @@ async function init() {
       body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG })
     });
     gameData = await res.json();
+    // Saneado en carga: solo preguntas completas y bien formadas (tolera contenido cojo)
+    gameData.preguntas = (gameData.preguntas || []).filter(p =>
+      p && p.enunciado && Array.isArray(p.opciones) && p.opciones.length >= 2 &&
+      Number.isInteger(p.correcta) && p.correcta >= 0 && p.correcta < p.opciones.length
+    ).slice(0, 3);
+    if (gameData.preguntas.length === 0) throw new Error('sin preguntas válidas');
     startTime = Date.now();
     renderPregunta(0);
   } catch(e) {
