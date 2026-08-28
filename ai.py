@@ -1363,11 +1363,37 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
   "datos": ["Dato 1 muy concreto", "Dato 2", "Dato 3", "Dato 4"],
   "pregunta": \"""" + pregunta + """\",
   "opciones": ["Opción A creíble", "Opción B creíble", "Opción C creíble", "Opción D creíble"],
+  "respuesta": "Texto EXACTO de la opción correcta, repetido literalmente",
   "correcta": 1,
   "explicacion": "Explicación de por qué esta respuesta tiene sentido con los datos del perfil. 2-3 frases."
-}""" + _bloque_evitar(evitar)
+}
+IMPORTANTE: "correcta" es la posición 1-indexada (1 = primera opción). "respuesta" debe repetir LITERALMENTE el texto de esa opción — es tu comprobación de coherencia: las pistas del perfil, la explicación, "respuesta" y "correcta" deben señalar todas a la MISMA opción.""" + _bloque_evitar(evitar)
 
-    return _post_ia(prompt, 900, api_key)
+    # Validación anclada por texto: el índice se deriva de la coincidencia real,
+    # inmune a la ambigüedad 0/1-indexado (bug del desplazamiento de opciones).
+    import json as _json
+    def _norm(s):
+        return ' '.join(str(s).lower().split())
+    raw = None
+    for _intento in range(2):
+        raw = _post_ia(prompt, 900, api_key)
+        try:
+            obj = _parse_ia_json(raw)
+            ops = obj.get('opciones') or []
+            if len(ops) == 4 and obj.get('explicacion') and obj.get('datos'):
+                resp = _norm(obj.get('respuesta', ''))
+                idx = next((i for i, o in enumerate(ops) if _norm(o) == resp), None)
+                if idx is None and resp:
+                    idx = next((i for i, o in enumerate(ops) if resp in _norm(o) or _norm(o) in resp), None)
+                if idx is not None:
+                    obj['correcta'] = idx + 1
+                    return _json.dumps(obj, ensure_ascii=False)
+                c = obj.get('correcta')
+                if isinstance(c, int) and 1 <= c <= 4:
+                    return _json.dumps(obj, ensure_ascii=False)
+        except Exception:
+            pass
+    return raw
 
 
 # ─────────────────────────────────────────────────────────────────────────────
