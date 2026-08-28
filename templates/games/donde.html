@@ -232,7 +232,7 @@ async function responder(idx) {
   const correcto = idx === gameData.correcto;
   const elapsed = startTime ? Math.round((Date.now() - startTime) / 1000) : 0;
 
-  await fetch('/api/play', {
+  try { await fetch('/api/play', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -240,7 +240,7 @@ async function responder(idx) {
       correct: correcto, game_type: 'donde',
       choice: pistasReveladas, elapsed
     })
-  });
+  }); } catch(e) {}
 
   // Mark options
   document.querySelectorAll('.opcion-btn').forEach((btn, i) => {

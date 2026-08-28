@@ -302,7 +302,7 @@ function checkBoard() {
 }
 
 async function mostrarResultado(elapsed) {
-  await fetch('/api/play', {
+  try { await fetch('/api/play', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -310,7 +310,7 @@ async function mostrarResultado(elapsed) {
       correct: true, game_type: 'carta',
       choice: errores, elapsed
     })
-  });
+  }); } catch(e) {}
 
   const items = gameData.categoria.items;
   let sub = errores === 0 ? '¡Sin errores! Perfecto.' : `Con ${errores} ${errores===1?'error':'errores'}.`;

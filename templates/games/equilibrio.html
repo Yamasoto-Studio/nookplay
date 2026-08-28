@@ -454,7 +454,7 @@ function useHint(idx) {
 
 async function mostrarResultado() {
   const elapsed = getElapsed();
-  await fetch('/api/play', {
+  try { await fetch('/api/play', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -462,7 +462,7 @@ async function mostrarResultado() {
       correct: true, game_type: 'equilibrio',
       choice: hintsUsed, elapsed
     })
-  });
+  }); } catch(e) {}
 
   let sub = hintsUsed === 0 ? '¡Sin pistas! Equilibrio perfecto.' : `Con ${hintsUsed} ${hintsUsed===1?'pista':'pistas'}.`;
   if (elapsed < 120 && hintsUsed === 0) sub = '¡Sin pistas y en tiempo récord!';

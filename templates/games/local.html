@@ -210,14 +210,14 @@ async function responderTrivia() {
   if (selectedOption === -1) return;
   const correcta = selectedOption === gameData.correcta;
 
-  await fetch('/api/play', {
+  try { await fetch('/api/play', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       code: CODE, bar_slug: BAR_SLUG,
       correct: correcta, game_type: 'local', choice: selectedOption
     })
-  });
+  }); } catch(e) {}
 
   // Mark options
   document.querySelectorAll('.local-opcion').forEach((btn, i) => {
@@ -238,14 +238,14 @@ async function responderTrivia() {
 }
 
 async function revelarBonus() {
-  await fetch('/api/play', {
+  try { await fetch('/api/play', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       code: CODE, bar_slug: BAR_SLUG,
       correct: true, game_type: 'local'
     })
-  });
+  }); } catch(e) {}
   document.getElementById('l-debate-wrap').style.display = 'none';
   mostrarBonus();
 }

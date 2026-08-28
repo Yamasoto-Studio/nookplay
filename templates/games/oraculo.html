@@ -198,14 +198,14 @@ async function elegirSigno(nombre) {
   const data = gameData.signos[nombre];
 
   // Register play
-  await fetch('/api/play', {
+  try { await fetch('/api/play', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       code: CODE, bar_slug: BAR_SLUG,
       correct: true, game_type: 'oraculo', choice: SIGNOS.indexOf(signo)
     })
-  });
+  }); } catch(e) {}
 
   // Render prediction
   document.getElementById('pred-card').innerHTML = `

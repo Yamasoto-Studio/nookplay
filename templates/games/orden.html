@@ -278,7 +278,7 @@ async function confirmar() {
   const perfecto = aciertos === order.length;
   const elapsed = getElapsed();
 
-  await fetch('/api/play', {
+  try { await fetch('/api/play', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -286,7 +286,7 @@ async function confirmar() {
       correct: perfecto, game_type: 'orden',
       choice: aciertos, elapsed
     })
-  });
+  }); } catch(e) {}
 
   // Pinta la lista del jugador con ok/bad
   pintarResultado(aciertos, perfecto, elapsed);

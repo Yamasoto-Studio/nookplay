@@ -115,11 +115,11 @@ async function revelar() {
   const correct = selected === gameData.falsa;
   const elapsed = startTime ? Math.round((Date.now() - startTime) / 1000) : 0;
 
-  await fetch('/api/play', {
+  try { await fetch('/api/play', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG, correct, game_type: 'impostor', choice: selected, elapsed })
-  });
+  }); } catch(e) {}
 
   const h = document.getElementById('imp-headline');
   h.textContent = correct ? '¡Encontraste al impostor!' : 'Te ha engañado.';

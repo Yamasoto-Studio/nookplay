@@ -387,7 +387,7 @@ function useHint(idx) {
 
 async function mostrarResultado() {
   const elapsed = getElapsed();
-  await fetch('/api/play', {
+  try { await fetch('/api/play', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -395,7 +395,7 @@ async function mostrarResultado() {
       correct: true, game_type: 'reinas',
       choice: hintsUsed, elapsed
     })
-  });
+  }); } catch(e) {}
 
   const mins = Math.floor(elapsed/60);
   let sub = hintsUsed === 0

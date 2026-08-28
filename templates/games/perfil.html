@@ -260,7 +260,7 @@ async function confirmar() {
   const elapsed = startTime ? Math.round((Date.now() - startTime) / 1000) : 0;
   const correct = myChoice === (gameData.correcta - 1); // correcta es 1-indexed
 
-  await fetch('/api/play', {
+  try { await fetch('/api/play', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -270,10 +270,13 @@ async function confirmar() {
       choice: myChoice,
       elapsed
     })
-  });
+  }); } catch(e) {}
 
-  const sr = await fetch(`/api/perfil-stats/${BAR_SLUG}`);
-  const stats = await sr.json();
+  let stats = {};
+  try {
+    const sr = await fetch(`/api/perfil-stats/${BAR_SLUG}`);
+    if (sr.ok) stats = await sr.json();
+  } catch(e) {}
   showResult(correct, stats);
 }
 

@@ -321,7 +321,7 @@ function esCercano() {
 
 async function mostrarResultado() {
   const elapsed = startTime ? Math.round((Date.now() - startTime) / 1000) : 0;
-  await fetch('/api/play', {
+  try { await fetch('/api/play', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -329,7 +329,7 @@ async function mostrarResultado() {
       correct: ganado, game_type: 'conexiones',
       choice: gruposAdivinados, elapsed
     })
-  });
+  }); } catch(e) {}
 
   const title = document.getElementById('r-title');
   title.textContent = ganado ? '¡Las encontraste!' : 'Se acabaron los intentos.';

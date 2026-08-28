@@ -183,7 +183,7 @@ async function confirmar() {
 
   const elapsed = startTime ? Math.round((Date.now() - startTime) / 1000) : 0;
 
-  await fetch('/api/play', {
+  try { await fetch('/api/play', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -193,10 +193,13 @@ async function confirmar() {
       choice: myVote === 'a' ? 0 : 1,
       elapsed
     })
-  });
+  }); } catch(e) {}
 
-  const sr = await fetch(`/api/dilema-stats/${BAR_SLUG}`);
-  const stats = await sr.json();
+  let stats = {};
+  try {
+    const sr = await fetch(`/api/dilema-stats/${BAR_SLUG}`);
+    if (sr.ok) stats = await sr.json();
+  } catch(e) {}
 
   showResult(stats);
 }
