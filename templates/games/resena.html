@@ -65,9 +65,9 @@
     <div class="re-msg" id="r-msg"></div>
   </div>
   <div class="re-repaso" id="r-repaso"></div>
-  <button class="btn-primary" onclick="doShare()" style="width:100%; margin-bottom:10px;">📤 Compartir resultado</button>
-  <div class="tomorrow-msg">{{ bar.tomorrow_message or ('Vuelve mañana: hay juego nuevo.' if (bar.space_kind or 'local') == 'evento' else 'Vuelve a tomar un café.') }}</div>
+  <button class="btn-share" onclick="doShare()">📤 Compartir</button>
   <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
+  <div class="tomorrow">{{ bar.tomorrow_message or "Mañana, cuatro reseñas nuevas que descifrar." }}</div>
 </div>
 
 <script>

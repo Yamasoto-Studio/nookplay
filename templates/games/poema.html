@@ -127,7 +127,7 @@
   <button class="btn-primary" onclick="otroPoema()" style="width:100%; margin-bottom:8px;">Crear otro poema</button>
   <button class="btn-share" onclick="doShare()">📤 Compartir</button>
   <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
-  <div class="tomorrow">Comparte tu poema con quien quieras.<br>{{ bar.tomorrow_message or ('Vuelve mañana: hay juego nuevo.' if (bar.space_kind or 'local') == 'evento' else 'Vuelve a tomar un café.') }}</div>
+  <div class="tomorrow">{{ bar.tomorrow_message or "Comparte tu poema con quien quieras." }}</div>
 </div>
 
 <script>

@@ -132,7 +132,7 @@
 
   <button class="btn-share" onclick="doShare()">📤 Compartir</button>
   <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
-  <div class="tomorrow">Mañana, 5 preguntas nuevas.<br>{{ bar.tomorrow_message or 'Vuelve a por la revancha.' }}</div>
+  <div class="tomorrow">{{ bar.tomorrow_message or "Mañana, 5 preguntas nuevas. Vuelve a por la revancha." }}</div>
 </div>
 
 <script>
