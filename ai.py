@@ -1990,6 +1990,14 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
                   and 0 <= p['correcta'] <= 3 and p.get('explicacion')]
             if len(pr) >= 3:
                 obj['preguntas'] = pr[:3]
+                msgs = obj.get('mensajes') or {}
+                if not all(str(k) in msgs for k in (0, 1, 2, 3)):
+                    obj['mensajes'] = {
+                        '0': '0 de 3 — Hoy la mente está de siesta. 😴',
+                        '1': '1 de 3 — Calentando motores. 🧠',
+                        '2': '2 de 3 — Buen nivel. Casi opositor. 💪',
+                        '3': '3 de 3 — Mente prodigiosa. 🏆'
+                    }
                 return _json.dumps(obj, ensure_ascii=False)
         except Exception:
             pass

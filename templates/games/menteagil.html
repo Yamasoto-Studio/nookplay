@@ -285,28 +285,37 @@ async function finalizarQuiz() {
   tiempoTotal = startTime ? Math.round((Date.now() - startTime) / 1000) : 0;
   const score = respuestas.filter(r => r.correcta).length;
 
-  await fetch('/api/play', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      code: CODE, bar_slug: BAR_SLUG,
-      correct: score > 0,
-      game_type: 'menteagil',
-      choice: score, // guardamos la puntuación como choice
-      elapsed: tiempoTotal
-    })
-  });
+  // Registrar la partida — best-effort: nunca bloquea el resultado
+  try {
+    await fetch('/api/play', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        code: CODE, bar_slug: BAR_SLUG,
+        correct: score > 0,
+        game_type: 'menteagil',
+        choice: score,
+        elapsed: tiempoTotal
+      })
+    });
+  } catch(e) {}
 
-  const sr = await fetch(`/api/menteagil-stats/${BAR_SLUG}`);
-  const stats = await sr.json();
+  // Stats — opcionales: si fallan, resultado sin bloque social
+  let stats = {};
+  try {
+    const sr = await fetch(`/api/menteagil-stats/${BAR_SLUG}`);
+    if (sr.ok) stats = await sr.json();
+  } catch(e) {}
+
   showResult(score, stats);
 }
 
 function showResult(score, stats) {
   document.getElementById('r-score').textContent = score;
 
-  const msgs = gameData.mensajes;
-  document.getElementById('r-msg').textContent = msgs[String(score)] || '';
+  const msgs = gameData.mensajes || {};
+  const total = respuestas.length;
+  document.getElementById('r-msg').textContent = msgs[String(score)] || `${score} de ${total} — ¡Gracias por jugar!`;
 
   // Repaso de respuestas
   document.getElementById('r-repaso').innerHTML = respuestas.map((r, i) => `
@@ -317,7 +326,7 @@ function showResult(score, stats) {
   `).join('');
 
   // Stats block
-  if (stats.total >= 1) {
+  if (stats && stats.total >= 1) {
     const statEl = document.getElementById('stats-block');
     if (statEl) {
       document.getElementById('stat-jugadores').textContent = stats.total;
