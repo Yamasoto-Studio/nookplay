@@ -54,6 +54,7 @@
   <div class="re-opciones" id="re-opciones"></div>
   <div class="re-cierre" id="re-cierre"></div>
   <button class="btn-primary" id="btn-sig" onclick="siguiente()" style="display:none; width:100%;">Siguiente reseña →</button>
+  <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
 </div>
 
 <!-- RESULTADO -->
@@ -66,6 +67,7 @@
   <div class="re-repaso" id="r-repaso"></div>
   <button class="btn-primary" onclick="doShare()" style="width:100%; margin-bottom:10px;">📤 Compartir resultado</button>
   <div class="tomorrow-msg">{{ bar.tomorrow_message or ('Vuelve mañana: hay juego nuevo.' if (bar.space_kind or 'local') == 'evento' else 'Vuelve a tomar un café.') }}</div>
+  <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
 </div>
 
 <script>
