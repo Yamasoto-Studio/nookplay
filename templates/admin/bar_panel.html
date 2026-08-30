@@ -1087,6 +1087,11 @@
     else alert('Error al cambiar plan');
   }
 
+  // Mandos creativos: visibles para el renderer, toggleKnobs y saveKnobs
+  const KNOBS = {{ game_knobs|tojson }};
+  const KNOB_VALUES = {{ knob_values|tojson }};
+  const KNOBS_SUPER = {{ 'true' if admin_role == 'superadmin' else 'false' }};
+
   async function loadGames() {
     try {
       const res = await fetch('/api/bar-games/' + PANEL_BAR_SLUG);
@@ -1102,9 +1107,6 @@
       // En eventos, marcar de un vistazo los juegos que se ambientan con la temática
       const ES_EVENTO_PANEL = {{ 'true' if es_evento else 'false' }};
       const TEMATIZABLES = new Set({{ event_game_types|tojson }});
-      const KNOBS = {{ game_knobs|tojson }};
-      const KNOB_VALUES = {{ knob_values|tojson }};
-      const KNOBS_SUPER = {{ 'true' if admin_role == 'superadmin' else 'false' }};
       list.innerHTML = games.map(g => {
         const isLocked = !g.available && !g.fixed;
         const canToggle = g.selectable && !isLocked;
