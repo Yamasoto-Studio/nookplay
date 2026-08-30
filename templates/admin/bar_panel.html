@@ -1010,6 +1010,15 @@
   }
   .game-row:last-child { border-bottom: none; }
   .game-row-img { width: 44px; height: 44px; border-radius: 8px; object-fit: cover; flex-shrink: 0; }
+  .knob-btn { background: none; border: 1px solid var(--border); border-radius: 8px; padding: 4px 8px; cursor: pointer; font-size: 15px; flex-shrink: 0; }
+  .knob-btn:hover { border-color: var(--bar-primary, #C4622D); }
+  .knob-panel { grid-column: 1 / -1; background: #FBF7F1; border: 1px solid var(--border); border-top: none; border-radius: 0 0 10px 10px; padding: 14px 16px; }
+  .knob-field { margin-bottom: 10px; }
+  .knob-field label { display: block; font-size: 12px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 5px; }
+  .knob-field input, .knob-field select { width: 100%; padding: 9px 11px; border: 1px solid var(--border); border-radius: 8px; font-family: inherit; font-size: 14px; box-sizing: border-box; }
+  .knob-hint { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+  .knob-actions { display: flex; align-items: center; gap: 12px; }
+  .knob-status { font-size: 13px; }
   .game-row-info { flex: 1; min-width: 0; }
   .game-row-name { font-size: 14px; font-weight: 600; color: var(--text); }
   .game-badge.badge-theme { font-size: 10px; font-weight: 700; letter-spacing: 0.3px; text-transform: uppercase; color: #A8410E; background: #FBE8DC; border: 1px solid #E8C4AC; border-radius: 5px; padding: 1px 6px; vertical-align: middle; }
@@ -1092,7 +1101,10 @@
       const list = document.getElementById('games-list');
       // En eventos, marcar de un vistazo los juegos que se ambientan con la temática
       const ES_EVENTO_PANEL = {{ 'true' if es_evento else 'false' }};
-      const TEMATIZABLES = new Set(['crimen','impostor','dilema','conexiones','veredicto','perfil','vestuario','trivia','local','orden','sinopsis','letra','quienmas','escalera','masomenos']);
+      const TEMATIZABLES = new Set({{ event_game_types|tojson }});
+      const KNOBS = {{ game_knobs|tojson }};
+      const KNOB_VALUES = {{ knob_values|tojson }};
+      const KNOBS_SUPER = {{ 'true' if admin_role == 'superadmin' else 'false' }};
       list.innerHTML = games.map(g => {
         const isLocked = !g.available && !g.fixed;
         const canToggle = g.selectable && !isLocked;
@@ -1133,6 +1145,7 @@
             <div class="game-row-status">${statusText}</div>
           </div>
           ${badgeHtml}
+          ${(KNOBS_SUPER && KNOBS[g.slug] && g.active) ? `<button class="knob-btn" onclick="toggleKnobs('${g.slug}', this)" title="Ajustes creativos de ${g.name}">🎛️</button>` : ''}
           <button class="${toggleClass}" ${onclick} aria-label="${g.active ? 'Desactivar' : 'Activar'} ${g.name}"></button>
         </div>`;
       }).join('');
@@ -1148,6 +1161,56 @@
       }
 
     } catch(e) { console.error('loadGames error:', e); }
+  }
+
+  function toggleKnobs(slug, btn) {
+    const fila = btn.closest('.game-row');
+    const existente = fila.nextElementSibling;
+    if (existente && existente.classList.contains('knob-panel')) {
+      existente.remove();
+      return;
+    }
+    document.querySelectorAll('.knob-panel').forEach(x => x.remove());
+    const vals = KNOB_VALUES[slug] || {};
+    const campos = (KNOBS[slug] || []).map(c => {
+      const v = vals[c.key] || '';
+      let control;
+      if (c.type === 'select') {
+        control = `<select data-knob="${c.key}">` + c.options.map(o =>
+          `<option value="${o}" ${o === v ? 'selected' : ''}>${o || '— estándar —'}</option>`).join('') + `</select>`;
+      } else {
+        control = `<input type="text" data-knob="${c.key}" value="${v.replace(/"/g, '&quot;')}" maxlength="${c.max || 200}" placeholder="${c.placeholder || ''}">`;
+      }
+      return `<div class="knob-field"><label>${c.label}</label>${control}<div class="knob-hint">${c.hint || ''}</div></div>`;
+    }).join('');
+    const div = document.createElement('div');
+    div.className = 'knob-panel';
+    div.innerHTML = campos + `<div class="knob-actions"><button class="btn-secondary" onclick="saveKnobs('${slug}', this)">Guardar ajustes</button><span class="knob-status"></span></div>`;
+    fila.insertAdjacentElement('afterend', div);
+  }
+
+  async function saveKnobs(slug, btn) {
+    const panel = btn.closest('.knob-panel');
+    const st = panel.querySelector('.knob-status');
+    const settings = {};
+    panel.querySelectorAll('[data-knob]').forEach(el => { settings[el.dataset.knob] = el.value; });
+    st.textContent = 'Guardando…'; st.style.color = 'var(--text-muted)';
+    try {
+      const r = await fetch('/admin/api/game-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bar_slug: '{{ bar.slug }}', game_slug: slug, settings })
+      });
+      const d = await r.json().catch(() => null);
+      if (d && d.ok) {
+        KNOB_VALUES[slug] = settings;
+        st.textContent = '✅ Guardado — se aplica al próximo contenido (o Regenerar)'; st.style.color = '#22aa55';
+      } else {
+        st.textContent = '❌ ' + ((d && d.error) || 'Error ' + r.status); st.style.color = '#cc2222';
+      }
+    } catch(e) {
+      st.textContent = '❌ Error de red'; st.style.color = '#cc2222';
+    }
   }
 
   async function toggleGame(slug, activate) {

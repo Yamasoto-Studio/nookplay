@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 from datetime import date, datetime, timedelta
 import sqlite3
-from ai import generate_game, generate_impostor, generate_dilema, generate_conexiones, generate_oraculo, generate_donde, generate_carta, generate_reinas, generate_conexion_local, generate_equilibrio, generate_veredicto, generate_perfil, generate_vestuario, generate_trivia, generate_sinopsis, generate_muertes, generate_letra, generate_pensamiento, generate_poema, generate_menteagil, generate_constitucion, generate_orden, generate_titular, generate_definicion, generate_masomenos, generate_escalera, generate_quienmas, generate_resena, build_bar_context, get_day_seed, set_event_theme, reset_event_theme, set_variant_hint
+from ai import generate_game, generate_impostor, generate_dilema, generate_conexiones, generate_oraculo, generate_donde, generate_carta, generate_reinas, generate_conexion_local, generate_equilibrio, generate_veredicto, generate_perfil, generate_vestuario, generate_trivia, generate_sinopsis, generate_muertes, generate_letra, generate_pensamiento, generate_poema, generate_menteagil, generate_constitucion, generate_orden, generate_titular, generate_definicion, generate_masomenos, generate_escalera, generate_quienmas, generate_resena, build_bar_context, set_game_knobs, reset_game_knobs, get_day_seed, set_event_theme, reset_event_theme, set_variant_hint
 import os
 import smtplib
 from email.mime.text import MIMEText
@@ -699,7 +699,11 @@ def pregen_daily_games():
                     if game_type == 'crimen':
                         ctx = build_bar_context(dict(bar))
                         ctx['productos'] = [p['title'] for p in products]
-                        game_data = generate_game(ctx, bar['slug'])
+                        _ktok = set_game_knobs(_knobs_de(db, bar['id'], 'crimen'))
+                        try:
+                            game_data = generate_game(ctx, bar['slug'])
+                        finally:
+                            reset_game_knobs(_ktok)
                     elif game_type == 'impostor':
                         ev = get_historial_reciente(db, 'impostor', bar['slug'], campo='tema')
                         game_data = generate_impostor(bar['name'], bar['slug'], evitar=ev)
@@ -745,10 +749,26 @@ def pregen_daily_games():
                         game_data = generate_resena(bar['slug'], evitar=ev)
                     elif game_type == 'vestuario':
                         ev = get_historial_reciente(db, 'vestuario', bar['slug'], campo='preguntas')
-                        game_data = generate_vestuario(bar['slug'], evitar=ev)
+                        _ktok = set_game_knobs(_knobs_de(db, bar['id'], 'vestuario'))
+                        try:
+                            _ktok = set_game_knobs(_knobs_de(get_db(), bar['id'], 'vestuario'))
+                            try:
+                                game_data = generate_vestuario(bar['slug'], evitar=ev)
+                            finally:
+                                reset_game_knobs(_ktok)
+                        finally:
+                            reset_game_knobs(_ktok)
                     elif game_type == 'trivia':
                         ev = get_historial_reciente(db, 'trivia', bar['slug'], campo='trivia_preguntas')
-                        game_data = generate_trivia(bar['slug'], evitar=ev)
+                        _ktok = set_game_knobs(_knobs_de(db, bar['id'], 'trivia'))
+                        try:
+                            _ktok = set_game_knobs(_knobs_de(get_db(), bar['id'], 'trivia'))
+                            try:
+                                game_data = generate_trivia(bar['slug'], evitar=ev)
+                            finally:
+                                reset_game_knobs(_ktok)
+                        finally:
+                            reset_game_knobs(_ktok)
                     elif game_type == 'sinopsis':
                         # Bares: única global. Eventos: propia y temática (con pool)
                         if not _es_evento_bar:
@@ -1236,6 +1256,47 @@ EVENT_GAME_TYPES = {'crimen', 'impostor', 'dilema', 'conexiones', 'veredicto', '
                     'vestuario', 'trivia', 'local', 'orden', 'sinopsis', 'letra',
                     'quienmas', 'escalera', 'masomenos', 'resena'}
 
+# ── Manifiesto de mandos creativos: qué expone cada juego en el panel ──
+# Fuente única: el panel pinta los controles desde aquí y los generadores los
+# reciben vía set_game_knobs. Añadir un mando = añadir un campo a este dict.
+GAME_KNOBS = {
+    'trivia': [
+        {'key': 'foco', 'label': 'Foco de las preguntas', 'type': 'text', 'max': 200,
+         'placeholder': 'Ej: solo sobre los novios · juegos de mesa y sus autores · cultura friki de los 90',
+         'hint': 'Dirige de qué van las preguntas. Vacío = cultura general con la temática del espacio.'},
+    ],
+    'crimen': [
+        {'key': 'tono', 'label': 'Tono del caso', 'type': 'select',
+         'options': ['', 'gamberro', 'tierno', 'noir clásico', 'absurdo total'],
+         'hint': 'El sabor narrativo del crimen del día. Vacío = tono estándar.'},
+    ],
+    'vestuario': [
+        {'key': 'concepto', 'label': 'Personajes de…', 'type': 'text', 'max': 120,
+         'placeholder': 'Ej: diseñadores de juegos de mesa · el mundo del café · el cine de los 80',
+         'hint': 'Sustituye el enfoque futbolero: curiosidades de personajes del mundo que elijas.'},
+    ],
+}
+KNOB_LABELS = {g: {c['key']: c['label'] for c in campos} for g, campos in GAME_KNOBS.items()}
+
+
+def _knobs_de(db, bar_id, game_slug):
+    """Lee los mandos guardados de un juego para un bar → dict etiqueta→valor (o None)."""
+    if game_slug not in GAME_KNOBS:
+        return None
+    try:
+        row = db.execute("SELECT settings FROM bar_games WHERE bar_id = ? AND game_slug = ?",
+                         (bar_id, game_slug)).fetchone()
+        if not row or not row['settings']:
+            return None
+        import json as _json
+        vals = _json.loads(row['settings'])
+        etiquetas = KNOB_LABELS.get(game_slug, {})
+        out = {etiquetas.get(k, k): str(v)[:200] for k, v in vals.items() if str(v).strip()}
+        return out or None
+    except Exception:
+        return None
+
+
 GAME_NOMBRES = {
     'crimen': 'El Crimen del Día', 'impostor': 'El Impostor', 'dilema': 'El Dilema',
     'conexiones': 'Conexiones', 'oraculo': 'El Oráculo', 'donde': '¿Dónde está?',
@@ -1464,6 +1525,21 @@ def admin_bar(bar_slug):
     # Nombre legible del juego favorito
     if analytics.get('top_game'):
         analytics['top_game_name'] = GAME_NOMBRES.get(analytics['top_game'], analytics['top_game'])
+    # Valores actuales de mandos creativos por juego (para el panel)
+    _knob_values = {}
+    try:
+        _dbk = get_db()
+        import json as _jsonk
+        for _r in _dbk.execute("SELECT game_slug, settings FROM bar_games WHERE bar_id = ?", (bar['id'],)).fetchall():
+            if _r['game_slug'] in GAME_KNOBS and _r['settings']:
+                try:
+                    _knob_values[_r['game_slug']] = _jsonk.loads(_r['settings'])
+                except Exception:
+                    pass
+        _dbk.close()
+    except Exception:
+        _knob_values = {}
+
     # Contenido de hoy (solo eventos): estado de generación por juego activo
     contenido_hoy = []
     if (bar['space_kind'] or 'local') == 'evento':
@@ -1489,6 +1565,8 @@ def admin_bar(bar_slug):
                            current_code=current_code, valid_until=valid_until_str, stats=stats,
                            analytics=analytics, event_days=event_days, event_admin_code=event_admin_code,
                            contenido_hoy=contenido_hoy,
+                           game_knobs=GAME_KNOBS, knob_values=_knob_values,
+                           event_game_types=sorted(EVENT_GAME_TYPES),
                            admin_role=session.get('admin_role','bar_admin'))
 
 def _normalizar_handle(valor, dominio):
@@ -1631,6 +1709,35 @@ def admin_informe(bar_slug):
         fechas_str = f"{bar['event_start']} — {bar['event_end']}"
     return render_template('admin/informe.html', bar=bar, a=analytics,
                            max_daily=max_daily, fechas_str=fechas_str, hoy=str(date.today()))
+
+
+@app.route('/admin/api/game-settings', methods=['POST'])
+def admin_game_settings():
+    """Guarda los mandos creativos de un juego (aislado; solo superadmin)."""
+    if session.get('admin_role') != 'superadmin':
+        return jsonify({'ok': False, 'error': 'No autorizado'}), 403
+    data = request.get_json() or {}
+    bar_slug = data.get('bar_slug')
+    game_slug = data.get('game_slug')
+    valores = data.get('settings') or {}
+    if game_slug not in GAME_KNOBS:
+        return jsonify({'ok': False, 'error': 'Este juego no tiene ajustes'}), 400
+    permitidos = {c['key']: c for c in GAME_KNOBS[game_slug]}
+    limpio = {}
+    for k, v in valores.items():
+        if k in permitidos:
+            limpio[k] = str(v).strip()[:permitidos[k].get('max', 200)]
+    db = get_db()
+    bar = db.execute("SELECT id FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
+    if not bar:
+        db.close()
+        return jsonify({'ok': False, 'error': 'No encontrado'}), 404
+    import json as _json
+    db.execute("UPDATE bar_games SET settings = ? WHERE bar_id = ? AND game_slug = ?",
+               (_json.dumps(limpio, ensure_ascii=False), bar['id'], game_slug))
+    db.commit()
+    db.close()
+    return jsonify({'ok': True})
 
 
 @app.route('/admin/api/regen-game', methods=['POST'])
@@ -2178,7 +2285,11 @@ def game():
     try:
         _tok = set_event_theme(_theme_de(bar))
         try:
-            game_data = generate_game(bar_context, bar_slug)
+            _ktok = set_game_knobs(_knobs_de(get_db(), bar['id'], 'crimen'))
+            try:
+                game_data = generate_game(bar_context, bar_slug)
+            finally:
+                reset_game_knobs(_ktok)
         finally:
             reset_event_theme(_tok)
         # Guardar en caché BD
@@ -2712,7 +2823,15 @@ def vestuario_api():
         _dbev.close()
         _tok = set_event_theme(_theme_de(bar))
         try:
-            game_data = generate_vestuario(bar_slug, evitar=_ev)
+            _ktok = set_game_knobs(_knobs_de(db, bar['id'], 'vestuario'))
+            try:
+                _ktok = set_game_knobs(_knobs_de(get_db(), bar['id'], 'vestuario'))
+                try:
+                    game_data = generate_vestuario(bar_slug, evitar=_ev)
+                finally:
+                    reset_game_knobs(_ktok)
+            finally:
+                reset_game_knobs(_ktok)
         finally:
             reset_event_theme(_tok)
         _bid = bar['id']
@@ -2794,7 +2913,15 @@ def trivia_api():
         _dbev.close()
         _tok = set_event_theme(_theme_de(bar))
         try:
-            game_data = generate_trivia(bar_slug, evitar=_ev)
+            _ktok = set_game_knobs(_knobs_de(db, bar['id'], 'trivia'))
+            try:
+                _ktok = set_game_knobs(_knobs_de(get_db(), bar['id'], 'trivia'))
+                try:
+                    game_data = generate_trivia(bar_slug, evitar=_ev)
+                finally:
+                    reset_game_knobs(_ktok)
+            finally:
+                reset_game_knobs(_ktok)
         finally:
             reset_event_theme(_tok)
         _bid = bar['id']

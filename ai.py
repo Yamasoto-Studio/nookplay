@@ -291,6 +291,30 @@ CATEGORIAS_IMPOSTOR = [
     "cine y música",
 ]
 
+import contextvars as _cv
+_game_knobs = _cv.ContextVar('game_knobs', default=None)
+
+def set_game_knobs(knobs):
+    """Mandos creativos del juego (dict etiqueta→valor). Devuelve token para reset."""
+    return _game_knobs.set(knobs if knobs else None)
+
+def reset_game_knobs(token):
+    try:
+        _game_knobs.reset(token)
+    except Exception:
+        pass
+
+def _bloque_knobs():
+    k = _game_knobs.get()
+    if not k:
+        return ''
+    lineas = '\n'.join(f'- {et}: {v}' for et, v in k.items() if str(v).strip())
+    if not lineas:
+        return ''
+    return ("\n\nDIRECTRICES CREATIVAS DEL ESPACIO PARA ESTE JUEGO (prioridad máxima, "
+            "por encima de cualquier enfoque por defecto):\n" + lineas)
+
+
 def _bloque_evitar(evitar):
     """Construye un bloque de texto para el prompt con los contenidos a no repetir."""
     if not evitar:
@@ -387,7 +411,7 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
   "explicacion": "3-4 frases que revelan el método, el motivo real y el detalle que lo delataba. Satisfactorio, con giro, con el toque de ironía final."
 }}"""
 
-    return _post_ia(prompt, 1500, api_key)
+    return _post_ia(prompt + _bloque_knobs(), 1500, api_key)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1521,7 +1545,7 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
     "2": "2 de 3 — Buen partido. Te llaman del banquillo. 👏",
     "3": "3 de 3 — Leyenda del vestuario. Nadie te discute. 🏆"
   }
-}""" + _bloque_evitar(evitar)
+}""" + _bloque_evitar(evitar) + _bloque_knobs()
 
     return _post_ia(prompt, 1200, api_key)
 
@@ -1584,7 +1608,7 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
     "5": "5 de 5 — Pleno absoluto. Hoy invitas tú. 🏆"
   }
 }
-IMPORTANTE: los índices "correcta" deben variar entre preguntas (no siempre la misma posición).""" + _bloque_evitar(evitar)
+IMPORTANTE: los índices "correcta" deben variar entre preguntas (no siempre la misma posición).""" + _bloque_evitar(evitar) + _bloque_knobs()
 
     return _post_ia(prompt, 1800, api_key)
 

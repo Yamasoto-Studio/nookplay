@@ -146,6 +146,7 @@ db.executescript('''
 
 migrations = [
     "ALTER TABLE bars ADD COLUMN type TEXT DEFAULT ''",
+    "ALTER TABLE bar_games ADD COLUMN settings TEXT DEFAULT ''",
     "ALTER TABLE bars ADD COLUMN logo_path TEXT DEFAULT ''",
     "ALTER TABLE bars ADD COLUMN address TEXT DEFAULT ''",
     "ALTER TABLE bars ADD COLUMN city TEXT DEFAULT ''",
