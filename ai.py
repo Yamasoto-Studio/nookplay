@@ -1478,12 +1478,13 @@ def generate_resena(bar_slug, evitar=None):
     prompt = """Eres el redactor de LA RESEÑA, un juego de humor: reseñas de 5 estrellas absurdamente serias sobre objetos o situaciones COTIDIANOS del universo indicado, y el jugador adivina qué se está reseñando.
 
 REGLAS DE ORO:
-1. Genera 4 reseñas. Cada una habla de un objeto o situación cotidiana SIN nombrarla jamás (ni con sinónimos obvios).
-2. Tono: solemnidad ridícula de reseña de 5 estrellas — épica desproporcionada, gratitud trascendental por lo doméstico. El humor nace del contraste.
-3. Pistas justas: adivinable releyendo con atención, nunca obvia a la primera.
-4. 4 opciones plausibles del mismo mundo; solo UNA encaja con TODOS los detalles de la reseña.
-5. "cierre": un remate de 1 frase, mostrado al resolver, que remata la broma.
-6. Los 4 objetos deben ser variados entre sí (no cuatro cosas de la misma categoría).
+1. Genera 4 reseñas. Cada una habla de un OBJETO COMÚN que cualquier persona reconoce (un dado, una silla plegable, un bocadillo, un sacapuntas, una bolsa de tela, un reloj de arena...), SIN nombrarlo jamás ni con sinónimos obvios.
+2. AMBIENTACIÓN, no publicidad: elige los objetos del MUNDO del espacio (en un festival de juegos: dados, meeples, sillas del pabellón, la mochila, el reloj de arena, el vaso de plástico...). PROHIBIDO reseñar productos, marcas, juegos concretos o sus componentes, y PROHIBIDO usar cualquier nombre propio o marca en el texto. Los datos internos del espacio son solo para el tono y algún guiño suelto, NUNCA la respuesta.
+3. El humor es PARODIA DE RESEÑAS DE INTERNET, con sus tics: el reseñista que cuenta su vida ("lo compré cuando aún vivía con mi ex"), la queja absurda seguida de 5 estrellas, el "EDIT:" días después, la comparación con el cuñado o la suegra, la jerga seria de reseña ("cumple lo que promete", "relación calidad-precio", "lo recomiendo a toda mi familia") aplicada a algo trivial. Solemnidad ridícula: lo doméstico narrado como épica.
+4. Pistas justas y COHERENTES: todos los detalles de la reseña deben ser ciertos para el objeto correcto. Adivinable releyendo, nunca obvio a la primera.
+5. 4 opciones de objetos comunes del mismo mundo; solo UNA encaja con TODOS los detalles; cada una de las otras 3 debe chocar claramente con al menos un detalle (que se pueda deducir, no adivinar al azar).
+6. "cierre": un remate de 1 frase al resolver, en la voz del reseñista, que remata la broma (ej.: "Cinco estrellas. Cuatro si me lo hubieran entregado en la fecha prometida.").
+7. Los 4 objetos deben ser de categorías distintas entre sí.
 
 Responde SOLO con este JSON:
 {

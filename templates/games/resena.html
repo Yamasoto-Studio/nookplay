@@ -21,7 +21,8 @@
 .re-op.sel { border-color: var(--bar-primary); background: var(--bar-bg-subtle); font-weight: 600; }
 .re-op.ok { border-color: #2E7D32; background: #E8F5E9; font-weight: 700; }
 .re-op.ko { border-color: #C0392B; background: #FDECEA; }
-.re-op:disabled { cursor: default; }
+.re-op:disabled { cursor: default; opacity: 1; color: var(--text); }
+.re-op:disabled:not(.ok):not(.ko) { opacity: 0.55; }
 .re-cierre { font-size: 14px; line-height: 1.6; color: var(--text-sec); background: var(--bar-bg-subtle); border-left: 3px solid var(--bar-primary); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: 12px 14px; margin-bottom: 14px; display: none; }
 .re-resultado { text-align: center; margin-bottom: 8px; }
 .re-score { font-size: 52px; font-weight: 800; color: var(--bar-primary); line-height: 1; }
