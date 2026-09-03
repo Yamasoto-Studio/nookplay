@@ -304,6 +304,41 @@ def reset_game_knobs(token):
     except Exception:
         pass
 
+def _norm_txt(s):
+    return ' '.join(str(s).lower().split())
+
+def _anclar_item(item, key_ops='opciones', n_ops=4, base=0):
+    """Ancla el índice 'correcta' por coincidencia de texto con 'respuesta'.
+    Inmune a la ambigüedad 0/1-indexado de los modelos. Devuelve True si el item queda válido."""
+    ops = item.get(key_ops)
+    if not isinstance(ops, list) or len(ops) < 2 or (n_ops and len(ops) != n_ops):
+        return False
+    if not all(isinstance(o, str) and o.strip() for o in ops):
+        return False
+    resp = _norm_txt(item.get('respuesta', ''))
+    idx = None
+    if resp:
+        idx = next((i for i, o in enumerate(ops) if _norm_txt(o) == resp), None)
+        if idx is None:
+            idx = next((i for i, o in enumerate(ops) if resp in _norm_txt(o) or _norm_txt(o) in resp), None)
+    if idx is None:
+        c = item.get('correcta')
+        if isinstance(c, int) and 0 <= c - base < len(ops):
+            idx = c - base
+        else:
+            return False
+    item['correcta'] = idx + base
+    return True
+
+def _validar_lista(obj, key_lista, key_ops, n_ops, n_req, corte=None):
+    items = obj.get(key_lista) or []
+    buenos = [it for it in items if isinstance(it, dict) and _anclar_item(it, key_ops, n_ops)]
+    if len(buenos) >= n_req:
+        obj[key_lista] = buenos[:corte] if corte else buenos
+        return True
+    return False
+
+
 def _bloque_knobs():
     k = _game_knobs.get()
     if not k:
@@ -1225,6 +1260,7 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
   "contenido": "El texto principal. 3-4 frases. Directo, con gancho, sorprendente.",
   "pregunta": "Una pregunta para debatir en mesa relacionada con el contenido (solo si tipo != trivia)",
   "opciones": ["Opción A", "Opción B", "Opción C", "Opción D"],
+  "respuesta": "texto EXACTO de la opción correcta, repetido literal (comprobación de coherencia)",
   "correcta": 0,
   "explicacion": "Por qué esta es la respuesta correcta. 1-2 frases con el dato interesante.",
   "dato_bonus": "Un dato extra sorprendente sobre """ + bar_city + """ o la zona. 1-2 frases.",
@@ -1233,10 +1269,23 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
 
 IMPORTANTE para trivia: opciones y correcta son obligatorios. Para los demás tipos, opciones puede ser null y correcta -1."""
 
-    result = _post_ia(prompt, 1200, api_key)
-    result['ciudad'] = bar_city
-    result['bar_name'] = bar_name
-    return result
+    result = None
+    obj = None
+    for _intento in range(2):
+        result = _post_ia(prompt, 1200, api_key)
+        try:
+            obj = _parse_ia_json(result)
+            # Solo el tipo trivia lleva opciones; los demás pasan sin anclaje
+            if obj.get('tipo') != 'trivia' or _anclar_item(obj, 'opciones', None):
+                break
+            obj = None
+        except Exception:
+            obj = None
+    if obj is None:
+        obj = _parse_ia_json(result)  # último recurso: comportamiento original
+    obj['ciudad'] = bar_city
+    obj['bar_name'] = bar_name
+    return obj
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1521,6 +1570,7 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
       "curiosidad": "Texto de la curiosidad sin revelar el nombre del jugador. Usa 'este jugador' o 'un jugador'.",
       "emoji": "⚽",
       "jugadores": ["Jugador A", "Jugador B", "Jugador C"],
+      "respuesta": "texto EXACTO del jugador correcto, repetido literal (comprobación de coherencia)",
       "correcta": 0,
       "explicacion": "Confirmación del dato con contexto adicional curioso. 1-2 frases."
     },
@@ -1547,7 +1597,17 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
   }
 }""" + _bloque_evitar(evitar) + _bloque_knobs()
 
-    return _post_ia(prompt, 1200, api_key)
+    import json as _json
+    raw = None
+    for _intento in range(2):
+        raw = _post_ia(prompt, 1200, api_key)
+        try:
+            obj = _parse_ia_json(raw)
+            if _validar_lista(obj, 'preguntas', 'jugadores', None, 3, corte=None):
+                return _json.dumps(obj, ensure_ascii=False)
+        except Exception:
+            pass
+    return raw
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1591,6 +1651,7 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
       "pregunta": "Texto de la pregunta",
       "emoji": "🔬",
       "opciones": ["Opción A", "Opción B", "Opción C", "Opción D"],
+      "respuesta": "texto EXACTO de la opción correcta, repetido literal (comprobación de coherencia)",
       "correcta": 0,
       "explicacion": "Por qué es esa la respuesta, con un dato extra curioso. 1-2 frases."
     },
@@ -1610,7 +1671,17 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
 }
 IMPORTANTE: los índices "correcta" deben variar entre preguntas (no siempre la misma posición).""" + _bloque_evitar(evitar) + _bloque_knobs()
 
-    return _post_ia(prompt, 1800, api_key)
+    import json as _json
+    raw = None
+    for _intento in range(2):
+        raw = _post_ia(prompt, 1800, api_key)
+        try:
+            obj = _parse_ia_json(raw)
+            if _validar_lista(obj, 'preguntas', 'opciones', 4, 5, corte=5):
+                return _json.dumps(obj, ensure_ascii=False)
+        except Exception:
+            pass
+    return raw
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1647,6 +1718,7 @@ PASO 3: Crea las 4 opciones donde la película del PASO 1 es la correcta.
 
 PASO 4: Escribe un dato curioso real sobre la película correcta.
 
+"respuesta": "texto EXACTO de la opción correcta, repetido literal (comprobación de coherencia)",
 Devuelve SOLO un objeto JSON válido, sin markdown, donde "correcta" es el índice (0-3) de la película que describes en "sinopsis":
 {
   "sinopsis": "Descripción absurda de la película correcta. 2-3 frases.",
@@ -1657,7 +1729,17 @@ Devuelve SOLO un objeto JSON válido, sin markdown, donde "correcta" es el índi
   "dato_extra": "Dato curioso real sobre la película correcta. 1-2 frases."
 }""" + _bloque_evitar(evitar)
 
-    return _post_ia(prompt, 800, api_key)
+    import json as _json
+    raw = None
+    for _intento in range(2):
+        raw = _post_ia(prompt, 800, api_key)
+        try:
+            obj = _parse_ia_json(raw)
+            if _anclar_item(obj, 'opciones', 4):
+                return _json.dumps(obj, ensure_ascii=False)
+        except Exception:
+            pass
+    return raw
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1722,6 +1804,7 @@ PASO 2: Escribe su definicion REAL del diccionario, en lenguaje sencillo y breve
 
 PASO 3: Inventa 3 definiciones FALSAS pero muy creibles, en el mismo estilo y registro que la real. Que sean plausibles y dificiles de descartar.
 
+"respuesta": "texto EXACTO de la opción correcta, repetido literal (comprobación de coherencia)",
 PASO 4: Coloca la definicion real en una posicion aleatoria (0-3) e indica su indice en "correcta".
 
 PASO 5: Escribe una frase de ejemplo usando la palabra correctamente, para que el jugador aprenda a "lucirla".
@@ -1739,7 +1822,17 @@ Devuelve SOLO un objeto JSON valido, sin markdown:
   "origen": "Breve apunte sobre su origen o curiosidad, 1 frase (puede quedar vacio)."
 }""" + _bloque_evitar(evitar)
 
-    return _post_ia(prompt, 800, api_key)
+    import json as _json
+    raw = None
+    for _intento in range(2):
+        raw = _post_ia(prompt, 800, api_key)
+        try:
+            obj = _parse_ia_json(raw)
+            if _anclar_item(obj, 'opciones', 4):
+                return _json.dumps(obj, ensure_ascii=False)
+        except Exception:
+            pass
+    return raw
 
 
 
@@ -1827,13 +1920,24 @@ REGLAS:
 Devuelve SOLO un objeto JSON valido, sin markdown:
 {
   "preguntas": [
+    "respuesta": "texto EXACTO de la opción correcta, repetido literal (comprobación de coherencia)",
     {"nivel": 1, "tema": "Geografia", "enunciado": "...", "opciones": ["A","B","C","D"], "correcta": 0, "explicacion": "..."},
     {"nivel": 2, "tema": "Cine", "enunciado": "...", "opciones": ["A","B","C","D"], "correcta": 2, "explicacion": "..."}
   ]
 }
 Genera exactamente 6 preguntas, una por peldano, en orden de dificultad creciente.""" + _bloque_evitar(evitar)
 
-    return _post_ia(prompt, 1800, api_key)
+    import json as _json
+    raw = None
+    for _intento in range(2):
+        raw = _post_ia(prompt, 1800, api_key)
+        try:
+            obj = _parse_ia_json(raw)
+            if _validar_lista(obj, 'preguntas', 'opciones', None, 6, corte=6):
+                return _json.dumps(obj, ensure_ascii=False)
+        except Exception:
+            pass
+    return raw
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1899,11 +2003,22 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
   "historia": "La historia de la muerte absurda. 3-4 frases. Tono irreverente pero elegante. Incluye nombre y época.",
   "pregunta": "Pregunta sobre un detalle concreto de la historia",
   "opciones": ["Opción A", "Opción B", "Opción C"],
+  "respuesta": "texto EXACTO de la opción correcta, repetido literal (comprobación de coherencia)",
   "correcta": 1,
   "dato_extra": "Un dato adicional curioso real sobre el caso o la época. 1-2 frases."
 }""" + _bloque_evitar(evitar)
 
-    return _post_ia(prompt, 900, api_key)
+    import json as _json
+    raw = None
+    for _intento in range(2):
+        raw = _post_ia(prompt, 900, api_key)
+        try:
+            obj = _parse_ia_json(raw)
+            if _anclar_item(obj, 'opciones', None):
+                return _json.dumps(obj, ensure_ascii=False)
+        except Exception:
+            pass
+    return raw
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1938,6 +2053,7 @@ PASO 3: Crea 4 opciones donde la canción del PASO 1 es la correcta.
 
 PASO 4: Dato curioso real sobre la canción.
 
+"respuesta": "texto EXACTO de la opción correcta, repetido literal (comprobación de coherencia)",
 Devuelve SOLO un objeto JSON válido, sin markdown, donde "correcta" es el índice (0-3) de la canción parafraseada:
 {
   "parafrasis": "La paráfrasis literal y absurda de la letra. 2-3 frases. Sin citar letra original.",
@@ -1947,7 +2063,17 @@ Devuelve SOLO un objeto JSON válido, sin markdown, donde "correcta" es el índi
   "dato_extra": "Dato curioso real sobre la canción correcta. 1-2 frases."
 }""" + _bloque_evitar(evitar)
 
-    return _post_ia(prompt, 900, api_key)
+    import json as _json
+    raw = None
+    for _intento in range(2):
+        raw = _post_ia(prompt, 900, api_key)
+        try:
+            obj = _parse_ia_json(raw)
+            if _anclar_item(obj, 'opciones', 4):
+                return _json.dumps(obj, ensure_ascii=False)
+        except Exception:
+            pass
+    return raw
 
 
 # ─────────────────────────────────────────────────────────────────────────────
