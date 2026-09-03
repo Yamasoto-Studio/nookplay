@@ -340,10 +340,15 @@ resena_exists = db.execute("SELECT id FROM games WHERE slug = 'resena'").fetchon
 if not resena_exists:
     db.execute(
         "INSERT INTO games (slug, name, description, icon, plan_min, position) VALUES (?,?,?,?,?,?)",
-        ('resena', 'La Reseña', '⭐⭐⭐⭐⭐ ¿Qué se está reseñando?', '/static/games/resena.webp', 'starter_free', 30)
+        ('resena', 'La Reseña', '¿Qué se está reseñando?', '/static/games/resena.webp', 'starter_free', 30)
     )
     db.commit()
     print('Juego La Reseña añadido.')
+else:
+    # Coherencia de catálogo: subtítulos sin iconos (corrige la fila ya existente)
+    db.execute("UPDATE games SET description = ? WHERE slug = 'resena' AND description != ?",
+               ('¿Qué se está reseñando?', '¿Qué se está reseñando?'))
+    db.commit()
 
 # Añadir perfil si no existe
 perfil_exists = db.execute("SELECT id FROM games WHERE slug = 'perfil'").fetchone()
