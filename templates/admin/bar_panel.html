@@ -1010,15 +1010,21 @@
   }
   .game-row:last-child { border-bottom: none; }
   .game-row-img { width: 44px; height: 44px; border-radius: 8px; object-fit: cover; flex-shrink: 0; }
-  .knob-btn { background: none; border: 1px solid var(--border); border-radius: 8px; padding: 4px 8px; cursor: pointer; font-size: 15px; flex-shrink: 0; }
-  .knob-btn:hover { border-color: var(--bar-primary, #C4622D); }
-  .knob-panel { grid-column: 1 / -1; background: #FBF7F1; border: 1px solid var(--border); border-top: none; border-radius: 0 0 10px 10px; padding: 14px 16px; }
-  .knob-field { margin-bottom: 10px; }
-  .knob-field label { display: block; font-size: 12px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 5px; }
-  .knob-field input, .knob-field select { width: 100%; padding: 9px 11px; border: 1px solid var(--border); border-radius: 8px; font-family: inherit; font-size: 14px; box-sizing: border-box; }
-  .knob-hint { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
-  .knob-actions { display: flex; align-items: center; gap: 12px; }
-  .knob-status { font-size: 13px; }
+  .knob-btn { background: white; border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; cursor: pointer; font-size: 12px; font-weight: 600; color: var(--text-sec); flex-shrink: 0; white-space: nowrap; }
+  .knob-btn:hover { border-color: var(--bar-primary, #C4622D); color: var(--bar-primary, #C4622D); }
+  .knob-overlay { position: fixed; inset: 0; background: rgba(26,26,26,0.45); z-index: 1200; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .knob-modal { background: white; border-radius: 16px; width: 100%; max-width: 460px; padding: 22px 22px 18px; box-shadow: 0 20px 60px rgba(0,0,0,0.25); }
+  .knob-modal-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+  .knob-modal-eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); }
+  .knob-modal-title { font-size: 19px; font-weight: 800; color: var(--text); margin-top: 2px; }
+  .knob-close { background: none; border: none; font-size: 18px; cursor: pointer; color: var(--text-muted); padding: 4px 6px; }
+  .knob-field { margin-bottom: 14px; }
+  .knob-field label { display: block; font-size: 12px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; }
+  .knob-field input, .knob-field select { width: 100%; padding: 11px 12px; border: 1px solid var(--border); border-radius: 10px; font-family: inherit; font-size: 15px; box-sizing: border-box; }
+  .knob-hint { font-size: 12px; color: var(--text-muted); margin-top: 5px; line-height: 1.4; }
+  .knob-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 6px; }
+  .knob-actions .btn-primary, .knob-actions .btn-secondary { width: auto; padding: 10px 18px; }
+  .knob-status { font-size: 13px; text-align: right; margin-top: 10px; min-height: 18px; }
   .game-row-info { flex: 1; min-width: 0; }
   .game-row-name { font-size: 14px; font-weight: 600; color: var(--text); }
   .game-badge.badge-theme { font-size: 10px; font-weight: 700; letter-spacing: 0.3px; text-transform: uppercase; color: #A8410E; background: #FBE8DC; border: 1px solid #E8C4AC; border-radius: 5px; padding: 1px 6px; vertical-align: middle; }
@@ -1147,7 +1153,7 @@
             <div class="game-row-status">${statusText}</div>
           </div>
           ${badgeHtml}
-          ${(KNOBS_SUPER && KNOBS[g.slug] && g.active) ? `<button class="knob-btn" onclick="toggleKnobs('${g.slug}', this)" title="Ajustes creativos de ${g.name}">🎛️</button>` : ''}
+          ${(KNOBS_SUPER && KNOBS[g.slug] && g.active) ? `<button class="knob-btn" onclick="openKnobs('${g.slug}', '${g.name.replace(/'/g, "\\'")}')" title="Ajustes creativos">⚙️ Ajustes</button>` : ''}
           <button class="${toggleClass}" ${onclick} aria-label="${g.active ? 'Desactivar' : 'Activar'} ${g.name}"></button>
         </div>`;
       }).join('');
@@ -1165,14 +1171,8 @@
     } catch(e) { console.error('loadGames error:', e); }
   }
 
-  function toggleKnobs(slug, btn) {
-    const fila = btn.closest('.game-row');
-    const existente = fila.nextElementSibling;
-    if (existente && existente.classList.contains('knob-panel')) {
-      existente.remove();
-      return;
-    }
-    document.querySelectorAll('.knob-panel').forEach(x => x.remove());
+  function openKnobs(slug, nombre) {
+    closeKnobs();
     const vals = KNOB_VALUES[slug] || {};
     const campos = (KNOBS[slug] || []).map(c => {
       const v = vals[c.key] || '';
@@ -1185,14 +1185,35 @@
       }
       return `<div class="knob-field"><label>${c.label}</label>${control}<div class="knob-hint">${c.hint || ''}</div></div>`;
     }).join('');
-    const div = document.createElement('div');
-    div.className = 'knob-panel';
-    div.innerHTML = campos + `<div class="knob-actions"><button class="btn-secondary" onclick="saveKnobs('${slug}', this)">Guardar ajustes</button><span class="knob-status"></span></div>`;
-    fila.insertAdjacentElement('afterend', div);
+    const overlay = document.createElement('div');
+    overlay.className = 'knob-overlay';
+    overlay.id = 'knob-overlay';
+    overlay.innerHTML = `
+      <div class="knob-modal" role="dialog" aria-modal="true">
+        <div class="knob-modal-head">
+          <div><div class="knob-modal-eyebrow">Ajustes creativos</div><div class="knob-modal-title">${nombre}</div></div>
+          <button class="knob-close" onclick="closeKnobs()" aria-label="Cerrar">✕</button>
+        </div>
+        ${campos}
+        <div class="knob-actions">
+          <button class="btn-secondary" onclick="closeKnobs()">Cancelar</button>
+          <button class="btn-primary" onclick="saveKnobs('${slug}', this)">Guardar ajustes</button>
+        </div>
+        <div class="knob-status"></div>
+      </div>`;
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeKnobs(); });
+    document.body.appendChild(overlay);
+    const primero = overlay.querySelector('[data-knob]');
+    if (primero) primero.focus();
+  }
+
+  function closeKnobs() {
+    const o = document.getElementById('knob-overlay');
+    if (o) o.remove();
   }
 
   async function saveKnobs(slug, btn) {
-    const panel = btn.closest('.knob-panel');
+    const panel = btn.closest('.knob-modal');
     const st = panel.querySelector('.knob-status');
     const settings = {};
     panel.querySelectorAll('[data-knob]').forEach(el => { settings[el.dataset.knob] = el.value; });
@@ -1207,6 +1228,7 @@
       if (d && d.ok) {
         KNOB_VALUES[slug] = settings;
         st.textContent = '✅ Guardado — se aplica al próximo contenido (o Regenerar)'; st.style.color = '#22aa55';
+        setTimeout(closeKnobs, 1400);
       } else {
         st.textContent = '❌ ' + ((d && d.error) || 'Error ' + r.status); st.style.color = '#cc2222';
       }
