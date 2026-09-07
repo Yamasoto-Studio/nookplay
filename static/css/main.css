@@ -59,14 +59,7 @@ body {
 }
 
 /* ── Top bar: Nookplay wordmark ── */
-.nook-topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 18px 0;
-  background: var(--bar-bg);
-  min-height: 24px;
-}
+.nook-topbar { display: none; }
 
 .nook-topbar img {
   height: auto;
@@ -75,12 +68,8 @@ body {
   display: block;
 }
 
-.nook-topbar .day-counter {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.3px;
-  color: var(--text-muted);
-}
+.day-counter { color: var(--bar-primary); }
+.day-counter:empty { display: none; }
 
 /* ── Bar hero ── */
 .bar-hero {
@@ -93,13 +82,26 @@ body {
 }
 
 .bar-hero-meta {
-  margin: 10px 0 0;
-  font-size: 12px;
-  color: var(--text-muted);
+  margin: 12px 0 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--bar-primary);
   text-align: center;
   letter-spacing: 0.2px;
+  line-height: 1.35;
 }
 .bar-hero-meta:empty { display: none; }
+.bar-hero-by {
+  margin-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text-muted);
+  text-decoration: none;
+  letter-spacing: 0.3px;
+}
+.bar-hero-by img { width: 54px; height: auto; opacity: 0.55; display: block; }
 
 .bar-hero-logo {
   width: 100%;

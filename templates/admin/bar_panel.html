@@ -851,6 +851,11 @@
     <div class="form-card">
       <h3 id="lbl-logo-title">{{ 'Logo del evento' if es_evento else 'Logo del local' }}</h3>
       <div class="field">
+        <label>Texto bajo el logo</label>
+        <input type="text" id="hero_subtitle" name="hero_subtitle" value="{{ bar.hero_subtitle or '' }}" maxlength="80" placeholder="{{ 'Ej: 12–15 nov · Fabra i Coats' if es_evento else 'Ej: Café de especialidad · Viladecans' }}">
+        <div class="field-hint">Aparece en la cabecera, bajo el logo. {{ 'Si lo dejas vacío, se muestran las fechas y la dirección del evento.' if es_evento else 'Si lo dejas vacío, no se muestra nada.' }}</div>
+      </div>
+      <div class="field">
         <label>Imagen actual</label>
         <img src="/media/{{ bar.slug }}/logo_header.png" data-fb="/static/clientes/{{ bar.slug }}/logo_header.png" alt="Logo" style="max-height:60px; display:block; margin-bottom:8px;" onerror="if(this.dataset.fb){this.src=this.dataset.fb;this.dataset.fb='';}else{this.style.display='none';}">
         <input type="file" id="logo-file" accept="image/*" onclick="this.value=''" onchange="uploadLogo(this)">
@@ -1633,6 +1638,7 @@ async function saveChanges() {
     social_tiktok: form.social_tiktok ? form.social_tiktok.value : '',
     menu_url: form.menu_url ? form.menu_url.value : '',
     menu_label: form.menu_label ? form.menu_label.value : '',
+    hero_subtitle: form.hero_subtitle ? form.hero_subtitle.value : '',
     products: []
   };
 

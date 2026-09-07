@@ -129,14 +129,10 @@
 
 <div class="nook">
 
-  <div class="nook-topbar">
-    <a href="/"><img src="/static/logo.svg" alt="Nookplay"></a>
-    <span class="day-counter" id="day-counter"></span>
-  </div>
-
   <div class="bar-hero">
     <img class="bar-hero-logo" src="/media/{{ bar.slug }}/logo_header.png" data-fb="/static/clientes/{{ bar.slug }}/logo_header.png" alt="{{ bar.name }}" onerror="if(this.dataset.fb){this.src=this.dataset.fb;this.dataset.fb='';}else{this.style.display='none';}">
     <p class="bar-hero-meta" id="bar-hero-meta"></p>
+    <a href="/" class="bar-hero-by">by <img src="/static/logo.svg" alt="nookplay"></a>
   </div>
 
   <div class="nook-content">
@@ -172,7 +168,7 @@
         </div>
         {% endif %}
         <p class="menu-welcome" id="menu-welcome"></p>
-        <div class="menu-section-row"><span>Los juegos de hoy</span></div>
+        <div class="menu-section-row"><span>Los juegos de hoy</span><span class="day-counter" id="day-counter"></span></div>
 
         <div id="streak-banner" class="streak-banner" style="display:none;"></div>
 
@@ -242,8 +238,8 @@
   </div>
 
   <div class="nook-footer">
-    <div class="nook-footer-line">Juegos nuevos cada día · con <a href="/" class="nook-footer-brand"><img src="/static/logo.svg" alt="Nookplay"></a></div>
-    <div class="nook-footer-by">Desarrollado por <a href="https://www.yamasoto.com/" target="_blank" rel="noopener">Yamasoto</a> · <a href="/">¿Lo quieres en tu evento o local?</a></div>
+    <div class="nook-footer-by">Nookplay · desarrollado por <a href="https://www.yamasoto.com/" target="_blank" rel="noopener">Yamasoto</a></div>
+    <div class="nook-footer-by"><a href="/">¿Lo quieres en tu evento o local?</a></div>
   </div>
 
 </div>
@@ -509,12 +505,14 @@ function mostrarRacha(banner, icono, texto) {
   banner.style.display = 'flex';
 }
 
-const EVENT_INFO = {{ {'evento': (bar.space_kind or 'local') == 'evento', 'start': bar.event_start or '', 'end': bar.event_end or '', 'lugar': (bar.address or bar.city or '')}|tojson }};
+const EVENT_INFO = {{ {'evento': (bar.space_kind or 'local') == 'evento', 'start': bar.event_start or '', 'end': bar.event_end or '', 'lugar': (bar.address or bar.city or ''), 'subtitulo': (bar.hero_subtitle or '')}|tojson }};
 
 function renderEventMeta() {
   const meta = document.getElementById('bar-hero-meta');
   const counter = document.getElementById('day-counter');
-  if (!meta || !EVENT_INFO.evento) return;
+  if (!meta) return;
+  if (EVENT_INFO.subtitulo) { meta.textContent = EVENT_INFO.subtitulo; }
+  if (!EVENT_INFO.evento) return;
   const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
   const parse = (s) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || ''); return m ? new Date(+m[1], +m[2]-1, +m[3]) : null; };
   const d1 = parse(EVENT_INFO.start), d2 = parse(EVENT_INFO.end);
@@ -528,13 +526,12 @@ function renderEventMeta() {
     partes.push(fechas);
   }
   if (EVENT_INFO.lugar) partes.push(EVENT_INFO.lugar);
-  meta.textContent = partes.join('  ·  ');
+  if (!EVENT_INFO.subtitulo) meta.textContent = partes.join('  ·  ');
   if (counter && d1 && d2) {
     const hoy = new Date(); hoy.setHours(0,0,0,0);
     const dia = Math.floor((hoy - d1) / 86400000) + 1;
     const total = Math.floor((d2 - d1) / 86400000) + 1;
-    if (dia >= 1 && dia <= total) counter.textContent = `día ${dia} de ${total}`;
-    else if (dia < 1) counter.textContent = `empieza el ${d1.getDate()} ${MESES[d1.getMonth()]}`;
+    if (dia >= 1 && dia <= total && total > 1) counter.textContent = `Día ${dia} de ${total}`;
   }
 }
 
