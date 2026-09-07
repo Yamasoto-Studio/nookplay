@@ -84,6 +84,17 @@ async function init() {
       body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG })
     });
     gameData = await res.json();
+    // Saneado: 'falsa' debe ser un índice válido (resuelve por texto si hace falta)
+    if (gameData && Array.isArray(gameData.afirmaciones) && gameData.afirmaciones.length) {
+      let f = gameData.falsa;
+      const porTexto = (t) => gameData.afirmaciones.findIndex(x => String(x).trim().toLowerCase() === String(t).trim().toLowerCase());
+      if (typeof f === 'string') { const k = porTexto(f); f = k >= 0 ? k : parseInt(f, 10); }
+      if (!Number.isInteger(f) || !gameData.afirmaciones[f]) {
+        const k = gameData.falsa_texto ? porTexto(gameData.falsa_texto) : -1;
+        f = k >= 0 ? k : 0;
+      }
+      gameData.falsa = f;
+    }
     renderGame(gameData);
     startTime = Date.now();
   } catch(e) {

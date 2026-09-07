@@ -90,6 +90,17 @@ async function init() {
       body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG })
     });
     currentGame = await res.json();
+    // Saneado: el culpable debe ser un índice válido (resuelve por nombre si la IA devolvió texto o fuera de rango)
+    if (currentGame && Array.isArray(currentGame.sospechosos) && currentGame.sospechosos.length) {
+      let cul = currentGame.culpable;
+      const porNombre = (n) => currentGame.sospechosos.findIndex(s => s && s.nombre && String(s.nombre).trim().toLowerCase() === String(n).trim().toLowerCase());
+      if (typeof cul === 'string') { const k = porNombre(cul); cul = k >= 0 ? k : parseInt(cul, 10); }
+      if (!Number.isInteger(cul) || !currentGame.sospechosos[cul]) {
+        const k = currentGame.culpable_nombre ? porNombre(currentGame.culpable_nombre) : -1;
+        cul = k >= 0 ? k : 0;
+      }
+      currentGame.culpable = cul;
+    }
     renderGame(currentGame);
     startTime = Date.now();
   } catch(e) {

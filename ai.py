@@ -443,10 +443,32 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
     {{"nombre": "Nombre Apellido evocador", "descripcion": "Ocupación precisa, rasgo de carácter y motivo sospechoso en una frase. Debe sonar real."}}
   ],
   "culpable": {get_day_seed(bar_slug) % 3},
+  "culpable_nombre": "nombre EXACTO del sospechoso culpable, repetido literal (comprobación de coherencia)",
   "explicacion": "3-4 frases que revelan el método, el motivo real y el detalle que lo delataba. Satisfactorio, con giro, con el toque de ironía final."
-}}"""
+}}
+IMPORTANTE: "culpable" es el índice base 0 (0 = primer sospechoso) y "culpable_nombre" repite literalmente su nombre — pistas, explicación, nombre e índice deben señalar al MISMO sospechoso."""
 
-    return _post_ia(prompt + _bloque_knobs(), 1500, api_key)
+    import json as _json
+    raw = None
+    for _intento in range(2):
+        raw = _post_ia(prompt + _bloque_knobs(), 1500, api_key)
+        try:
+            obj = _parse_ia_json(raw)
+            sosp = obj.get('sospechosos') or []
+            if len(sosp) >= 3 and all(isinstance(s, dict) and s.get('nombre') for s in sosp) and obj.get('explicacion'):
+                nom = _norm_txt(obj.get('culpable_nombre', ''))
+                idx = next((i for i, s in enumerate(sosp) if _norm_txt(s['nombre']) == nom), None) if nom else None
+                if idx is None and nom:
+                    idx = next((i for i, s in enumerate(sosp) if nom in _norm_txt(s['nombre']) or _norm_txt(s['nombre']) in nom), None)
+                if idx is None:
+                    c = obj.get('culpable')
+                    idx = c if isinstance(c, int) and 0 <= c < len(sosp) else None
+                if idx is not None:
+                    obj['culpable'] = idx
+                    return _json.dumps(obj, ensure_ascii=False)
+        except Exception:
+            pass
+    return raw
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -487,13 +509,34 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
     "Afirmación 4"
   ],
   "falsa": """ + str(falsa_idx) + """,
+  "falsa_texto": "texto EXACTO de la afirmación falsa, repetido literal (comprobación de coherencia)",
   "explicacion_falsa": "Explica SOLO por qué esa afirmación concreta es falsa y cuál es la realidad. 2 frases máximo.",
   "dato_bonus": "Un dato curioso sobre el tema general. 1-2 frases."
 }
 
-La afirmación en la posición """ + str(falsa_idx) + """ (índice 0-3) debe ser la FALSA."""
+La afirmación en la posición """ + str(falsa_idx) + """ (índice 0-3) debe ser la FALSA, y "falsa_texto" debe repetirla literalmente."""
 
-    return _post_ia(prompt + _bloque_evitar(evitar), 1000, api_key)
+    import json as _json
+    raw = None
+    for _intento in range(2):
+        raw = _post_ia(prompt + _bloque_evitar(evitar), 1000, api_key)
+        try:
+            obj = _parse_ia_json(raw)
+            afs = obj.get('afirmaciones') or []
+            if len(afs) >= 3 and all(isinstance(x, str) and x.strip() for x in afs) and obj.get('explicacion_falsa'):
+                ft = _norm_txt(obj.get('falsa_texto', ''))
+                idx = next((i for i, x in enumerate(afs) if _norm_txt(x) == ft), None) if ft else None
+                if idx is None and ft:
+                    idx = next((i for i, x in enumerate(afs) if ft in _norm_txt(x) or _norm_txt(x) in ft), None)
+                if idx is None:
+                    c = obj.get('falsa')
+                    idx = c if isinstance(c, int) and 0 <= c < len(afs) else None
+                if idx is not None:
+                    obj['falsa'] = idx
+                    return _json.dumps(obj, ensure_ascii=False)
+        except Exception:
+            pass
+    return raw
 
 
 # ─────────────────────────────────────────────────────────────────────────────
