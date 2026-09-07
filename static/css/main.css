@@ -77,12 +77,17 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 14px 24px 18px;
+  padding: 36px 24px 20px;
   background: var(--bar-bg);
+}
+@media (min-width: 640px) {
+  .bar-hero { padding: 60px 24px 44px; }
+  .bar-hero-meta { margin-top: 60px; }
+  .bar-hero-by { margin-top: 20px; }
 }
 
 .bar-hero-meta {
-  margin: 12px 0 0;
+  margin: 36px 0 0;
   font-size: 15px;
   font-weight: 700;
   color: var(--bar-accent-dark, var(--text));
@@ -92,7 +97,7 @@ body {
 }
 .bar-hero-meta:empty { display: none; }
 .bar-hero-by {
-  margin-top: 9px;
+  margin-top: 14px;
   display: inline-flex;
   align-items: center;
   gap: 5px;
