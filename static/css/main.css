@@ -82,7 +82,7 @@ body {
 }
 @media (min-width: 640px) {
   .bar-hero { padding: 30px 24px 24px; }
-  .bar-hero-meta { margin-top: 30px; }
+  .bar-hero-meta { margin-top: 20px; }
   .bar-hero-by { margin-top: 10px; }
 }
 
