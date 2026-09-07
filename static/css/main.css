@@ -85,23 +85,23 @@ body {
   margin: 12px 0 0;
   font-size: 15px;
   font-weight: 700;
-  color: var(--bar-primary);
+  color: var(--bar-accent-dark, var(--text));
   text-align: center;
   letter-spacing: 0.2px;
   line-height: 1.35;
 }
 .bar-hero-meta:empty { display: none; }
 .bar-hero-by {
-  margin-top: 8px;
+  margin-top: 9px;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--text-sec, var(--text));
   text-decoration: none;
   letter-spacing: 0.3px;
 }
-.bar-hero-by img { width: 54px; height: auto; opacity: 0.55; display: block; }
+.bar-hero-by img { width: 68px; height: auto; opacity: 1; display: block; }
 
 .bar-hero-logo {
   width: 100%;
