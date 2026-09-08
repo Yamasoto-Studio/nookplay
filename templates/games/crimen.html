@@ -181,14 +181,13 @@ async function accuse() {
 
 function doShare() {
   const correct = selectedSuspect === currentGame.culpable;
-  const culpableName = currentGame.sospechosos[currentGame.culpable].nombre;
   const pct = document.getElementById('donut-pct')?.textContent;
   shareGame({
     gameSlug: 'crimen',
     correct,
-    barName: BAR_NAME,
+    emoji: '🔍',
     gameTitle: 'El Crimen del Día',
-    detail: correct ? `El culpable era ${culpableName}` : `No encontré al culpable: ${culpableName}`,
+    gancho: `Un crimen, tres sospechosos, ${currentGame.pistas ? currentGame.pistas.length : 'varias'} pistas… ¿lo resuelves TÚ?`,
     pct: pct !== '—%' ? pct : null
   });
 }

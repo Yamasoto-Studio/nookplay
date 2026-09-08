@@ -181,12 +181,8 @@ function doShare() {
   const TOTAL = gameData.resenas.length;
   const score = resultados.filter(Boolean).length;
   const grid = resultados.map(ok => ok ? '🟩' : '🟥').join('');
-  const texto = `⭐ La Reseña · ${BAR_NAME}\n${grid} ${score}/${TOTAL}\nReseñas de 5 estrellas… ¿adivinas TÚ qué se reseña?\n👉 nookplay.app/${BAR_SLUG}`;
-  if (navigator.share) {
-    navigator.share({ text: texto }).catch(() => {});
-  } else {
-    navigator.clipboard.writeText(texto).then(() => alert('¡Copiado! Pégalo donde quieras.')).catch(() => {});
-  }
+  const texto = nookShareText({ emoji: '⭐', titulo: 'La Reseña', resultado: `${grid} ${score}/${TOTAL}`, gancho: 'Reseñas de 5 estrellas… ¿adivinas TÚ qué se reseña?' });
+  nookShareWithImage(texto, 'resena');
 }
 
 init();

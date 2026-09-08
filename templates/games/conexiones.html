@@ -371,7 +371,7 @@ function doShare() {
   const intentosStr = ganado
     ? `Resuelto con ${intentosUsados} ${intentosUsados === 1 ? 'fallo' : 'fallos'}`
     : 'Sin resolver hoy';
-  const txt = `🔗 Las Conexiones de hoy en ${BAR_NAME}\n\n${intentosStr}\n\n¿Puedes tú? → nookplay.app`;
+  const txt = nookShareText({ emoji: '🔗', titulo: 'Las Conexiones', resultado: (ganado ? '✅ ' : '❌ ') + intentosStr, gancho: '16 palabras, 4 grupos ocultos… ¿los ves TÚ?' });
   nookShareWithImage(txt, 'conexiones');
 }
 

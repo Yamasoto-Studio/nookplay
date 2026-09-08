@@ -300,7 +300,7 @@
       </div>
 
       {% set v2 = analytics.v2 or {} %}
-      {% if v2.por_asistente or v2.retencion_pct is defined or v2.rejugado %}
+      {% if v2.por_asistente or v2.retencion_pct is defined or v2.rejugado or v2.compartidos %}
       <div class="insights-v2-h">Enganche</div>
       <div class="insights-grid">
         {% if v2.retencion_pct is defined %}
@@ -322,6 +322,13 @@
           <div class="insight-tile-ico">🔥</div>
           <div class="insight-tile-val">{{ v2.rejugado }}</div>
           <div class="insight-tile-lbl">el que más se repite (×{{ v2.rejugado_n }} rejugadas)</div>
+        </div>
+        {% endif %}
+        {% if v2.compartidos %}
+        <div class="insight-tile insight-tile-v2">
+          <div class="insight-tile-ico">📤</div>
+          <div class="insight-tile-val">{{ v2.compartidos }}</div>
+          <div class="insight-tile-lbl">resultados compartidos{% if v2.mas_compartido %} · el más viral: {{ v2.mas_compartido }}{% endif %}</div>
         </div>
         {% endif %}
       </div>

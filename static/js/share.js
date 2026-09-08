@@ -1,20 +1,48 @@
 /* ─────────────────────────────────────────────────────────────────────────────
-   Nookplay — Shared Share Component
-   Usage: shareGame({ correct, barName, gameTitle, detail, pct })
+   Nookplay — Compartir (estándar orientado al receptor)
+   Formato: {emoji} {título} · {espacio}
+            {resultado visual}
+            {gancho para quien lo recibe}
+            👉 nookplay.app/{espacio}
 ───────────────────────────────────────────────────────────────────────────── */
 
-function shareGame({ correct, barName, gameTitle, detail, pct, gameSlug }) {
-  const emoji = correct ? '✅' : '❌';
-  const result = correct ? 'Lo conseguí' : 'Me ha ganado';
-  const pctText = pct ? ` · Solo el ${pct} acertó hoy` : '';
+function nookSpaceSlug() { return (typeof BAR_SLUG !== 'undefined' && BAR_SLUG) ? BAR_SLUG : ''; }
+function nookSpaceName() { return (typeof BAR_NAME !== 'undefined' && BAR_NAME) ? BAR_NAME : 'Nookplay'; }
+function nookSpaceUrl() { const s = nookSpaceSlug(); return 'https://nookplay.app' + (s ? '/' + s : ''); }
 
-  const txt = `${emoji} ${gameTitle} — ${barName}\n\n${result}${pctText}\n\n"${detail}"\n\n¿Puedes tú? → nookplay.app`;
+function nookShareText({ emoji, titulo, resultado, gancho }) {
+  const lineas = [`${emoji || '🎲'} ${titulo} · ${nookSpaceName()}`];
+  if (resultado) lineas.push(resultado);
+  lineas.push(gancho || '¿Te atreves tú?');
+  lineas.push(`👉 ${nookSpaceUrl().replace('https://', '')}`);
+  return lineas.join('\n');
+}
 
+/* Registro del compartido (best-effort: nunca bloquea) */
+function nookTrackShare(gameSlug) {
+  try {
+    let did = '';
+    try { did = localStorage.getItem('nook_did') || ''; } catch (e) {}
+    const body = JSON.stringify({ bar_slug: nookSpaceSlug(), game_type: gameSlug || '', device_id: did });
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon('/api/share', new Blob([body], { type: 'application/json' }));
+    } else {
+      fetch('/api/share', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true }).catch(() => {});
+    }
+  } catch (e) {}
+}
+
+/* Compartir genérico de acierto/fallo — SIN spoilers para quien lo recibe */
+function shareGame({ correct, gameTitle, pct, gameSlug, gancho, emoji }) {
+  const resultado = (correct ? '✅ Lo conseguí' : '❌ Me ha ganado') + (pct ? ` · solo el ${pct} acertó hoy` : '');
+  const txt = nookShareText({ emoji: emoji || '🎲', titulo: gameTitle, resultado, gancho: gancho || '¿Puedes tú?' });
   nookShareWithImage(txt, gameSlug);
 }
 
 /* ─── Compartir con imagen del juego (Web Share API Level 2) ─── */
 async function nookShareWithImage(txt, gameSlug) {
+  nookTrackShare(gameSlug);
+  const url = nookSpaceUrl();
   if (gameSlug && navigator.canShare) {
     try {
       const resp = await fetch(`/static/games/${gameSlug}.webp`);
@@ -27,9 +55,9 @@ async function nookShareWithImage(txt, gameSlug) {
     } catch (e) { /* fallback abajo */ }
   }
   if (navigator.share) {
-    navigator.share({ text: txt, url: 'https://nookplay.app' });
+    navigator.share({ text: txt }).catch(() => {});
   } else {
-    navigator.clipboard.writeText(txt).then(() => alert('¡Copiado! Compártelo donde quieras.'));
+    navigator.clipboard.writeText(txt).then(() => alert('¡Copiado! Compártelo donde quieras.')).catch(() => {});
   }
 }
 

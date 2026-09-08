@@ -118,7 +118,7 @@
   {% endif %}
 
   {% set v2 = a.v2 or {} %}
-  {% if v2.retencion_pct is defined or v2.por_asistente or v2.rejugado %}
+  {% if v2.retencion_pct is defined or v2.por_asistente or v2.rejugado or v2.compartidos %}
   <div class="sec">
     <div class="sec-title">Enganche</div>
     <div class="high">
@@ -141,6 +141,13 @@
         <div class="high-k">🔥 El que más se repite</div>
         <div class="high-v">{{ v2.rejugado }}</div>
         <div class="high-s">×{{ v2.rejugado_n }} rejugadas por la misma persona</div>
+      </div>
+      {% endif %}
+      {% if v2.compartidos %}
+      <div class="high-card">
+        <div class="high-k">📤 Compartidos</div>
+        <div class="high-v">{{ v2.compartidos }}</div>
+        <div class="high-s">resultados enviados por WhatsApp y redes{% if v2.mas_compartido %} · el más viral: {{ v2.mas_compartido }}{% endif %}</div>
       </div>
       {% endif %}
     </div>

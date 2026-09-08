@@ -161,7 +161,8 @@ function doShare() {
     correct,
     barName: BAR_NAME,
     gameTitle: 'El Impostor',
-    detail: gameData.afirmaciones[gameData.falsa],
+    emoji: '🕵️',
+    gancho: `4 afirmaciones sobre ${gameData.tema || 'un tema'}, una es mentira… ¿la pillas TÚ?`,
     pct: pct !== '—%' ? pct : null
   });
 }

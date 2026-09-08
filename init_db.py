@@ -336,6 +336,18 @@ if not veredicto_exists:
     db.commit()
     print('Juego El Veredicto añadido.')
 
+# Compartidos (métrica de viralidad)
+db.execute('''CREATE TABLE IF NOT EXISTS shares (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    bar_slug TEXT NOT NULL,
+    game_type TEXT NOT NULL,
+    device_id TEXT DEFAULT '',
+    shared_on TEXT NOT NULL,
+    shared_at TEXT NOT NULL
+)''')
+db.execute("CREATE INDEX IF NOT EXISTS idx_shares_bar_day ON shares (bar_slug, shared_on)")
+db.commit()
+
 # Añadir resena si no existe
 resena_exists = db.execute("SELECT id FROM games WHERE slug = 'resena'").fetchone()
 if not resena_exists:

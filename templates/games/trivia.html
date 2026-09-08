@@ -328,7 +328,8 @@ function doShare() {
   const score = respuestas.filter(r => r.correcta).length;
   const emojis = respuestas.map(r => r.correcta ? '✅' : '❌').join(' ');
   const msg = gameData.mensajes[String(score)] || '';
-  const txt = `💡 La Trivia — ${BAR_NAME}\n\n${emojis}\n${score}/5 — ${msg.split('—')[1]?.trim() || ''}\n\n¿Puedes superarme? → nookplay.app`;
+  const grid = respuestas.map(r => r.correcta ? '🟩' : '🟥').join('');
+  const txt = nookShareText({ emoji: '💡', titulo: 'La Trivia', resultado: `${grid} ${score}/${respuestas.length}`, gancho: '5 preguntas nuevas cada día… ¿me superas TÚ?' });
   nookShareWithImage(txt, 'trivia');
 }
 

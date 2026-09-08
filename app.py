@@ -1289,6 +1289,20 @@ def calcular_analytics_bar(db, bar_slug, ventana=None):
                 fecha = str(v_desde + timedelta(days=i))
                 if fecha in a['v2']['hora_por_dia']:
                     d['hora'] = a['v2']['hora_por_dia'][fecha]
+        # Compartidos en la ventana (viralidad)
+        try:
+            sh = db.execute(
+                "SELECT COUNT(*) n FROM shares WHERE bar_slug=? AND shared_on>=? AND shared_on<=?",
+                (bar_slug, str(v_desde), str(v_hasta))).fetchone()['n']
+            if sh:
+                a['v2']['compartidos'] = sh
+                top_sh = db.execute(
+                    "SELECT game_type, COUNT(*) n FROM shares WHERE bar_slug=? AND shared_on>=? AND shared_on<=? GROUP BY game_type ORDER BY n DESC LIMIT 1",
+                    (bar_slug, str(v_desde), str(v_hasta))).fetchone()
+                if top_sh:
+                    a['v2']['mas_compartido'] = GAME_NOMBRES.get(top_sh['game_type'], top_sh['game_type'])
+        except Exception:
+            pass
     except Exception:
         a['v2'] = a.get('v2') or {}
 
@@ -1736,7 +1750,7 @@ def informe_ejemplo():
         'top_games': [{'name': 'La Trivia', 'count': 301}, {'name': 'El Crimen del Día', 'count': 244},
                       {'name': 'Freep', 'count': 198}, {'name': 'Las Conexiones', 'count': 171}, {'name': 'La Reseña', 'count': 139}],
         'v2': {'retencion_pct': 41, 'retencion_n': 251, 'retencion_total': 612, 'por_asistente': 2.4,
-               'rejugado': 'Freep', 'rejugado_n': 87},
+               'rejugado': 'Freep', 'rejugado_n': 87, 'compartidos': 173, 'mas_compartido': 'La Trivia'},
     }
     bar = {'name': 'Festival Lúdic de Tardor', 'slug': 'ejemplo'}
     return render_template('admin/informe.html', bar=bar, a=a, max_daily=561,
@@ -2270,6 +2284,29 @@ def _peek_pregenerado(db, bar_id, game_type, today, device_id):
         f"SELECT gg_id, viewed_at FROM variant_views WHERE device_id = ? AND gg_id IN ({marcas})", [device_id] + ids).fetchall()}
     no_vistas = [r for r in rows if r['id'] not in vistos]
     return no_vistas[0] if no_vistas else min(rows, key=lambda r: vistos.get(r['id'], ''))
+
+
+@app.route('/api/share', methods=['POST'])
+def share_api():
+    """Registra un clic de compartir (best-effort, sin bloquear al cliente)."""
+    data = request.get_json(silent=True) or {}
+    bar_slug = (data.get('bar_slug') or '').strip()[:60]
+    game_type = (data.get('game_type') or '').strip()[:40]
+    device_id = str(data.get('device_id') or '')[:80]
+    if not bar_slug or not game_type:
+        return jsonify({'ok': False}), 400
+    try:
+        db = get_db()
+        if db.execute("SELECT 1 FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone():
+            from datetime import datetime as _dt
+            ahora = _dt.now()
+            db.execute("INSERT INTO shares (bar_slug, game_type, device_id, shared_on, shared_at) VALUES (?,?,?,?,?)",
+                       (bar_slug, game_type, device_id, str(ahora.date()), ahora.isoformat(timespec='seconds')))
+            db.commit()
+        db.close()
+    except Exception:
+        pass
+    return jsonify({'ok': True})
 
 
 @app.route('/api/teasers', methods=['POST'])
