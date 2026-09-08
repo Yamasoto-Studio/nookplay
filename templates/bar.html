@@ -62,6 +62,17 @@
   .demo-wall-link { display: block; margin-top: 12px; font-size: 13px; font-weight: 600; color: #A8410E; text-decoration: none; }
 
   /* Separador de grupo en el menú (juegos a dobles) */
+  /* Transición de filtro: las tarjetas viajan a su nuevo sitio; entran y salen con fundido */
+  ::view-transition-group(*) { animation-duration: 260ms; animation-timing-function: cubic-bezier(.2,.8,.2,1); }
+  ::view-transition-old(*):only-child { animation: nk-out 180ms ease-out both; }
+  ::view-transition-new(*):only-child { animation: nk-in 220ms cubic-bezier(.2,.8,.2,1) both; }
+  ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
+  @keyframes nk-out { to { opacity: 0; transform: scale(.96); } }
+  @keyframes nk-in { from { opacity: 0; transform: scale(.96) translateY(6px); } }
+  .activities-grid { transition: opacity 140ms ease; }
+  .activities-grid.grid-fading { opacity: 0; }
+  .menu-chip { transition: background 180ms ease, color 180ms ease, border-color 180ms ease, transform 120ms ease; }
+  .menu-chip:active { transform: scale(.96); }
   .menu-chips { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 12px; margin: -2px 0 0; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
   .menu-chips::-webkit-scrollbar { display: none; }
   .menu-chip { flex-shrink: 0; font-family: inherit; font-size: 13px; font-weight: 600; padding: 7px 13px; border-radius: 20px; border: 1px solid var(--border); background: white; color: var(--text-sec, var(--text)); cursor: pointer; white-space: nowrap; }
@@ -403,12 +414,23 @@ function renderChips(activeGames) {
   const nombres = { empezar: 'Para empezar', deduccion: 'Deducción', palabras: 'Palabras', logica: 'Lógica', curiosidades: 'Curiosidades', crear: 'Crear', dobles: 'A dobles' };
   orden.forEach(g => { if (activeGames.some(a => (a.grupo || '') === g)) GRUPOS_CHIP.push([g, nombres[g]]); });
   const actual = window.__nookFiltro || 'todos';
-  el.innerHTML = GRUPOS_CHIP.map(([k, n]) => `<button class="menu-chip${k === actual ? ' on' : ''}" onclick="setFiltro('${k}')">${n}</button>`).join('');
+  if (el.dataset.rendered === '1') return;  // los chips se pintan una vez; el estado activo se conmuta
+  el.innerHTML = GRUPOS_CHIP.map(([k, n]) => `<button class="menu-chip${k === actual ? ' on' : ''}" data-k="${k}" onclick="setFiltro('${k}')">${n}</button>`).join('');
+  el.dataset.rendered = '1';
   el.style.display = 'flex';
 }
 function setFiltro(k) {
+  if ((window.__nookFiltro || 'todos') === k) return;
   window.__nookFiltro = k;
-  showMenu();
+  // Chips: estado activo al instante
+  document.querySelectorAll('.menu-chip').forEach(c => c.classList.toggle('on', c.dataset.k === k));
+  const list = document.getElementById('activities-list');
+  if (document.startViewTransition && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    document.startViewTransition(() => renderGrid());
+  } else {
+    list.classList.add('grid-fading');
+    setTimeout(() => { renderGrid(); list.classList.remove('grid-fading'); }, 140);
+  }
 }
 
 async function loadActivities() {
@@ -545,12 +567,18 @@ async function cargarGanchos() {
       body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG, device_id: nookDeviceId() })
     });
     if (!r.ok) return;
-    const t = await r.json();
-    Object.entries(t).forEach(([slug, texto]) => {
-      const el = document.querySelector(`.activity-card-grid[data-slug="${slug}"]:not(.played) .activity-desc`);
-      if (el && texto) { el.innerHTML = `<span class="teaser-hoy">Hoy</span>${texto.replace(/</g, '&lt;')}`; el.classList.add('teaser'); }
-    });
+    window.__nookTeasers = await r.json();
+    aplicarGanchos();
   } catch(e) {}
+}
+
+function aplicarGanchos() {
+  const t = window.__nookTeasers;
+  if (!t) return;
+  Object.entries(t).forEach(([slug, texto]) => {
+    const el = document.querySelector(`.activity-card-grid[data-slug="${slug}"]:not(.played) .activity-desc`);
+    if (el && texto && !el.classList.contains('teaser')) { el.innerHTML = `<span class="teaser-hoy">Hoy</span>${texto.replace(/</g, '&lt;')}`; el.classList.add('teaser'); }
+  });
 }
 
 const EVENT_INFO = {{ {'evento': (bar.space_kind or 'local') == 'evento', 'start': bar.event_start or '', 'end': bar.event_end or '', 'lugar': (bar.address or bar.city or ''), 'subtitulo': (bar.hero_subtitle or '')}|tojson }};
@@ -594,7 +622,13 @@ async function showMenu() {
   renderEventMeta();
 
   actualizarRacha();
+  renderGrid();
+  if (!IS_DEMO) cargarGanchos();
+  postRenderMenu();
+}
 
+function renderGrid() {
+  retirarBanner();
   const list = document.getElementById('activities-list');
   // En demo mostramos TODO el catálogo: los activos (elegidos en el admin) son jugables,
   // el resto se ven bloqueados con candado. En un bar normal, solo los activos.
@@ -637,7 +671,7 @@ async function showMenu() {
     }
     grupoActual = g;
     return divider + `
-    <div class="activity-card-grid${locked ? ' locked' : ''}${played ? ' played' : ''}" data-slug="${a.slug}" onclick="${locked ? 'showDemoWall()' : `startActivity('${a.slug}')`}">
+    <div class="activity-card-grid${locked ? ' locked' : ''}${played ? ' played' : ''}" data-slug="${a.slug}" style="view-transition-name: card-${a.slug};" onclick="${locked ? 'showDemoWall()' : `startActivity('${a.slug}')`}">
       ${locked ? '<div class="lock-badge">🔒</div>' : ''}
       ${played ? '<div class="played-badge" title="Jugado hoy — mañana hay contenido nuevo">✓</div>' : ''}
       <div class="activity-img-wrap">
@@ -649,30 +683,40 @@ async function showMenu() {
       </div>
     </div>`;
   }).join('');
-  if (!IS_DEMO) cargarGanchos();
+  aplicarGanchos();
+  colocarBanner();
+}
 
+function retirarBanner() {
+  const list = document.getElementById('activities-list');
+  const promoBanner = document.getElementById('promo-banner');
+  if (promoBanner && list && list.contains(promoBanner)) list.parentElement.insertBefore(promoBanner, list);
+}
+
+function colocarBanner() {
+  const list = document.getElementById('activities-list');
+  const promoBanner = document.getElementById('promo-banner');
+  if (!promoBanner || !PRODUCTS || PRODUCTS.length === 0) return;
+  promoBanner.style.gridColumn = '1 / -1';
+  promoBanner.style.display = 'block';
+  const cards = list.querySelectorAll('.activity-card-grid');
+  const filaCompleta = window.matchMedia('(min-width: 900px)').matches ? 4 : 2;
+  const pos = Math.min(filaCompleta, cards.length) - 1;
+  if (pos >= 0) cards[pos].insertAdjacentElement('afterend', promoBanner);
+  else list.appendChild(promoBanner);
+  if (!promoBanner.dataset.carrusel) { promoBanner.dataset.carrusel = '1'; initPromoCarousel(); }
+}
+
+function postRenderMenu() {
+  const activeGames = IS_DEMO ? ACTIVITIES.slice() : ACTIVITIES.filter(a => a.active);
+  const hasHidden = !IS_DEMO && ACTIVITIES.length > activeGames.length;
   // Botón de descubrimiento si hay juegos no activos en este bar
   const discoverBtn = document.getElementById('discover-more-btn');
   if (discoverBtn) {
     discoverBtn.style.display = hasHidden ? 'block' : 'none';
   }
 
-  // Insertar banner de productos tras la primera fila del grid:
-  // móvil (2 col) → tras el 2º juego; desktop (4 col) → tras el 4º.
-  const promoBanner = document.getElementById('promo-banner');
-  if (promoBanner && PRODUCTS && PRODUCTS.length > 0) {
-    promoBanner.style.gridColumn = '1 / -1';
-    promoBanner.style.display = 'block';
-    const cards = list.querySelectorAll('.activity-card-grid');
-    const filaCompleta = window.matchMedia('(min-width: 900px)').matches ? 4 : 2;
-    const pos = Math.min(filaCompleta, cards.length) - 1;
-    if (pos >= 0) {
-      cards[pos].insertAdjacentElement('afterend', promoBanner);
-    } else {
-      list.appendChild(promoBanner);
-    }
-    initPromoCarousel();
-  }
+  colocarBanner();
 
   showScreen('s-menu');
 
