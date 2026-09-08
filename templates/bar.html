@@ -270,6 +270,7 @@
 .promo-banner { margin: 0; }
 .promo-card {
   overflow: hidden;
+  cursor: grab; user-select: none; -webkit-user-select: none;
   border-radius: 16px;
   border: 1px solid var(--border);
   background: var(--bar-bg-subtle);
@@ -289,7 +290,7 @@
   /* Sin bloque: la imagen flota sobre el mismo fondo, con un halo sutil del color del espacio */
   background: radial-gradient(ellipse at center, color-mix(in srgb, var(--bar-primary) 14%, transparent) 0%, transparent 68%);
 }
-.promo-img { max-width: 100%; max-height: 100%; object-fit: contain; filter: drop-shadow(0 14px 22px rgba(0,0,0,0.20)); transition: transform 0.4s ease; }
+.promo-img { -webkit-user-drag: none; pointer-events: none; max-width: 100%; max-height: 100%; object-fit: contain; filter: drop-shadow(0 14px 22px rgba(0,0,0,0.20)); transition: transform 0.4s ease; }
 .promo-item:hover .promo-img { transform: translateY(-3px) scale(1.02); }
 .promo-img-placeholder { font-size: 44px; opacity: 0.5; }
 .promo-info { padding: 16px 18px 18px; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
@@ -393,13 +394,54 @@ function initPromoCarousel() {
       `<div class="promo-dot ${i === 0 ? 'active' : ''}" id="pdot-${i}"></div>`
     ).join('');
 
-    let cur = 0;
-    setInterval(() => {
+    let cur = 0, timer = null, pausaHasta = 0;
+    const N = PRODUCTS.length;
+    const irA = (i, animar = true) => {
       document.getElementById(`pdot-${cur}`)?.classList.remove('active');
-      cur = (cur + 1) % PRODUCTS.length;
+      cur = (i + N) % N;
+      track.style.transition = animar ? 'transform 0.45s cubic-bezier(.2,.8,.2,1)' : 'none';
       track.style.transform = `translateX(-${cur * 100}%)`;
       document.getElementById(`pdot-${cur}`)?.classList.add('active');
-    }, 4000);
+    };
+    const arrancar = () => { clearInterval(timer); timer = setInterval(() => { if (Date.now() > pausaHasta) irA(cur + 1); }, 4000); };
+    const pausar = (ms) => { pausaHasta = Date.now() + ms; };
+    arrancar();
+
+    // Puntos: se puede tocar
+    dotsEl.querySelectorAll('.promo-dot').forEach((d, i) => d.addEventListener('click', () => { irA(i); pausar(8000); }));
+
+    // Arrastre con el dedo (y con el ratón): sigue al dedo, decide al soltar
+    let x0 = null, dx = 0, ancho = 1;
+    const card = track.parentElement;
+    card.style.touchAction = 'pan-y';
+    card.addEventListener('pointerdown', (e) => {
+      x0 = e.clientX; dx = 0; ancho = card.offsetWidth || 1;
+      track.style.transition = 'none';
+      pausar(8000);
+      try { card.setPointerCapture(e.pointerId); } catch(err) {}
+    });
+    card.addEventListener('pointermove', (e) => {
+      if (x0 === null) return;
+      dx = e.clientX - x0;
+      // Resistencia en los extremos
+      if ((cur === 0 && dx > 0) || (cur === N - 1 && dx < 0)) dx = dx / 3;
+      track.style.transform = `translateX(calc(-${cur * 100}% + ${dx}px))`;
+    });
+    const soltar = () => {
+      if (x0 === null) return;
+      x0 = null;
+      const umbral = Math.min(60, ancho * 0.18);
+      if (dx < -umbral) irA(cur + 1);
+      else if (dx > umbral) irA(cur - 1);
+      else irA(cur);
+      dx = 0;
+    };
+    card.addEventListener('pointerup', soltar);
+    card.addEventListener('pointercancel', soltar);
+    card.addEventListener('pointerleave', soltar);
+    // Pausa al pasar el ratón (desktop): la gente lee
+    card.addEventListener('mouseenter', () => pausar(60000));
+    card.addEventListener('mouseleave', () => pausar(0));
   }
 }
 
