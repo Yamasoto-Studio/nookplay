@@ -611,6 +611,13 @@ async function showMenu() {
   // Juegos a dobles (2 jugadores, 1 móvil). Van agrupados al final con un separador.
   const DOBLES = ['freep', 'dosverdades', 'masomenos', 'quienmas', 'pensamiento'];
   const GRUPOS = { empezar: 'Para empezar', deduccion: 'Deducción', palabras: 'Palabras y cultura', logica: 'Lógica y puzzle', curiosidades: 'Curiosidades', crear: 'Crear', dobles: '👥 A dobles' };
+  // Orden canónico por grupo (y posición dentro del grupo): inmune al orden que llegue del servidor
+  const ORDEN_GRUPOS = ['empezar','deduccion','palabras','logica','curiosidades','crear','dobles'];
+  activeGames.sort((x, y) => {
+    const gx = ORDEN_GRUPOS.indexOf(x.grupo || 'otros'), gy = ORDEN_GRUPOS.indexOf(y.grupo || 'otros');
+    if (gx !== gy) return (gx === -1 ? 99 : gx) - (gy === -1 ? 99 : gy);
+    return 0;
+  });
   const filtro = window.__nookFiltro || 'todos';
   const visibles = activeGames.filter(a => filtro === 'todos' ? true : filtro === 'evento' ? a.tematizable : (a.grupo || 'otros') === filtro);
   renderChips(activeGames);
