@@ -65,7 +65,7 @@
   /* Transición de filtro: las tarjetas viajan a su nuevo sitio; entran y salen con fundido */
   ::view-transition-group(*) { animation-duration: 260ms; animation-timing-function: cubic-bezier(.2,.8,.2,1); }
   ::view-transition-old(*):only-child { animation: nk-out 180ms ease-out both; }
-  ::view-transition-new(*):only-child { animation: nk-in 220ms cubic-bezier(.2,.8,.2,1) both; }
+  ::view-transition-new(*):only-child { animation: none; }
   ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
   @keyframes nk-out { to { opacity: 0; transform: scale(.96); } }
   @keyframes nk-in { from { opacity: 0; transform: scale(.96) translateY(6px); } }
@@ -76,7 +76,10 @@
   .menu-chips { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 12px; margin: -2px 0 0; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
   .menu-chips::-webkit-scrollbar { display: none; }
   .menu-chip { flex-shrink: 0; font-family: inherit; font-size: 13px; font-weight: 600; padding: 7px 13px; border-radius: 20px; border: 1px solid var(--border); background: white; color: var(--text-sec, var(--text)); cursor: pointer; white-space: nowrap; }
-  .menu-chip.on { background: var(--bar-primary); color: var(--bar-primary-text); border-color: var(--bar-primary); }
+  .menu-chips { position: relative; }
+  .menu-chip { position: relative; z-index: 1; background: transparent; }
+  .menu-chip.on { color: var(--bar-primary-text); border-color: transparent; background: transparent; }
+  .menu-chip-pill { position: absolute; left: 0; top: 2px; height: calc(100% - 14px); border-radius: 20px; background: var(--bar-primary); opacity: 0; will-change: transform, width; z-index: 0; pointer-events: none; }
   .grid-divider {
     grid-column: 1 / -1;
     display: flex; align-items: center; gap: 14px;
@@ -415,21 +418,59 @@ function renderChips(activeGames) {
   orden.forEach(g => { if (activeGames.some(a => (a.grupo || '') === g)) GRUPOS_CHIP.push([g, nombres[g]]); });
   const actual = window.__nookFiltro || 'todos';
   if (el.dataset.rendered === '1') return;  // los chips se pintan una vez; el estado activo se conmuta
-  el.innerHTML = GRUPOS_CHIP.map(([k, n]) => `<button class="menu-chip${k === actual ? ' on' : ''}" data-k="${k}" onclick="setFiltro('${k}')">${n}</button>`).join('');
+  el.innerHTML = `<span class="menu-chip-pill" id="menu-chip-pill"></span>` +
+    GRUPOS_CHIP.map(([k, n]) => `<button class="menu-chip${k === actual ? ' on' : ''}" data-k="${k}" onclick="setFiltro('${k}')">${n}</button>`).join('');
   el.dataset.rendered = '1';
+  requestAnimationFrame(() => moverPill(false));
   el.style.display = 'flex';
 }
+function moverPill(animar) {
+  const pill = document.getElementById('menu-chip-pill');
+  const on = document.querySelector('.menu-chip.on');
+  if (!pill || !on) return;
+  pill.style.transition = animar ? 'transform 220ms cubic-bezier(.2,.8,.2,1), width 220ms cubic-bezier(.2,.8,.2,1)' : 'none';
+  pill.style.width = on.offsetWidth + 'px';
+  pill.style.transform = `translateX(${on.offsetLeft}px)`;
+  pill.style.opacity = '1';
+}
+
 function setFiltro(k) {
   if ((window.__nookFiltro || 'todos') === k) return;
   window.__nookFiltro = k;
-  // Chips: estado activo al instante
+  const reducir = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // Chips: estado activo al instante + pastilla que viaja
   document.querySelectorAll('.menu-chip').forEach(c => c.classList.toggle('on', c.dataset.k === k));
+  moverPill(!reducir);
+  const on = document.querySelector('.menu-chip.on');
+  if (on && on.scrollIntoView) on.scrollIntoView({ inline: 'center', block: 'nearest', behavior: reducir ? 'auto' : 'smooth' });
+
   const list = document.getElementById('activities-list');
-  if (document.startViewTransition && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    document.startViewTransition(() => renderGrid());
+  const altoAntes = list.offsetHeight;
+  const repintar = () => {
+    renderGrid();
+    // Cascada de entrada: cada tarjeta llega 25 ms después de la anterior
+    if (!reducir) list.querySelectorAll('.activity-card-grid').forEach((c, i) => {
+      c.style.animation = 'none'; void c.offsetWidth;
+      c.style.animation = `nk-in 260ms cubic-bezier(.2,.8,.2,1) ${Math.min(i, 16) * 25}ms both`;
+    });
+  };
+  const respirar = () => {
+    // El contenedor respira: de la altura vieja a la nueva sin salto del pie
+    if (reducir) return;
+    const altoDespues = list.offsetHeight;
+    if (Math.abs(altoDespues - altoAntes) < 4) return;
+    list.style.height = altoAntes + 'px'; list.style.overflow = 'hidden';
+    void list.offsetHeight;
+    list.style.transition = 'height 320ms cubic-bezier(.2,.8,.2,1)';
+    list.style.height = altoDespues + 'px';
+    setTimeout(() => { list.style.height = ''; list.style.overflow = ''; list.style.transition = ''; }, 340);
+  };
+  if (document.startViewTransition && !reducir) {
+    const vt = document.startViewTransition(() => { repintar(); });
+    vt.ready.then(respirar).catch(() => {});
   } else {
     list.classList.add('grid-fading');
-    setTimeout(() => { renderGrid(); list.classList.remove('grid-fading'); }, 140);
+    setTimeout(() => { repintar(); list.classList.remove('grid-fading'); respirar(); }, 140);
   }
 }
 
