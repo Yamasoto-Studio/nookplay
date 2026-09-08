@@ -1284,9 +1284,11 @@ def calcular_analytics_bar(db, bar_slug, ventana=None):
                     por_dia.setdefault(r['played_on'], _C())[int(r['played_at'][11:13])] += 1
                 except (ValueError, IndexError):
                     continue
-            for d in a['daily']:
-                pass
             a['v2']['hora_por_dia'] = {dia: f"{h:02d}:00" for dia, cnt in por_dia.items() for h, _ in [cnt.most_common(1)[0]]}
+            for i, d in enumerate(a['daily']):
+                fecha = str(v_desde + timedelta(days=i))
+                if fecha in a['v2']['hora_por_dia']:
+                    d['hora'] = a['v2']['hora_por_dia'][fecha]
     except Exception:
         a['v2'] = a.get('v2') or {}
 
@@ -1719,6 +1721,27 @@ def admin_save():
     db.commit()
     db.close()
     return jsonify({'ok': True})
+
+@app.route('/informe-ejemplo')
+def informe_ejemplo():
+    """Informe público de un festival ficticio con datos realistas: material comercial."""
+    daily = [
+        {'dia': 'Jue 12', 'count': 214, 'hora': '18:00'}, {'dia': 'Vie 13', 'count': 388, 'hora': '19:00'},
+        {'dia': 'Sáb 14', 'count': 561, 'hora': '17:00'}, {'dia': 'Dom 15', 'count': 297, 'hora': '12:00'},
+    ]
+    a = {
+        'has_data': True, 'week': 1460, 'active_days': 4, 'people_week': 612, 'has_device_data': True,
+        'daily': daily, 'best_day': 'Sábado 14', 'best_day_count': 561,
+        'has_hour_data': True, 'best_hour': '17:00–18:00', 'best_hour_count': 96,
+        'top_games': [{'name': 'La Trivia', 'count': 301}, {'name': 'El Crimen del Día', 'count': 244},
+                      {'name': 'Freep', 'count': 198}, {'name': 'Las Conexiones', 'count': 171}, {'name': 'La Reseña', 'count': 139}],
+        'v2': {'retencion_pct': 41, 'retencion_n': 251, 'retencion_total': 612, 'por_asistente': 2.4,
+               'rejugado': 'Freep', 'rejugado_n': 87},
+    }
+    bar = {'name': 'Festival Lúdic de Tardor', 'slug': 'ejemplo'}
+    return render_template('admin/informe.html', bar=bar, a=a, max_daily=561,
+                           fechas_str='12–15 de noviembre de 2026', hoy=str(date.today()), ejemplo=True)
+
 
 @app.route('/admin/informe/<bar_slug>')
 @admin_required

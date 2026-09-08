@@ -64,6 +64,7 @@
     @page { size: A4 portrait; margin: 1.6cm; }
     .hero-card, .chart-track, .empty { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   }
+  .chart-hora { font-size: 11px; color: #A89B91; margin-left: 6px; font-weight: 400; }
 </style>
 </head>
 <body>
@@ -110,9 +111,39 @@
     <div class="chart-row">
       <div class="chart-day">{{ d.dia }}</div>
       <div class="chart-track"><div class="chart-fill" style="width: {{ (d.count / max_daily * 100) | round(1) if max_daily else 0 }}%;"></div></div>
-      <div class="chart-val">{{ d.count }}</div>
+      <div class="chart-val">{{ d.count }}{% if d.hora %}<span class="chart-hora">· punta {{ d.hora }}</span>{% endif %}</div>
     </div>
     {% endfor %}
+  </div>
+  {% endif %}
+
+  {% set v2 = a.v2 or {} %}
+  {% if v2.retencion_pct is defined or v2.por_asistente or v2.rejugado %}
+  <div class="sec">
+    <div class="sec-title">Enganche</div>
+    <div class="high">
+      {% if v2.retencion_pct is defined %}
+      <div class="high-card">
+        <div class="high-k">🔁 Volvieron otro día</div>
+        <div class="high-v">{{ v2.retencion_pct }}%</div>
+        <div class="high-s">{{ v2.retencion_n }} de {{ v2.retencion_total }} asistentes jugaron en más de un día</div>
+      </div>
+      {% endif %}
+      {% if v2.por_asistente %}
+      <div class="high-card">
+        <div class="high-k">🎮 Partidas por asistente</div>
+        <div class="high-v">{{ v2.por_asistente }}</div>
+        <div class="high-s">profundidad de uso durante el evento</div>
+      </div>
+      {% endif %}
+      {% if v2.rejugado %}
+      <div class="high-card">
+        <div class="high-k">🔥 El que más se repite</div>
+        <div class="high-v">{{ v2.rejugado }}</div>
+        <div class="high-s">×{{ v2.rejugado_n }} rejugadas por la misma persona</div>
+      </div>
+      {% endif %}
+    </div>
   </div>
   {% endif %}
 
@@ -151,8 +182,15 @@
   </div>
   {% endif %}
 
+  {% if ejemplo %}
+  <div class="sec" style="text-align:center;">
+    <div class="sec-title" style="margin-bottom:6px;">¿Quieres un informe así de tu evento?</div>
+    <div style="font-size:14px; color:#6B6059;">Nookplay entrega este informe al cierre de cada evento — partidas, asistentes, horas punta y enganche, listo para compartir con patrocinadores y equipo.<br><b>nookplay@yamasoto.com</b> · nookplay.app</div>
+  </div>
+  {% endif %}
+
   <div class="foot">
-    <div>Informe generado por <b>Nookplay</b> · nookplay.app</div>
+    <div>Informe generado por <b>Nookplay</b> · nookplay.app{% if ejemplo %} · <b>Datos de ejemplo</b>{% endif %}</div>
     <div>{{ hoy }}</div>
   </div>
 
