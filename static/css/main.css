@@ -77,17 +77,28 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 20px 24px 12px;
+  padding: 12px 24px 6px;
   background: var(--bar-bg);
 }
 @media (min-width: 640px) {
-  .bar-hero { padding: 30px 24px 24px; }
-  .bar-hero-meta { margin-top: 20px; }
-  .bar-hero-by { margin-top: 10px; }
+  .bar-hero { padding: 20px 24px 14px; }
+  .bar-hero-meta { margin-top: 10px; }
+  .bar-hero-by { margin-top: 5px; }
+}
+/* Dentro de un juego: misma identidad, versión compacta */
+.bar-hero--game { padding: 10px 24px 4px; }
+.bar-hero--game .bar-hero-logo { max-width: 200px; max-height: 44px; object-fit: contain; }
+.bar-hero--game .bar-hero-meta { margin-top: 6px; font-size: 13px; }
+.bar-hero--game .bar-hero-by { margin-top: 3px; }
+.bar-hero--game .bar-hero-by img { width: 56px; }
+@media (min-width: 640px) {
+  .bar-hero--game { padding: 14px 24px 8px; }
+  .bar-hero--game .bar-hero-meta { margin-top: 8px; }
+  .bar-hero--game .bar-hero-by { margin-top: 4px; }
 }
 
 .bar-hero-meta {
-  margin: 30px 0 0;
+  margin: 20px 0 0;
   font-size: 15px;
   font-weight: 700;
   color: var(--bar-accent-dark, var(--text));
@@ -97,7 +108,7 @@ body {
 }
 .bar-hero-meta:empty { display: none; }
 .bar-hero-by {
-  margin-top: 7px;
+  margin-top: 4px;
   display: inline-flex;
   align-items: center;
   gap: 5px;

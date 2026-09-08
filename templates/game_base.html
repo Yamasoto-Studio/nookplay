@@ -95,12 +95,35 @@ function showResultPromo() {
 </script>
 
 <div class="nook">
-  <div class="bar-hero">
+  <div class="bar-hero bar-hero--game">
     <img class="bar-hero-logo"
       src="/media/{{ bar.slug }}/logo_header.png" data-fb="/static/clientes/{{ bar.slug }}/logo_header.png"
       alt="{{ bar.name }}"
       onerror="if(this.dataset.fb){this.src=this.dataset.fb;this.dataset.fb='';}else{this.style.display='none';}">
+    <p class="bar-hero-meta" id="bar-hero-meta"></p>
+    <a href="/{{ bar.slug }}?code={{ code }}" class="bar-hero-by">by <img src="/static/logo.svg" alt="nookplay"></a>
   </div>
+  <script>
+  (function () {
+    const INFO = {{ {'evento': (bar.space_kind or 'local') == 'evento', 'start': bar.event_start or '', 'end': bar.event_end or '', 'lugar': (bar.address or bar.city or ''), 'subtitulo': (bar.hero_subtitle or '')}|tojson }};
+    const meta = document.getElementById('bar-hero-meta');
+    if (!meta) return;
+    if (INFO.subtitulo) { meta.textContent = INFO.subtitulo; return; }
+    if (!INFO.evento) return;
+    const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+    const parse = (s) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || ''); return m ? new Date(+m[1], +m[2]-1, +m[3]) : null; };
+    const d1 = parse(INFO.start), d2 = parse(INFO.end);
+    const partes = [];
+    if (d1 && d2) {
+      const mismoMes = d1.getMonth() === d2.getMonth();
+      partes.push(d1.getTime() === d2.getTime() ? `${d1.getDate()} ${MESES[d1.getMonth()]}`
+        : mismoMes ? `${d1.getDate()}–${d2.getDate()} ${MESES[d2.getMonth()]}`
+        : `${d1.getDate()} ${MESES[d1.getMonth()]} – ${d2.getDate()} ${MESES[d2.getMonth()]}`);
+    }
+    if (INFO.lugar) partes.push(INFO.lugar);
+    meta.textContent = partes.join('  ·  ');
+  })();
+  </script>
   <div class="nook-content">
     <div class="nook-card">
       {% block game_content %}{% endblock %}
