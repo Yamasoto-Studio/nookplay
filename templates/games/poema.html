@@ -187,6 +187,10 @@ async function generar() {
     document.getElementById('r-poema').textContent = data.poema;
     document.getElementById('r-firma').textContent = `— para ${nombre}`;
     showScreen('s-result');
+    try {
+      await fetch('/api/play', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG, correct: true, game_type: 'poema', choice: 0, elapsed: 0 }) });
+    } catch(e) {}
     window.scrollTo(0, 0);
   } catch(e) {
     showScreen('s-form');

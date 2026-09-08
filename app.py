@@ -1232,7 +1232,7 @@ def calcular_analytics_bar(db, bar_slug, ventana=None):
 
     # Top juegos de la ventana (favorito + top 3)
     top_juegos = db.execute(
-        "SELECT game_type, COUNT(*) n FROM plays WHERE bar_slug=? AND played_on>=? AND played_on<=? GROUP BY game_type ORDER BY n DESC LIMIT 3",
+        "SELECT game_type, COUNT(*) n FROM plays WHERE bar_slug=? AND played_on>=? AND played_on<=? GROUP BY game_type ORDER BY n DESC LIMIT 5",
         (bar_slug, str(v_desde), str(v_hasta))).fetchall()
     if top_juegos:
         a['top_game'] = top_juegos[0]['game_type']
@@ -1425,7 +1425,7 @@ def calcular_analytics_evento(db, bar):
 
     # Top juegos del evento
     top_juegos = db.execute(
-        "SELECT game_type, COUNT(*) n FROM plays WHERE bar_slug=? AND played_on>=? AND played_on<=? GROUP BY game_type ORDER BY n DESC LIMIT 3",
+        "SELECT game_type, COUNT(*) n FROM plays WHERE bar_slug=? AND played_on>=? AND played_on<=? GROUP BY game_type ORDER BY n DESC LIMIT 5",
         (bar_slug, ini, fin)).fetchall()
     if top_juegos:
         a['top_game'] = top_juegos[0]['game_type']

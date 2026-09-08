@@ -58,6 +58,10 @@
   .insights-card { background: #fff; border-radius: 14px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
   .insights-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 16px; }
   .insights-head h3 { font-size: 15px; font-weight: 700; color: #1A1A1A; margin: 0; }
+  .insights-head { align-items: center; gap: 12px; flex-wrap: wrap; }
+  .btn-informe { display: inline-flex; align-items: center; gap: 6px; background: white; color: #1A1A1A; border: 1px solid #E5DDD5; border-radius: 8px; padding: 8px 14px; font-size: 13px; font-weight: 600; text-decoration: none; white-space: nowrap; }
+  .btn-informe:hover { border-color: #C4622D; color: #C4622D; }
+  .insights-previo { background: #FBE8DC; border: 1px solid #E8C4AC; border-radius: 10px; padding: 10px 14px; font-size: 13px; color: #7A4A20; margin: -4px 0 16px; line-height: 1.5; }
   .insights-trend { font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 20px; }
   .insights-trend.up { background: #E6F4EA; color: #1E7E34; }
   .insights-trend.down { background: #FDECEA; color: #C0392B; }
@@ -214,16 +218,10 @@
   <div class="insights-card" id="sec-actividad">
     <div class="insights-head">
       <h3 id="lbl-insights-title">📊 {{ 'Actividad en Nookplay' if es_evento else 'Tu semana en Nookplay' }}</h3>
-      {% if analytics.evento_futuro %}
-      <div style="background:#FBE8DC; border:1px solid #E8C4AC; border-radius:10px; padding:10px 14px; font-size:13px; color:#7A4A20; margin-bottom:12px;">
-        🎪 <strong>Modo previo:</strong> el evento empieza el <strong>{{ analytics.evento_inicio }}</strong>. Estas gráficas muestran tu actividad de pruebas; el día 1 pasarán solas a medir el evento (y su informe final).
-      </div>
-      {% endif %}
       {% if es_evento and (analytics.ventana_evento or analytics.evento_futuro) %}
-      <a href="/admin/informe/{{ bar.slug }}" target="_blank" rel="noopener"
-         style="display:inline-block; margin-bottom:12px; background:transparent; color:#A8410E; border:1.5px solid #E8C4AC; border-radius:8px; padding:8px 14px; font-size:13px; font-weight:600; text-decoration:none;">📄 Informe del evento</a>
+      <a href="/admin/informe/{{ bar.slug }}" target="_blank" rel="noopener" class="btn-informe">📄 Informe del evento</a>
       {% endif %}
-      {% if analytics.has_data and analytics.trend_pct is not none %}
+      {% if analytics.has_data and analytics.trend_pct is not none and not analytics.evento_futuro %}
         {% if analytics.trend_dir == 'up' %}
           <span class="insights-trend up">↑ {{ analytics.trend_pct }}% vs. semana pasada</span>
         {% elif analytics.trend_dir == 'down' %}
@@ -233,6 +231,11 @@
         {% endif %}
       {% endif %}
     </div>
+    {% if analytics.evento_futuro %}
+    <div class="insights-previo">
+      🎪 <strong>Modo previo:</strong> el evento empieza el <strong>{{ analytics.evento_inicio }}</strong>. Estas gráficas muestran tu actividad de pruebas; el día 1 pasarán solas a medir el evento y su informe final.
+    </div>
+    {% endif %}
 
     {% if analytics.has_data %}
       {% if analytics.has_device_data %}

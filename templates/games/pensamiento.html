@@ -128,6 +128,10 @@ async function enviar() {
     const data = await res.json();
     if (data.error) throw new Error(data.error);
     showResult(data, val);
+    try {
+      await fetch('/api/play', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG, correct: true, game_type: 'pensamiento', choice: 0, elapsed: 0 }) });
+    } catch(e) {}
   } catch(e) {
     btn.disabled = false; btn.textContent = 'Enviar mi respuesta';
     alert('No se pudo enviar tu respuesta. Inténtalo de nuevo.');
