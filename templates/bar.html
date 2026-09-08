@@ -287,7 +287,7 @@
   /* Sin bloque: la imagen flota sobre el mismo fondo, con un halo sutil del color del espacio */
   background: radial-gradient(ellipse at center, color-mix(in srgb, var(--bar-primary) 14%, transparent) 0%, transparent 68%);
 }
-.promo-img { -webkit-user-drag: none; pointer-events: none; max-width: 100%; max-height: 100%; object-fit: contain; filter: drop-shadow(0 14px 22px rgba(0,0,0,0.20)); transition: transform 0.4s ease; }
+.promo-img { -webkit-user-drag: none; pointer-events: none; width: auto; height: auto; max-width: 100%; max-height: 140px; object-fit: contain; filter: drop-shadow(0 14px 22px rgba(0,0,0,0.20)); transition: transform 0.4s ease; }
 .promo-item:hover .promo-img { transform: translateY(-3px) scale(1.02); }
 .promo-img-placeholder { font-size: 44px; opacity: 0.5; }
 .promo-info { padding: 16px 18px 18px; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
@@ -689,7 +689,6 @@ async function showMenu() {
 }
 
 function renderGrid() {
-  retirarBanner();
   const list = document.getElementById('activities-list');
   // En demo mostramos TODO el catálogo: los activos (elegidos en el admin) son jugables,
   // el resto se ven bloqueados con candado. En un bar normal, solo los activos.
@@ -721,18 +720,18 @@ function renderGrid() {
   const SIN_CHECK = ['freep', 'dosverdades', 'masomenos', 'quienmas', 'poema'];
   let grupoActual = null;
 
-  list.innerHTML = visibles.map((a, idx) => {
+  const htmlTarjetas = visibles.map((a, idx) => {
     const locked = IS_DEMO && !a.active;
     const played = !locked && playedToday.includes(a.slug) && !SIN_CHECK.includes(a.slug);
     let divider = '';
     // Cabecera de grupo (solo en "Todos"; en un filtro concreto no hace falta)
     const g = a.grupo || 'otros';
     if (filtro === 'todos' && g !== grupoActual && GRUPOS[g] && g !== 'empezar') {
-      divider = `<div class="grid-divider"><span>${GRUPOS[g]}</span></div>`;
+      divider = `<div class="grid-divider" style="order:${idx * 3 + 1};"><span>${GRUPOS[g]}</span></div>`;
     }
     grupoActual = g;
     return divider + `
-    <div class="activity-card-grid${locked ? ' locked' : ''}${played ? ' played' : ''}" data-slug="${a.slug}" style="--i:${idx};" onclick="${locked ? 'showDemoWall()' : `startActivity('${a.slug}')`}">
+    <div class="activity-card-grid${locked ? ' locked' : ''}${played ? ' played' : ''}" data-slug="${a.slug}" style="--i:${idx}; order:${idx * 3 + 2};" onclick="${locked ? 'showDemoWall()' : `startActivity('${a.slug}')`}">
       ${locked ? '<div class="lock-badge">🔒</div>' : ''}
       ${played ? '<div class="played-badge" title="Jugado hoy — mañana hay contenido nuevo">✓</div>' : ''}
       <div class="activity-img-wrap">
@@ -744,27 +743,25 @@ function renderGrid() {
       </div>
     </div>`;
   }).join('');
+  // Sustituir solo tarjetas y cabeceras: el banner de actividades permanece en su sitio (no se recalcula su imagen)
+  list.querySelectorAll('.activity-card-grid, .grid-divider').forEach(n => n.remove());
+  list.insertAdjacentHTML('beforeend', htmlTarjetas);
   aplicarGanchos();
   colocarBanner();
-}
-
-function retirarBanner() {
-  const list = document.getElementById('activities-list');
-  const promoBanner = document.getElementById('promo-banner');
-  if (promoBanner && list && list.contains(promoBanner)) list.parentElement.insertBefore(promoBanner, list);
 }
 
 function colocarBanner() {
   const list = document.getElementById('activities-list');
   const promoBanner = document.getElementById('promo-banner');
   if (!promoBanner || !PRODUCTS || PRODUCTS.length === 0) return;
+  const cards = list.querySelectorAll('.activity-card-grid');
+  if (!cards.length) { promoBanner.style.display = 'none'; return; }
+  if (promoBanner.parentElement !== list) list.appendChild(promoBanner);
   promoBanner.style.gridColumn = '1 / -1';
   promoBanner.style.display = 'block';
-  const cards = list.querySelectorAll('.activity-card-grid');
   const filaCompleta = window.matchMedia('(min-width: 900px)').matches ? 4 : 2;
   const pos = Math.min(filaCompleta, cards.length) - 1;
-  if (pos >= 0) cards[pos].insertAdjacentElement('afterend', promoBanner);
-  else list.appendChild(promoBanner);
+  promoBanner.style.order = String(pos * 3 + 3);
   if (!promoBanner.dataset.carrusel) { promoBanner.dataset.carrusel = '1'; initPromoCarousel(); }
 }
 
