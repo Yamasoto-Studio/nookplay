@@ -4858,6 +4858,8 @@ def get_bar_games(bar_slug):
             "name": g["name"],
             "description": g["description"],
             "icon": g["icon"],
+            "grupo": (g["grupo"] if "grupo" in g.keys() else "") or "",
+            "tematizable": slug in EVENT_GAME_TYPES,
             "active": is_active,
             "available": available,
             "fixed": is_fixed,

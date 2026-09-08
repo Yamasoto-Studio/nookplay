@@ -148,6 +148,7 @@ migrations = [
     "ALTER TABLE bars ADD COLUMN type TEXT DEFAULT ''",
     "ALTER TABLE bar_games ADD COLUMN settings TEXT DEFAULT ''",
     "ALTER TABLE bars ADD COLUMN hero_subtitle TEXT DEFAULT ''",
+    "ALTER TABLE games ADD COLUMN grupo TEXT DEFAULT ''",
     "ALTER TABLE bars ADD COLUMN logo_path TEXT DEFAULT ''",
     "ALTER TABLE bars ADD COLUMN address TEXT DEFAULT ''",
     "ALTER TABLE bars ADD COLUMN city TEXT DEFAULT ''",
@@ -335,6 +336,27 @@ if not veredicto_exists:
     )
     db.commit()
     print('Juego El Veredicto añadido.')
+
+# Orden curado del catálogo y grupos (se reaplica en cada arranque: fuente única)
+CATALOGO_ORDEN = [
+    # Para empezar — la primera fila: universales, con gancho, tematizables
+    ('trivia', 'empezar'), ('crimen', 'empezar'), ('resena', 'empezar'), ('conexiones', 'empezar'),
+    # Deducción y personas
+    ('perfil', 'deduccion'), ('impostor', 'deduccion'), ('veredicto', 'deduccion'), ('dilema', 'deduccion'),
+    # Palabras y cultura
+    ('letra', 'palabras'), ('definicion', 'palabras'), ('titular', 'palabras'), ('sinopsis', 'palabras'), ('constitucion', 'palabras'),
+    # Lógica y puzzle
+    ('reinas', 'logica'), ('equilibrio', 'logica'), ('carta', 'logica'), ('orden', 'logica'), ('escalera', 'logica'), ('menteagil', 'logica'),
+    # Curiosidades del mundo
+    ('oraculo', 'curiosidades'), ('muertes', 'curiosidades'), ('donde', 'curiosidades'), ('local', 'curiosidades'), ('vestuario', 'curiosidades'),
+    # Crear
+    ('poema', 'crear'),
+    # A dobles
+    ('freep', 'dobles'), ('dosverdades', 'dobles'), ('masomenos', 'dobles'), ('quienmas', 'dobles'), ('pensamiento', 'dobles'),
+]
+for _pos, (_slug, _grupo) in enumerate(CATALOGO_ORDEN, start=1):
+    db.execute("UPDATE games SET position = ?, grupo = ? WHERE slug = ?", (_pos, _grupo, _slug))
+db.commit()
 
 # Compartidos (métrica de viralidad)
 db.execute('''CREATE TABLE IF NOT EXISTS shares (

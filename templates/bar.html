@@ -62,6 +62,10 @@
   .demo-wall-link { display: block; margin-top: 12px; font-size: 13px; font-weight: 600; color: #A8410E; text-decoration: none; }
 
   /* Separador de grupo en el menú (juegos a dobles) */
+  .menu-chips { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 12px; margin: -2px 0 0; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .menu-chips::-webkit-scrollbar { display: none; }
+  .menu-chip { flex-shrink: 0; font-family: inherit; font-size: 13px; font-weight: 600; padding: 7px 13px; border-radius: 20px; border: 1px solid var(--border); background: white; color: var(--text-sec, var(--text)); cursor: pointer; white-space: nowrap; }
+  .menu-chip.on { background: var(--bar-primary); color: var(--bar-primary-text); border-color: var(--bar-primary); }
   .grid-divider {
     grid-column: 1 / -1;
     display: flex; align-items: center; gap: 14px;
@@ -171,6 +175,7 @@
         {% endif %}
         <p class="menu-welcome" id="menu-welcome"></p>
         <div class="menu-section-row"><span>Los juegos de hoy</span><span class="day-counter" id="day-counter"></span></div>
+        <div class="menu-chips" id="menu-chips" style="display:none;"></div>
 
         <div id="streak-banner" class="streak-banner" style="display:none;"></div>
 
@@ -388,6 +393,24 @@ let menuPromoIdx = -1;
 
 let ACTIVITIES = [];
 
+function renderChips(activeGames) {
+  const el = document.getElementById('menu-chips');
+  if (!el) return;
+  if (activeGames.length < 12 || IS_DEMO) { el.style.display = 'none'; return; }
+  const GRUPOS_CHIP = [['todos','Todos']];
+  if (EVENT_INFO.evento && activeGames.some(a => a.tematizable)) GRUPOS_CHIP.push(['evento', 'Del evento']);
+  const orden = ['empezar','deduccion','palabras','logica','curiosidades','crear','dobles'];
+  const nombres = { empezar: 'Para empezar', deduccion: 'Deducción', palabras: 'Palabras', logica: 'Lógica', curiosidades: 'Curiosidades', crear: 'Crear', dobles: 'A dobles' };
+  orden.forEach(g => { if (activeGames.some(a => (a.grupo || '') === g)) GRUPOS_CHIP.push([g, nombres[g]]); });
+  const actual = window.__nookFiltro || 'todos';
+  el.innerHTML = GRUPOS_CHIP.map(([k, n]) => `<button class="menu-chip${k === actual ? ' on' : ''}" onclick="setFiltro('${k}')">${n}</button>`).join('');
+  el.style.display = 'flex';
+}
+function setFiltro(k) {
+  window.__nookFiltro = k;
+  showMenu();
+}
+
 async function loadActivities() {
   try {
     const res = await fetch(`/api/bar-games/${BAR_SLUG}`);
@@ -586,21 +609,26 @@ async function showMenu() {
   } catch(e) {}
 
   // Juegos a dobles (2 jugadores, 1 móvil). Van agrupados al final con un separador.
-  const DOBLES = ['freep', 'dosverdades', 'masomenos', 'quienmas'];
+  const DOBLES = ['freep', 'dosverdades', 'masomenos', 'quienmas', 'pensamiento'];
+  const GRUPOS = { empezar: 'Para empezar', deduccion: 'Deducción', palabras: 'Palabras y cultura', logica: 'Lógica y puzzle', curiosidades: 'Curiosidades', crear: 'Crear', dobles: '👥 A dobles' };
+  const filtro = window.__nookFiltro || 'todos';
+  const visibles = activeGames.filter(a => filtro === 'todos' ? true : filtro === 'evento' ? a.tematizable : (a.grupo || 'otros') === filtro);
+  renderChips(activeGames);
   // Juegos sin contenido diario renovable (a dobles / deterministas rejugables):
   // no tiene sentido el ✓ de "hecho hoy" porque cada partida es distinta.
   const SIN_CHECK = ['freep', 'dosverdades', 'masomenos', 'quienmas', 'poema'];
-  let dividerInsertado = false;
+  let grupoActual = null;
 
-  list.innerHTML = activeGames.map(a => {
+  list.innerHTML = visibles.map(a => {
     const locked = IS_DEMO && !a.active;
     const played = !locked && playedToday.includes(a.slug) && !SIN_CHECK.includes(a.slug);
     let divider = '';
-    // Insertar el separador justo antes del primer juego a dobles
-    if (!dividerInsertado && DOBLES.includes(a.slug)) {
-      dividerInsertado = true;
-      divider = `<div class="grid-divider"><span>👥 Juegos para dos jugadores</span></div>`;
+    // Cabecera de grupo (solo en "Todos"; en un filtro concreto no hace falta)
+    const g = a.grupo || 'otros';
+    if (filtro === 'todos' && g !== grupoActual && GRUPOS[g] && g !== 'empezar') {
+      divider = `<div class="grid-divider"><span>${GRUPOS[g]}</span></div>`;
     }
+    grupoActual = g;
     return divider + `
     <div class="activity-card-grid${locked ? ' locked' : ''}${played ? ' played' : ''}" data-slug="${a.slug}" onclick="${locked ? 'showDemoWall()' : `startActivity('${a.slug}')`}">
       ${locked ? '<div class="lock-badge">🔒</div>' : ''}
