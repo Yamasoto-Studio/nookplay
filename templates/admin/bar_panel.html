@@ -723,7 +723,15 @@
   {% if es_evento and contenido_hoy %}
   <!-- Contenido de hoy: control editorial del organizador -->
   <div class="form-card side-card" id="sec-contenido">
-    <h3>🎲 Contenido de hoy</h3>
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+      <h3 style="margin:0;">🎲 Contenido de hoy</h3>
+      {% if admin_role == 'superadmin' %}
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span id="pregen-status" style="font-size:12px; color:var(--text-muted);"></span>
+        <button type="button" class="btn-secondary" id="btn-pregen" onclick="generarTodoHoy()" style="width:auto; padding:8px 14px; font-size:13px;">⚡ Generar todo hoy</button>
+      </div>
+      {% endif %}
+    </div>
     <div class="field-hint" style="margin-bottom:12px;">Prueba cada juego tal como lo verá el asistente. Si una pieza no te convence, <strong>regenérala</strong>: se descarta la de hoy y se crea una nueva (con la temática) al abrir el juego. Máximo 10 regeneraciones al día.</div>
     <div style="display:flex; flex-direction:column; gap:8px;">
       {% for g in contenido_hoy %}
@@ -1143,6 +1151,29 @@
   const KNOBS = {{ game_knobs|tojson }};
   const KNOB_VALUES = {{ knob_values|tojson }};
   const KNOBS_SUPER = {{ 'true' if admin_role == 'superadmin' else 'false' }};
+
+  async function generarTodoHoy() {
+    const btn = document.getElementById('btn-pregen'), st = document.getElementById('pregen-status');
+    if (!btn) return;
+    btn.disabled = true; st.textContent = 'Arrancando…';
+    try {
+      const r = await fetch('/admin/api/pregen-hoy', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ bar_slug: '{{ bar.slug }}' }) });
+      const d = await r.json().catch(() => null);
+      if (!d || !d.ok) { st.textContent = '❌ ' + ((d && d.error) || 'Error ' + r.status); btn.disabled = false; return; }
+    } catch(e) { st.textContent = '❌ Error de red'; btn.disabled = false; return; }
+    const poll = setInterval(async () => {
+      try {
+        const e = await (await fetch('/admin/api/pregen-estado')).json();
+        if (e.corriendo) {
+          st.textContent = `Generando ${e.hechos}/${e.total}…` + (e.actual ? ` (${e.actual})` : '');
+        } else {
+          clearInterval(poll);
+          st.textContent = e.errores ? `✅ Hecho con ${e.errores} error(es) — recargando…` : '✅ Contenido de hoy listo — recargando…';
+          setTimeout(() => location.reload(), 1200);
+        }
+      } catch(err) {}
+    }, 2000);
+  }
 
   async function loadGames() {
     try {

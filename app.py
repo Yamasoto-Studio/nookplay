@@ -640,8 +640,10 @@ def pregen_daily_games_scheduled():
         _liberar_lock_pregen()
 
 
-def pregen_daily_games():
-    """Ejecuta cada día a las 6am — pre-genera los juegos del día para todos los bares."""
+def pregen_daily_games(solo_bar_slug=None, forzar=False):
+    """Ejecuta cada día a las 6am — pre-genera los juegos del día para todos los bares.
+    solo_bar_slug: limita la ejecución a un espacio (botón 'Generar todo hoy').
+    forzar: ignora la regla de ahorro de eventos fuera de fechas."""
     today = str(date.today())
     resumen = {'ok': [], 'error': []}
     # Juegos por-bar: los únicos que un evento genera (y en pool si procede)
@@ -649,11 +651,20 @@ def pregen_daily_games():
     GAME_TYPES = ['crimen', 'impostor', 'dilema', 'conexiones', 'oraculo', 'donde', 'local', 'veredicto', 'perfil', 'vestuario', 'trivia', 'sinopsis', 'muertes', 'letra', 'pensamiento', 'menteagil', 'constitucion', 'titular', 'definicion', 'masomenos', 'escalera', 'quienmas', 'orden']
 
     db = get_db()
-    bars = db.execute("SELECT * FROM bars WHERE active = 1").fetchall()
+    if solo_bar_slug:
+        bars = db.execute("SELECT * FROM bars WHERE active = 1 AND slug = ?", (solo_bar_slug,)).fetchall()
+    else:
+        bars = db.execute("SELECT * FROM bars WHERE active = 1").fetchall()
     # Inicializar el contador de progreso (estimación: juegos x bares)
     _pregen_estado['total'] = len(bars) * len(GAME_TYPES)
     _pregen_estado['hechos'] = 0
     for bar in bars:
+        # Modo espacio: solo los juegos activos en ese espacio (no gastar en los apagados)
+        _activos_bar = None
+        if solo_bar_slug:
+            _activos_bar = {r['game_slug'] for r in db.execute(
+                "SELECT game_slug FROM bar_games WHERE bar_id = ? AND active = 1", (bar['id'],)).fetchall()}
+            _pregen_estado['total'] = len([g for g in GAME_TYPES if g in _activos_bar])
         # ── Evento: activar tema temático para todos sus juegos ────────────
         # Cada bar sobrescribe el tema al entrar (evento→su tema, local→''),
         # así ningún espacio hereda el tema del anterior. Los bares normales
@@ -674,9 +685,11 @@ def pregen_daily_games():
             _ev_start = _bar_d.get('event_start') or ''
             _ev_end = _bar_d.get('event_end') or ''
             _hoy_en_evento = bool(_ev_start) and bool(_ev_end) and (_ev_start <= today <= _ev_end)
-            if not _hoy_en_evento and not _bar_d.get('event_test_mode'):
+            if not forzar and not _hoy_en_evento and not _bar_d.get('event_test_mode'):
                 continue
         for game_type in GAME_TYPES:
+            if _activos_bar is not None and game_type not in _activos_bar:
+                continue
             # Un evento solo genera juegos por-bar (los tematizables). Los globales
             # compartidos no: irían con la temática del evento a todos los bares.
             if _es_evento_bar and game_type not in POOL_GAME_TYPES:
@@ -1820,6 +1833,43 @@ def admin_game_settings():
     db.commit()
     db.close()
     return jsonify({'ok': True})
+
+
+@app.route('/admin/api/pregen-hoy', methods=['POST'])
+def admin_pregen_hoy():
+    """Genera de golpe el contenido de hoy de un espacio (juegos activos, con su pool). Solo superadmin."""
+    if session.get('admin_role') != 'superadmin':
+        return jsonify({'ok': False, 'error': 'No autorizado'}), 403
+    data = request.get_json() or {}
+    bar_slug = (data.get('bar_slug') or '').strip()
+    db = get_db()
+    bar = db.execute("SELECT id FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
+    db.close()
+    if not bar:
+        return jsonify({'ok': False, 'error': 'No encontrado'}), 404
+    if _pregen_estado.get('corriendo') or not _intentar_claim_pregen():
+        return jsonify({'ok': False, 'error': 'Ya hay una generación en curso; espera a que termine'}), 409
+    import threading
+    _pregen_estado.update({'corriendo': True, 'hechos': 0, 'total': 0, 'actual': '', 'ok': [], 'error': []})
+    def _run():
+        try:
+            pregen_daily_games(solo_bar_slug=bar_slug, forzar=True)
+        except Exception as e:
+            _pregen_estado['error'].append(f"fatal: {str(e)[:120]}")
+        finally:
+            _pregen_estado['corriendo'] = False
+            _liberar_lock_pregen()
+    threading.Thread(target=_run, daemon=True).start()
+    return jsonify({'ok': True})
+
+
+@app.route('/admin/api/pregen-estado')
+def admin_pregen_estado():
+    if session.get('admin_role') != 'superadmin':
+        return jsonify({'ok': False}), 403
+    e = _pregen_estado
+    return jsonify({'corriendo': bool(e.get('corriendo')), 'hechos': e.get('hechos', 0), 'total': e.get('total', 0),
+                    'errores': len(e.get('error') or []), 'actual': e.get('actual', '')})
 
 
 @app.route('/admin/api/regen-game', methods=['POST'])
