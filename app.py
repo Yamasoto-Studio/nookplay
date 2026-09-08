@@ -1148,6 +1148,7 @@ def calcular_analytics_bar(db, bar_slug, ventana=None):
     }
     a['ventana_evento'] = bool(es_ventana)
     a['evento_futuro'] = bool(es_ventana) and v_desde > hoy
+    a['v2'] = {}
 
     # Volumen semana actual y hoy
     a['week'] = db.execute(
@@ -1245,6 +1246,49 @@ def calcular_analytics_bar(db, bar_slug, ventana=None):
     # Media de partidas por día activo
     if a['active_days'] > 0:
         a['avg_day'] = round(a['week'] / a['active_days'], 1)
+
+    # ── v2: métricas de enganche (las que venden un evento) ──
+    a['v2'] = {}
+    try:
+        # Partidas por asistente (profundidad de uso)
+        if a['people_week'] > 0:
+            a['v2']['por_asistente'] = round(a['week'] / a['people_week'], 1)
+        # Retención entre días: asistentes que jugaron en más de un día distinto
+        filas_ret = db.execute(
+            "SELECT device_id, COUNT(DISTINCT played_on) d FROM plays WHERE bar_slug=? AND played_on>=? AND played_on<=? AND device_id!='' GROUP BY device_id",
+            (bar_slug, str(v_desde), str(v_hasta))).fetchall()
+        if filas_ret and (v_hasta - v_desde).days >= 1:
+            vuelven = sum(1 for r in filas_ret if r['d'] >= 2)
+            a['v2']['retencion_pct'] = round(100 * vuelven / len(filas_ret))
+            a['v2']['retencion_n'] = vuelven
+            a['v2']['retencion_total'] = len(filas_ret)
+        # Rejugado: juego que más repite la misma persona
+        rej = db.execute(
+            """SELECT game_type, SUM(c - 1) rep FROM (
+                   SELECT game_type, device_id, COUNT(*) c FROM plays
+                   WHERE bar_slug=? AND played_on>=? AND played_on<=? AND device_id!=''
+                   GROUP BY game_type, device_id HAVING c >= 2)
+               GROUP BY game_type ORDER BY rep DESC LIMIT 1""",
+            (bar_slug, str(v_desde), str(v_hasta))).fetchone()
+        if rej and rej['rep']:
+            a['v2']['rejugado'] = GAME_NOMBRES.get(rej['game_type'], rej['game_type'])
+            a['v2']['rejugado_n'] = int(rej['rep'])
+        # Hora punta por día (eventos): para cada día con partidas, su hora más activa
+        if es_ventana:
+            from collections import Counter as _C
+            por_dia = {}
+            for r in db.execute(
+                    "SELECT played_on, played_at FROM plays WHERE bar_slug=? AND played_on>=? AND played_on<=? AND played_at!=''",
+                    (bar_slug, str(v_desde), str(v_hasta))).fetchall():
+                try:
+                    por_dia.setdefault(r['played_on'], _C())[int(r['played_at'][11:13])] += 1
+                except (ValueError, IndexError):
+                    continue
+            for d in a['daily']:
+                pass
+            a['v2']['hora_por_dia'] = {dia: f"{h:02d}:00" for dia, cnt in por_dia.items() for h, _ in [cnt.most_common(1)[0]]}
+    except Exception:
+        a['v2'] = a.get('v2') or {}
 
     return a
 
