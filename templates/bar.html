@@ -38,6 +38,8 @@
     display: flex; align-items: center; justify-content: center;
     box-shadow: 0 1px 4px rgba(0,0,0,0.15);
   }
+  .activity-desc.teaser { color: var(--bar-accent-dark, var(--text)); font-weight: 600; }
+  .teaser-hoy { display: inline-block; font-size: 9px; font-weight: 800; letter-spacing: 0.8px; text-transform: uppercase; color: var(--bar-primary); margin-right: 6px; vertical-align: 1px; }
   .activity-card-grid.played { opacity: 0.72; }
   .activity-card-grid.played .activity-desc { color: #2E7D32; font-weight: 600; }
   .demo-wall-overlay {
@@ -505,6 +507,29 @@ function mostrarRacha(banner, icono, texto) {
   banner.style.display = 'flex';
 }
 
+function nookDeviceId() {
+  try {
+    const k = 'nook_did'; let v = localStorage.getItem(k);
+    if (!v) { v = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2)); localStorage.setItem(k, v); }
+    return v;
+  } catch(e) { return ''; }
+}
+
+async function cargarGanchos() {
+  try {
+    const r = await fetch('/api/teasers', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG, device_id: nookDeviceId() })
+    });
+    if (!r.ok) return;
+    const t = await r.json();
+    Object.entries(t).forEach(([slug, texto]) => {
+      const el = document.querySelector(`.activity-card-grid[data-slug="${slug}"]:not(.played) .activity-desc`);
+      if (el && texto) { el.innerHTML = `<span class="teaser-hoy">Hoy</span>${texto.replace(/</g, '&lt;')}`; el.classList.add('teaser'); }
+    });
+  } catch(e) {}
+}
+
 const EVENT_INFO = {{ {'evento': (bar.space_kind or 'local') == 'evento', 'start': bar.event_start or '', 'end': bar.event_end or '', 'lugar': (bar.address or bar.city or ''), 'subtitulo': (bar.hero_subtitle or '')}|tojson }};
 
 function renderEventMeta() {
@@ -577,7 +602,7 @@ async function showMenu() {
       divider = `<div class="grid-divider"><span>👥 Juegos para dos jugadores</span></div>`;
     }
     return divider + `
-    <div class="activity-card-grid${locked ? ' locked' : ''}${played ? ' played' : ''}" onclick="${locked ? 'showDemoWall()' : `startActivity('${a.slug}')`}">
+    <div class="activity-card-grid${locked ? ' locked' : ''}${played ? ' played' : ''}" data-slug="${a.slug}" onclick="${locked ? 'showDemoWall()' : `startActivity('${a.slug}')`}">
       ${locked ? '<div class="lock-badge">🔒</div>' : ''}
       ${played ? '<div class="played-badge" title="Jugado hoy — mañana hay contenido nuevo">✓</div>' : ''}
       <div class="activity-img-wrap">
@@ -589,6 +614,7 @@ async function showMenu() {
       </div>
     </div>`;
   }).join('');
+  if (!IS_DEMO) cargarGanchos();
 
   // Botón de descubrimiento si hay juegos no activos en este bar
   const discoverBtn = document.getElementById('discover-more-btn');

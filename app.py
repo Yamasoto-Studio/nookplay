@@ -2177,6 +2177,79 @@ def _pool_slugs():
     return _pool_slugs_cache['v']
 
 
+# ── Ganchos del menú: campo titular NO spoiler por juego ──
+TEASER_FIELDS = {
+    'crimen': 'titular', 'veredicto': 'titulo', 'muertes': 'titulo', 'local': 'titulo',
+    'impostor': 'tema', 'titular': 'tema', 'carta': 'categoria', 'pensamiento': 'categoria',
+}
+
+def _peek_pregenerado(db, bar_id, game_type, today, device_id):
+    """Como _leer_pregenerado pero SIN registrar la vista: devuelve la variante que
+    recibirá este dispositivo cuando abra el juego (misma elección determinista)."""
+    rows = db.execute(
+        "SELECT id, content FROM generated_games WHERE bar_id = ? AND game_type = ? AND game_date = ? ORDER BY id",
+        (bar_id, game_type, today)).fetchall()
+    if not rows:
+        rows = db.execute(
+            "SELECT id, content FROM generated_games WHERE bar_id IS NULL AND game_type = ? AND game_date = ? ORDER BY id",
+            (game_type, today)).fetchall()
+    if not rows:
+        return None
+    if len(rows) == 1 or not device_id:
+        return rows[0]
+    ids = [r['id'] for r in rows]
+    marcas = ','.join('?' * len(ids))
+    vistos = {v['gg_id']: v['viewed_at'] for v in db.execute(
+        f"SELECT gg_id, viewed_at FROM variant_views WHERE device_id = ? AND gg_id IN ({marcas})", [device_id] + ids).fetchall()}
+    no_vistas = [r for r in rows if r['id'] not in vistos]
+    return no_vistas[0] if no_vistas else min(rows, key=lambda r: vistos.get(r['id'], ''))
+
+
+@app.route('/api/teasers', methods=['POST'])
+def teasers_api():
+    """Ganchos del contenido de hoy para las tarjetas del menú (coherentes con la variante del dispositivo)."""
+    data = request.get_json(silent=True) or {}
+    code = (data.get('code') or '').strip().upper()
+    bar_slug = (data.get('bar_slug') or '').strip()
+    device_id = str(data.get('device_id') or '')[:80]
+    today = str(date.today())
+    db = get_db()
+    bar = db.execute("SELECT * FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
+    if not bar:
+        db.close()
+        return jsonify({}), 403
+    ok = db.execute("SELECT 1 FROM access_codes WHERE bar_id = ? AND code = ? AND valid_from <= ? AND valid_until >= ?",
+                    (bar['id'], code, today, today)).fetchone()
+    if not ok:
+        db.close()
+        return jsonify({}), 403
+    import json as _json
+    activos = {r['game_slug'] for r in db.execute(
+        "SELECT game_slug FROM bar_games WHERE bar_id = ? AND active = 1", (bar['id'],)).fetchall()}
+    out = {}
+    for slug, campo in TEASER_FIELDS.items():
+        if slug not in activos:
+            continue
+        try:
+            row = _peek_pregenerado(db, bar['id'], slug, today, device_id)
+            if not row:
+                continue
+            obj = _json.loads(row['content'])
+            val = obj.get(campo)
+            if isinstance(val, str) and val.strip():
+                out[slug] = ' '.join(val.split())[:70]
+        except Exception:
+            continue
+    # Trivia: su foco (mando creativo) como gancho
+    if 'trivia' in activos:
+        k = _knobs_de(db, bar['id'], 'trivia') or {}
+        foco = k.get('Foco de las preguntas')
+        if foco:
+            out['trivia'] = foco[:70]
+    db.close()
+    return jsonify(out)
+
+
 def _leer_pregenerado(db, bar_id, game_type, today):
     """Lee el contenido pre-generado de un juego. Devuelve una fila con
     ['content'] o None (compatible con el fetchone() al que sustituye).

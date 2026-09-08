@@ -866,9 +866,10 @@
 
     <!-- Dirección -->
     <div class="form-card" id="sec-ubicacion">
-      <h3>Ubicación</h3>
+      <h3>{{ 'Lugar del evento' if es_evento else 'Ubicación' }}</h3>
+      {% if es_evento %}<div class="field-hint" style="margin:-6px 0 12px;">Recinto y dirección donde se celebra el evento — es lo que ven los asistentes en la cabecera (si no escribes un texto bajo el logo).</div>{% endif %}
       <div class="field">
-        <label>Dirección</label>
+        <label>{{ 'Recinto o dirección del evento' if es_evento else 'Dirección' }}</label>
         <div style="display:flex; gap:8px;">
           <input type="text" id="address-input" name="address" value="{{ bar.address or '' }}" placeholder="Calle Mayor 1, Barcelona" style="flex:1;">
           <button type="button" onclick="searchAddress()" style="padding:10px 14px; background:#C4622D; color:#fff; border:none; border-radius:8px; cursor:pointer; font-size:13px; white-space:nowrap;">Buscar</button>
