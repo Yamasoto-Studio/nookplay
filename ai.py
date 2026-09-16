@@ -1513,6 +1513,49 @@ IMPORTANTE: "correcta" es la posición 1-indexada (1 = primera opción). "respue
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Tu Papel de Hoy generator (identidad del día + misión social)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def generate_papel(bar_slug, evitar=None):
+    api_key = os.environ.get('ANTHROPIC_API_KEY')
+    prompt = """Eres el guionista de TU PAPEL DE HOY: cada persona recibe un PERSONAJE del día dentro del universo del espacio, con una pequeña misión social que puede cumplir de verdad allí mismo. No hay acierto ni fallo: el objetivo es arrancar una sonrisa y dar una excusa para hablar con alguien.
+
+REGLAS DE ORO:
+1. Genera 8 papeles distintos. Cada uno: un TÍTULO memorable en mayúsculas con artículo ("EL ORÁCULO DE LOS DADOS", "LA GUARDIANA DEL ÚLTIMO CROISSANT"), un emoji, una DESCRIPCIÓN de 2 frases con voz épica y guiño cómico, y una MISIÓN: una acción social pequeña, real y amable, cumplible en 5 minutos en ese lugar ("pregunta a alguien de la cola cuál fue su primer juego" / "brinda con un desconocido sin decir por qué").
+2. Los papeles se inspiran en el mundo del espacio (sus rituales, objetos, tipos de persona, rincones), pero NUNCA usan nombres de personas reales, marcas ni productos concretos.
+3. Variedad de arquetipos: el sabio, el caótico, el diplomático, el explorador, el guardián, el trovador, el estratega, el novato entusiasta... Nada de papeles humillantes ni misiones incómodas: todo debe ser fácil de hacer sin vergüenza y agradable para el otro.
+4. Tono: solemnidad juguetona. Frases cortas. Que cualquiera quiera hacer un pantallazo.
+5. "frase": una cita de una línea que el personaje diría, para compartir.
+
+Responde SOLO con este JSON:
+{
+  "papeles": [
+    {"titulo": "EL ORÁCULO DE LOS DADOS", "emoji": "🎲", "descripcion": "2 frases.", "mision": "1 frase con la acción.", "frase": "1 línea."}
+  ]
+}
+Exactamente 8 papeles.""" + _bloque_evitar(evitar)
+
+    import json as _json
+    raw = None
+    for _intento in range(2):
+        raw = _post_ia(prompt, 1800, api_key)
+        try:
+            obj = _parse_ia_json(raw)
+            ps = [p for p in (obj.get('papeles') or [])
+                  if isinstance(p, dict) and p.get('titulo') and p.get('descripcion') and p.get('mision')]
+            for p in ps:
+                p['titulo'] = str(p['titulo']).strip().upper()[:60]
+                p.setdefault('emoji', '🎭')
+                p.setdefault('frase', '')
+            if len(ps) >= 6:
+                obj['papeles'] = ps[:8]
+                return _json.dumps(obj, ensure_ascii=False)
+        except Exception:
+            pass
+    return raw
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # La Reseña generator (humor: reseñas 5⭐ de cosas cotidianas)
 # ─────────────────────────────────────────────────────────────────────────────
 

@@ -350,7 +350,7 @@ CATALOGO_ORDEN = [
     # Curiosidades del mundo
     ('oraculo', 'curiosidades'), ('muertes', 'curiosidades'), ('donde', 'curiosidades'), ('local', 'curiosidades'), ('vestuario', 'curiosidades'),
     # Crear
-    ('poema', 'crear'),
+    ('poema', 'crear'), ('papel', 'crear'),
     # A dobles
     ('freep', 'dobles'), ('dosverdades', 'dobles'), ('masomenos', 'dobles'), ('quienmas', 'dobles'), ('pensamiento', 'dobles'),
 ]
@@ -369,6 +369,15 @@ db.execute('''CREATE TABLE IF NOT EXISTS shares (
 )''')
 db.execute("CREATE INDEX IF NOT EXISTS idx_shares_bar_day ON shares (bar_slug, shared_on)")
 db.commit()
+
+# Añadir papel si no existe
+if not db.execute("SELECT id FROM games WHERE slug = 'papel'").fetchone():
+    db.execute(
+        "INSERT INTO games (slug, name, description, icon, plan_min, position) VALUES (?,?,?,?,?,?)",
+        ('papel', 'Tu Papel de Hoy', '¿Quién eres hoy?', '/static/games/papel.webp', 'starter_free', 31)
+    )
+    db.commit()
+    print('Juego Tu Papel de Hoy añadido.')
 
 # Añadir resena si no existe
 resena_exists = db.execute("SELECT id FROM games WHERE slug = 'resena'").fetchone()

@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 from datetime import date, datetime, timedelta
 import sqlite3
-from ai import generate_game, generate_impostor, generate_dilema, generate_conexiones, generate_oraculo, generate_donde, generate_carta, generate_reinas, generate_conexion_local, generate_equilibrio, generate_veredicto, generate_perfil, generate_vestuario, generate_trivia, generate_sinopsis, generate_muertes, generate_letra, generate_pensamiento, generate_poema, generate_menteagil, generate_constitucion, generate_orden, generate_titular, generate_definicion, generate_masomenos, generate_escalera, generate_quienmas, generate_resena, build_bar_context, set_game_knobs, reset_game_knobs, get_day_seed, set_event_theme, reset_event_theme, set_variant_hint
+from ai import generate_game, generate_impostor, generate_dilema, generate_conexiones, generate_oraculo, generate_donde, generate_carta, generate_reinas, generate_conexion_local, generate_equilibrio, generate_veredicto, generate_perfil, generate_vestuario, generate_trivia, generate_sinopsis, generate_muertes, generate_letra, generate_pensamiento, generate_poema, generate_menteagil, generate_constitucion, generate_orden, generate_titular, generate_definicion, generate_masomenos, generate_escalera, generate_quienmas, generate_resena, generate_papel, build_bar_context, set_game_knobs, reset_game_knobs, get_day_seed, set_event_theme, reset_event_theme, set_variant_hint
 import os
 import smtplib
 from email.mime.text import MIMEText
@@ -452,6 +452,10 @@ def get_historial_reciente(db, game_type, bar_slug=None, dias=10, campo='titulo'
                 for p in data['preguntas']:
                     if isinstance(p, dict) and p.get('curiosidad'):
                         items.append(p['curiosidad'][:80])
+            elif campo == 'papeles' and isinstance(data.get('papeles'), list):
+                for x in data['papeles']:
+                    if isinstance(x, dict) and x.get('titulo'):
+                        items.append(str(x['titulo'])[:60])
             elif campo == 'objetos' and isinstance(data.get('objetos'), list):
                 for x in data['objetos']:
                     items.append(str(x)[:60])
@@ -760,6 +764,9 @@ def pregen_daily_games(solo_bar_slug=None, forzar=False):
                     elif game_type == 'resena':
                         ev = get_historial_reciente(db, 'resena', bar['slug'], campo='objetos')
                         game_data = generate_resena(bar['slug'], evitar=ev)
+                    elif game_type == 'papel':
+                        ev = get_historial_reciente(db, 'papel', bar['slug'], campo='papeles')
+                        game_data = generate_papel(bar['slug'], evitar=ev)
                     elif game_type == 'vestuario':
                         ev = get_historial_reciente(db, 'vestuario', bar['slug'], campo='preguntas')
                         _ktok = set_game_knobs(_knobs_de(db, bar['id'], 'vestuario'))
@@ -1327,7 +1334,7 @@ def calcular_analytics_bar(db, bar_slug, ventana=None):
 # Única fuente de verdad — la usan el pregen, el panel y la regeneración.
 EVENT_GAME_TYPES = {'crimen', 'impostor', 'dilema', 'conexiones', 'veredicto', 'perfil',
                     'vestuario', 'trivia', 'local', 'orden', 'sinopsis', 'letra',
-                    'quienmas', 'escalera', 'masomenos', 'resena'}
+                    'quienmas', 'escalera', 'masomenos', 'resena', 'papel'}
 
 # ── Manifiesto de mandos creativos: qué expone cada juego en el panel ──
 # Fuente única: el panel pinta los controles desde aquí y los generadores los
@@ -1374,7 +1381,7 @@ GAME_NOMBRES = {
     'crimen': 'El Crimen del Día', 'impostor': 'El Impostor', 'dilema': 'El Dilema',
     'conexiones': 'Conexiones', 'oraculo': 'El Oráculo', 'donde': '¿Dónde está?',
     'local': 'Conexión Local', 'veredicto': 'El Veredicto', 'perfil': 'El Perfil',
-    'resena': 'La Reseña',
+    'resena': 'La Reseña', 'papel': 'Tu Papel de Hoy',
     'vestuario': 'El Vestuario', 'trivia': 'La Trivia', 'sinopsis': 'La Sinopsis', 'muertes': 'Muertes Célebres',
     'letra': 'Adivina la Letra', 'pensamiento': 'El Mismo Pensamiento',
     'menteagil': 'Mente Ágil', 'constitucion': '¿Tú la has leído?', 'poema': 'El Poema',
@@ -2857,6 +2864,64 @@ def perfil_page(bar_slug):
     products = db.execute("SELECT * FROM bar_products WHERE bar_id = ? AND active = 1 ORDER BY position", (bar['id'],)).fetchall()
     db.close()
     return render_template('games/perfil.html', bar=bar, products=products)
+
+
+@app.route('/<bar_slug>/papel')
+def papel_page(bar_slug):
+    db = get_db()
+    bar = db.execute("SELECT * FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
+    if not bar:
+        db.close()
+        return render_template('404.html'), 404
+    products = db.execute("SELECT * FROM bar_products WHERE bar_id = ? AND active = 1 ORDER BY position", (bar['id'],)).fetchall()
+    db.close()
+    return render_template('games/papel.html', bar=bar, products=products)
+
+
+@app.route('/api/papel', methods=['POST'])
+def papel_api():
+    data = request.get_json()
+    code = data.get('code', '').strip().upper()
+    bar_slug = data.get('bar_slug', '').strip()
+    today = str(date.today())
+    db = get_db()
+    bar = db.execute("SELECT * FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
+    if not bar:
+        db.close()
+        return jsonify({'error': 'Invalid code'}), 403
+    valid_code = db.execute(
+        "SELECT code FROM access_codes WHERE bar_id = ? AND code = ? AND valid_from <= ? AND valid_until >= ?",
+        (bar['id'], code, today, today)).fetchone()
+    if not valid_code:
+        db.close()
+        return jsonify({'error': 'Invalid code'}), 403
+    bar_id = bar['id']
+    cache_key = f"{bar_slug}_papel_{today}"
+    if cache_key in _game_cache:
+        db.close()
+        return jsonify(_game_cache[cache_key])
+    pregenerated = _leer_pregenerado(db, bar_id, 'papel', today)
+    if pregenerated:
+        import json as _json
+        game_data = _json.loads(pregenerated['content'])
+        _game_cache[cache_key] = game_data
+        db.close()
+        return jsonify(game_data)
+    db.close()
+    try:
+        _dbev = get_db()
+        _ev = get_historial_reciente(_dbev, 'papel', bar_slug, campo='papeles')
+        _dbev.close()
+        _tok = set_event_theme(_theme_de(bar))
+        try:
+            game_data = generate_papel(bar_slug, evitar=_ev)
+        finally:
+            reset_event_theme(_tok)
+        _persistir_generado(bar['id'], 'papel', game_data, es_global=False)
+        _game_cache[cache_key] = game_data
+        return jsonify(game_data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/<bar_slug>/resena')

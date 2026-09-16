@@ -1,0 +1,128 @@
+{% extends "game_base.html" %}
+{% block title %}Tu Papel de Hoy — {{ bar.name }}{% endblock %}
+{% block og_title %}¿Quién eres hoy? — {{ bar.name }}{% endblock %}
+{% block og_description %}Descubre tu papel del día y cumple tu misión. Juega en {{ bar.name }} con Nookplay.{% endblock %}
+{% block og_url %}/{{ bar.slug }}/papel{% endblock %}
+
+{% block game_content %}
+<style>
+.pp-intro { text-align: center; padding: 8px 0 18px; }
+.pp-intro h2 { font-size: 22px; font-weight: 800; margin: 0 0 8px; color: var(--bar-accent-dark); }
+.pp-intro p { font-size: 15px; color: var(--text-sec); margin: 0; line-height: 1.5; }
+.pp-stage { perspective: 1200px; margin: 6px 0 18px; }
+.pp-card { position: relative; width: 100%; min-height: 260px; border-radius: 20px; transform-style: preserve-3d; transition: transform 0.7s cubic-bezier(.2,.8,.2,1); cursor: pointer; }
+.pp-card.flipped { transform: rotateY(180deg); cursor: default; }
+.pp-face { position: absolute; inset: 0; border-radius: 20px; backface-visibility: hidden; -webkit-backface-visibility: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 26px 22px; box-sizing: border-box; }
+.pp-front { background: var(--bar-primary); color: var(--bar-primary-text); box-shadow: 0 16px 40px rgba(0,0,0,0.18); }
+.pp-front .pp-mark { font-size: 54px; margin-bottom: 8px; }
+.pp-front .pp-tap { font-size: 12px; letter-spacing: 1.4px; text-transform: uppercase; opacity: .85; font-weight: 700; }
+.pp-back { background: white; border: 1.5px solid var(--border); transform: rotateY(180deg); box-shadow: 0 16px 40px rgba(0,0,0,0.12); }
+.pp-emoji { font-size: 46px; line-height: 1; margin-bottom: 10px; }
+.pp-eyebrow { font-size: 10px; font-weight: 800; letter-spacing: 1.6px; text-transform: uppercase; color: var(--bar-primary); margin-bottom: 6px; }
+.pp-titulo { font-size: 21px; font-weight: 900; line-height: 1.15; color: var(--bar-accent-dark); margin-bottom: 10px; letter-spacing: .2px; }
+.pp-desc { font-size: 14px; line-height: 1.55; color: var(--text-sec); }
+.pp-mision { margin-top: 14px; width: 100%; background: var(--bar-bg-subtle); border-left: 3px solid var(--bar-primary); border-radius: 0 12px 12px 0; padding: 12px 14px; text-align: left; }
+.pp-mision .pp-mlbl { font-size: 10px; font-weight: 800; letter-spacing: 1.4px; text-transform: uppercase; color: var(--bar-primary); margin-bottom: 4px; }
+.pp-mision .pp-mtxt { font-size: 14px; line-height: 1.5; color: var(--bar-accent-dark); font-weight: 600; }
+.pp-frase { margin-top: 12px; font-size: 13px; font-style: italic; color: var(--text-muted); }
+.pp-actions { display: none; }
+.pp-actions.on { display: block; }
+.pp-hecho { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 6px 0 14px; }
+.pp-hecho button { font-family: inherit; font-size: 13px; font-weight: 600; padding: 9px 14px; border-radius: 20px; border: 1.5px solid var(--border); background: white; color: var(--text-sec); cursor: pointer; }
+.pp-hecho button.on { background: #E8F5E9; border-color: #2E7D32; color: #2E7D32; }
+</style>
+
+<div class="screen active" id="s-loading">
+  <div class="loading-spinner"></div>
+  <p style="text-align:center; color:var(--text-muted);">Repartiendo papeles...</p>
+</div>
+
+<div class="screen" id="s-juego">
+  <div class="pp-intro">
+    <h2>¿Quién eres hoy?</h2>
+    <p>Hoy te ha tocado un papel en {{ bar.name }}. Toca la carta para descubrirlo.</p>
+  </div>
+  <div class="pp-stage">
+    <div class="pp-card" id="pp-card" onclick="revelar()">
+      <div class="pp-face pp-front">
+        <div class="pp-mark">🎭</div>
+        <div class="pp-tap">Toca para revelar</div>
+      </div>
+      <div class="pp-face pp-back">
+        <div class="pp-emoji" id="pp-emoji">🎭</div>
+        <div class="pp-eyebrow">Hoy eres</div>
+        <div class="pp-titulo" id="pp-titulo"></div>
+        <div class="pp-desc" id="pp-desc"></div>
+        <div class="pp-mision"><div class="pp-mlbl">Tu misión</div><div class="pp-mtxt" id="pp-mision"></div></div>
+        <div class="pp-frase" id="pp-frase"></div>
+      </div>
+    </div>
+  </div>
+  <div class="pp-actions" id="pp-actions">
+    <div class="pp-hecho"><button id="btn-hecho" onclick="misionHecha()">☐ Misión cumplida</button></div>
+    <button class="btn-share" onclick="doShare()">📤 Compartir</button>
+    <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
+    <div class="tomorrow">{{ bar.tomorrow_message or "Mañana te tocará otro papel. Ven a descubrirlo." }}</div>
+  </div>
+  <button class="btn-menu" id="btn-menu-pre" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
+</div>
+
+<script>
+const BAR_SLUG = "{{ bar.slug }}";
+const BAR_NAME = {{ bar.name|tojson }};
+const CODE = new URLSearchParams(window.location.search).get('code') || '';
+let gameData = null, papel = null, revelado = false;
+
+function deviceId() {
+  try { const k = 'nook_did'; let v = localStorage.getItem(k); if (!v) { v = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2)); localStorage.setItem(k, v); } return v; } catch(e) { return 'anon'; }
+}
+function hashStr(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return Math.abs(h); }
+
+async function init() {
+  try {
+    const res = await fetch('/api/papel', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG }) });
+    gameData = await res.json();
+    gameData.papeles = (gameData.papeles || []).filter(p => p && p.titulo && p.descripcion && p.mision);
+    if (!gameData.papeles.length) throw new Error('sin papeles');
+    // Personal y estable: mismo papel para este móvil durante todo el día
+    const hoy = new Date().toISOString().slice(0, 10);
+    papel = gameData.papeles[hashStr(deviceId() + '|' + hoy + '|' + BAR_SLUG) % gameData.papeles.length];
+    document.getElementById('pp-emoji').textContent = papel.emoji || '🎭';
+    document.getElementById('pp-titulo').textContent = papel.titulo;
+    document.getElementById('pp-desc').textContent = papel.descripcion;
+    document.getElementById('pp-mision').textContent = papel.mision;
+    document.getElementById('pp-frase').textContent = papel.frase ? `«${papel.frase}»` : '';
+    showScreen('s-juego');
+  } catch(e) {
+    document.getElementById('s-loading').innerHTML = `<div class="error-msg">No se pudo repartir tu papel.<br><button class="btn-secondary" onclick="location.reload()">Reintentar</button></div>`;
+  }
+}
+
+function showScreen(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); document.getElementById(id).classList.add('active'); window.scrollTo(0, 0); }
+
+async function revelar() {
+  if (revelado) return;
+  revelado = true;
+  document.getElementById('pp-card').classList.add('flipped');
+  setTimeout(() => { document.getElementById('pp-actions').classList.add('on'); document.getElementById('btn-menu-pre').style.display = 'none'; }, 500);
+  try {
+    await fetch('/api/play', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG, correct: true, game_type: 'papel', choice: 0, elapsed: 0 }) });
+  } catch(e) {}
+}
+
+function misionHecha() {
+  const b = document.getElementById('btn-hecho');
+  const on = b.classList.toggle('on');
+  b.textContent = on ? '☑ Misión cumplida' : '☐ Misión cumplida';
+}
+
+function doShare() {
+  if (!papel) return;
+  const hecha = document.getElementById('btn-hecho').classList.contains('on');
+  const txt = nookShareText({ emoji: '🎭', titulo: 'Tu Papel de Hoy', resultado: `${papel.emoji || '🎭'} Hoy soy ${papel.titulo}${hecha ? ' · misión cumplida ✅' : ''}`, gancho: '¿Y tú? Descubre tu papel de hoy 👇' });
+  nookShareWithImage(txt, 'papel');
+}
+
+init();
+</script>
+{% endblock %}
