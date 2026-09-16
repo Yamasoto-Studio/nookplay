@@ -15,9 +15,9 @@
 .pp-face { border-radius: 20px; backface-visibility: hidden; -webkit-backface-visibility: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 26px 22px; box-sizing: border-box; }
 /* La trasera va en flujo y define la altura de la carta; la delantera se superpone */
 .pp-back { position: relative; }
-.pp-front { position: absolute; inset: 0; background: var(--bar-primary); color: var(--bar-primary-text); box-shadow: 0 16px 40px rgba(0,0,0,0.18); }
-.pp-front .pp-mark { font-size: 54px; margin-bottom: 8px; }
-.pp-front .pp-tap { font-size: 12px; letter-spacing: 1.4px; text-transform: uppercase; opacity: .85; font-weight: 700; }
+.pp-front { position: absolute; inset: 0; background: var(--bar-bg-subtle); border: 1.5px dashed var(--border); color: var(--bar-accent-dark); box-shadow: 0 10px 30px rgba(0,0,0,0.06); }
+.pp-front .pp-mark { font-size: 54px; margin-bottom: 10px; opacity: .9; }
+.pp-front .pp-tap { font-size: 12px; letter-spacing: 1.4px; text-transform: uppercase; font-weight: 800; color: var(--bar-primary); }
 .pp-back { background: white; border: 1.5px solid var(--border); transform: rotateY(180deg); box-shadow: 0 16px 40px rgba(0,0,0,0.12); min-height: 240px; }
 .pp-emoji { font-size: 46px; line-height: 1; margin-bottom: 10px; }
 .pp-eyebrow { font-size: 10px; font-weight: 800; letter-spacing: 1.6px; text-transform: uppercase; color: var(--bar-primary); margin-bottom: 6px; }
@@ -34,7 +34,7 @@
 .pp-opts { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
 .pp-opt { flex: 1; font-family: inherit; font-size: 17px; font-weight: 700; padding: 22px 12px; border-radius: 16px; border: 2px solid var(--border); background: white; color: var(--bar-accent-dark); cursor: pointer; transition: transform 0.12s, border-color 0.15s, background 0.15s; line-height: 1.25; }
 .pp-opt:active { transform: scale(.96); }
-.pp-opt.pick { border-color: var(--bar-primary); background: var(--bar-primary); color: var(--bar-primary-text); }
+.pp-opt.pick { border-color: var(--bar-primary); background: var(--bar-bg-subtle); color: var(--bar-accent-dark); }
 .pp-o { font-size: 12px; font-weight: 800; color: var(--text-muted); letter-spacing: 1px; }
 .pp-legend { display: inline-block; margin: -4px 0 10px; font-size: 11px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #8A5A00; background: #FFF3C4; border: 1px solid #F3D77A; border-radius: 20px; padding: 4px 10px; }
 .pp-card.legend .pp-back { box-shadow: 0 0 0 3px #F3D77A, 0 18px 44px rgba(138,90,0,0.22); }

@@ -18,7 +18,9 @@ def _no_cache_admin(resp):
     """El panel de admin NUNCA se cachea: cada visita trae el HTML y el JS del último deploy.
     (Sin esto, el navegador puede servir el panel entero desde caché durante días.)"""
     from flask import request as _rq
-    if _rq.path.startswith('/admin'):
+    es_html = (resp.mimetype or '').startswith('text/html')
+    if _rq.path.startswith('/admin') or (es_html and not _rq.path.startswith('/static')):
+        # HTML siempre fresco (admin, menú y juegos); los estáticos siguen cacheándose por versión
         resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
         resp.headers['Pragma'] = 'no-cache'
     return resp
