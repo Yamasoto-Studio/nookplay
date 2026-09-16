@@ -1518,46 +1518,55 @@ IMPORTANTE: "correcta" es la posición 1-indexada (1 = primera opción). "respue
 
 def generate_papel(bar_slug, evitar=None):
     api_key = os.environ.get('ANTHROPIC_API_KEY')
-    prompt = """Eres el guionista de TU PAPEL DE HOY: cada persona recibe un PERSONAJE del día dentro del universo del espacio, con una pequeña misión social que puede cumplir de verdad allí mismo. No hay acierto ni fallo: el objetivo es arrancar una sonrisa y dar una excusa para hablar con alguien.
+    prompt = """Eres el guionista de TU PAPEL DE HOY: un test relámpago de 3 preguntas "esto o aquello" que asigna a cada persona un PERSONAJE del día dentro del universo del espacio, con una pequeña misión social real. Género: test de personalidad de revista, con humor.
 
 REGLAS DE ORO:
-1. Genera 8 papeles distintos. Cada uno: un TÍTULO memorable en mayúsculas con artículo ("EL ORÁCULO DE LOS DADOS", "LA GUARDIANA DEL ÚLTIMO CROISSANT"), un emoji, una DESCRIPCIÓN de 2 frases con voz épica y guiño cómico, y una MISIÓN: una acción social pequeña, real y amable, cumplible en 5 minutos en ese lugar ("pregunta a alguien de la cola cuál fue su primer juego" / "brinda con un desconocido sin decir por qué").
-2. Los papeles se inspiran en el mundo del espacio (sus rituales, objetos, tipos de persona, rincones), pero NUNCA usan nombres de personas reales, marcas ni productos concretos.
-3. Variedad de arquetipos: el sabio, el caótico, el diplomático, el explorador, el guardián, el trovador, el estratega, el novato entusiasta... Nada de papeles humillantes ni misiones incómodas: todo debe ser fácil de hacer sin vergüenza y agradable para el otro.
-4. Tono: solemnidad juguetona. Frases cortas. Que cualquiera quiera hacer un pantallazo.
-5. "frase": una cita de una línea que el personaje diría, para compartir.
+1. 3 PREGUNTAS de "esto o aquello", cortas y con gracia, sobre cómo es la persona en ese mundo (no de conocimiento). Cada una con dos opciones A y B de 1-3 palabras, opuestas y ambas apetecibles. Ej.: "¿Dados o cartas?" · "¿Ganar, o que nadie pierda?" · "¿Explicas las reglas o las lees por encima?".
+2. 8 PAPELES, uno por cada combinación de respuestas (AAA, AAB, ABA, ABB, BAA, BAB, BBA, BBB). El papel debe SONAR a esa combinación (quien elige "cartas + ganar + explicar reglas" es un estratega distinto de quien elige "dados + que nadie pierda + leer por encima").
+3. Cada papel: TÍTULO memorable en mayúsculas con artículo ("EL ORÁCULO DE LOS DADOS"), un emoji, DESCRIPCIÓN de 2 frases en segunda persona, voz épica con guiño cómico ("Tú..."), una MISIÓN social pequeña y amable cumplible en 5 minutos allí mismo, y una FRASE de una línea que diría el personaje.
+4. Uno de los 8 papeles es "legendario": el más deseable y raro (marca "legendario": true solo en ese).
+5. Inspirado en el mundo del espacio (rituales, objetos, tipos de persona), NUNCA nombres de personas reales, marcas ni productos. Nada humillante; misiones sin vergüenza y agradables para el otro.
+6. Tono: solemnidad juguetona. Frases cortas. Que cualquiera quiera hacer un pantallazo.
 
 Responde SOLO con este JSON:
 {
+  "preguntas": [
+    {"pregunta": "¿Dados o cartas?", "a": "Dados", "b": "Cartas"}
+  ],
   "papeles": [
-    {"titulo": "EL ORÁCULO DE LOS DADOS", "emoji": "🎲", "descripcion": "2 frases.", "mision": "1 frase con la acción.", "frase": "1 línea."}
+    {"combo": "AAA", "titulo": "EL ORÁCULO DE LOS DADOS", "emoji": "🎲", "descripcion": "2 frases.", "mision": "1 frase.", "frase": "1 línea.", "legendario": false}
   ]
 }
-Exactamente 8 papeles.""" + _bloque_evitar(evitar)
+Exactamente 3 preguntas y 8 papeles con las 8 combinaciones distintas.""" + _bloque_evitar(evitar)
 
-    import json as _json
+    import json as _json, itertools as _it
+    COMBOS = [''.join(c) for c in _it.product('AB', repeat=3)]
     raw = None
     for _intento in range(2):
-        raw = _post_ia(prompt, 1800, api_key)
+        raw = _post_ia(prompt, 2200, api_key)
         try:
             obj = _parse_ia_json(raw)
-            ps = [p for p in (obj.get('papeles') or [])
-                  if isinstance(p, dict) and p.get('titulo') and p.get('descripcion') and p.get('mision')]
+            pq = [q for q in (obj.get('preguntas') or []) if isinstance(q, dict) and q.get('pregunta') and q.get('a') and q.get('b')]
+            ps = [p for p in (obj.get('papeles') or []) if isinstance(p, dict) and p.get('titulo') and p.get('descripcion') and p.get('mision')]
+            if len(pq) < 3 or len(ps) < 8:
+                continue
+            pq = pq[:3]; ps = ps[:8]
             for p in ps:
                 p['titulo'] = str(p['titulo']).strip().upper()[:60]
-                p.setdefault('emoji', '🎭')
-                p.setdefault('frase', '')
-            if len(ps) >= 6:
-                obj['papeles'] = ps[:8]
-                return _json.dumps(obj, ensure_ascii=False)
+                p.setdefault('emoji', '🎭'); p.setdefault('frase', '')
+                p['combo'] = str(p.get('combo', '')).strip().upper()
+            # Combos: si no son las 8 distintas, se asignan por orden (el test sigue funcionando)
+            if sorted(p['combo'] for p in ps) != sorted(COMBOS):
+                for p, c in zip(ps, COMBOS):
+                    p['combo'] = c
+            legend = [k for k, p in enumerate(ps) if p.get('legendario') is True]
+            for k, p in enumerate(ps):
+                p['legendario'] = (k == (legend[0] if legend else get_day_seed(bar_slug) % 8))
+            obj['preguntas'] = pq; obj['papeles'] = ps
+            return _json.dumps(obj, ensure_ascii=False)
         except Exception:
             pass
     return raw
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# La Reseña generator (humor: reseñas 5⭐ de cosas cotidianas)
-# ─────────────────────────────────────────────────────────────────────────────
 
 def generate_resena(bar_slug, evitar=None):
     api_key = os.environ.get('ANTHROPIC_API_KEY')

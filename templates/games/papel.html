@@ -27,6 +27,18 @@
 .pp-mision .pp-mlbl { font-size: 10px; font-weight: 800; letter-spacing: 1.4px; text-transform: uppercase; color: var(--bar-primary); margin-bottom: 4px; }
 .pp-mision .pp-mtxt { font-size: 14px; line-height: 1.5; color: var(--bar-accent-dark); font-weight: 600; }
 .pp-frase { margin-top: 12px; font-size: 13px; font-style: italic; color: var(--text-muted); }
+.pp-prog { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; margin: 0 0 18px; }
+.pp-prog-fill { height: 100%; width: 0; background: var(--bar-primary); border-radius: 2px; transition: width 0.3s cubic-bezier(.2,.8,.2,1); }
+.pp-q { font-size: 21px; font-weight: 800; text-align: center; line-height: 1.25; color: var(--bar-accent-dark); margin: 0 0 18px; min-height: 54px; animation: pp-qin 0.25s cubic-bezier(.2,.8,.2,1); }
+@keyframes pp-qin { from { opacity: 0; transform: translateY(6px); } }
+.pp-opts { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
+.pp-opt { flex: 1; font-family: inherit; font-size: 17px; font-weight: 700; padding: 22px 12px; border-radius: 16px; border: 2px solid var(--border); background: white; color: var(--bar-accent-dark); cursor: pointer; transition: transform 0.12s, border-color 0.15s, background 0.15s; line-height: 1.25; }
+.pp-opt:active { transform: scale(.96); }
+.pp-opt.pick { border-color: var(--bar-primary); background: var(--bar-primary); color: var(--bar-primary-text); }
+.pp-o { font-size: 12px; font-weight: 800; color: var(--text-muted); letter-spacing: 1px; }
+.pp-legend { display: inline-block; margin: -4px 0 10px; font-size: 11px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #8A5A00; background: #FFF3C4; border: 1px solid #F3D77A; border-radius: 20px; padding: 4px 10px; }
+.pp-card.legend .pp-back { box-shadow: 0 0 0 3px #F3D77A, 0 18px 44px rgba(138,90,0,0.22); }
+.pp-count { margin-top: 12px; font-size: 13px; font-weight: 700; color: var(--bar-primary); }
 .pp-actions { display: none; }
 .pp-actions.on { display: block; }
 .pp-hecho { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 6px 0 14px; }
@@ -39,10 +51,25 @@
   <p style="text-align:center; color:var(--text-muted);">Repartiendo papeles...</p>
 </div>
 
-<div class="screen" id="s-juego">
+<div class="screen" id="s-test">
   <div class="pp-intro">
     <h2>¿Quién eres hoy?</h2>
-    <p>Hoy te ha tocado un papel en {{ bar.name }}. Toca la carta para descubrirlo.</p>
+    <p>Tres respuestas rápidas y {{ bar.name }} te dirá tu papel de hoy.</p>
+  </div>
+  <div class="pp-prog"><div class="pp-prog-fill" id="pp-prog"></div></div>
+  <div class="pp-q" id="pp-q"></div>
+  <div class="pp-opts">
+    <button class="pp-opt" id="pp-a" onclick="responder('A')"></button>
+    <div class="pp-o">o</div>
+    <button class="pp-opt" id="pp-b" onclick="responder('B')"></button>
+  </div>
+  <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
+</div>
+
+<div class="screen" id="s-juego">
+  <div class="pp-intro">
+    <h2>Tu papel está listo</h2>
+    <p>Toca la carta para descubrirlo.</p>
   </div>
   <div class="pp-stage">
     <div class="pp-card" id="pp-card" onclick="revelar()">
@@ -52,11 +79,13 @@
       </div>
       <div class="pp-face pp-back">
         <div class="pp-emoji" id="pp-emoji">🎭</div>
-        <div class="pp-eyebrow">Hoy eres</div>
+        <div class="pp-eyebrow" id="pp-eyebrow">Hoy eres</div>
         <div class="pp-titulo" id="pp-titulo"></div>
+        <div class="pp-legend" id="pp-legend" style="display:none;">✨ Papel legendario de hoy</div>
         <div class="pp-desc" id="pp-desc"></div>
         <div class="pp-mision"><div class="pp-mlbl">Tu misión</div><div class="pp-mtxt" id="pp-mision"></div></div>
         <div class="pp-frase" id="pp-frase"></div>
+        <div class="pp-count" id="pp-count"></div>
       </div>
     </div>
   </div>
@@ -73,7 +102,7 @@
 const BAR_SLUG = "{{ bar.slug }}";
 const BAR_NAME = {{ bar.name|tojson }};
 const CODE = new URLSearchParams(window.location.search).get('code') || '';
-let gameData = null, papel = null, revelado = false;
+let gameData = null, papel = null, papelIdx = -1, revelado = false, respuestas = [], qIdx = 0;
 
 function deviceId() {
   try { const k = 'nook_did'; let v = localStorage.getItem(k); if (!v) { v = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2)); localStorage.setItem(k, v); } return v; } catch(e) { return 'anon'; }
@@ -86,18 +115,56 @@ async function init() {
     gameData = await res.json();
     gameData.papeles = (gameData.papeles || []).filter(p => p && p.titulo && p.descripcion && p.mision);
     if (!gameData.papeles.length) throw new Error('sin papeles');
-    // Personal y estable: mismo papel para este móvil durante todo el día
-    const hoy = new Date().toISOString().slice(0, 10);
-    papel = gameData.papeles[hashStr(deviceId() + '|' + hoy + '|' + BAR_SLUG) % gameData.papeles.length];
-    document.getElementById('pp-emoji').textContent = papel.emoji || '🎭';
-    document.getElementById('pp-titulo').textContent = papel.titulo;
-    document.getElementById('pp-desc').textContent = papel.descripcion;
-    document.getElementById('pp-mision').textContent = papel.mision;
-    document.getElementById('pp-frase').textContent = papel.frase ? `«${papel.frase}»` : '';
-    showScreen('s-juego');
+    gameData.preguntas = (gameData.preguntas || []).filter(q => q && q.pregunta && q.a && q.b).slice(0, 3);
+    if (gameData.preguntas.length === 3 && gameData.papeles.length >= 8) {
+      renderPregunta();
+      showScreen('s-test');
+    } else {
+      // Contenido antiguo sin test: reparto estable por dispositivo
+      const hoy = new Date().toISOString().slice(0, 10);
+      asignarPapel(hashStr(deviceId() + '|' + hoy + '|' + BAR_SLUG) % gameData.papeles.length);
+      showScreen('s-juego');
+    }
   } catch(e) {
     document.getElementById('s-loading').innerHTML = `<div class="error-msg">No se pudo repartir tu papel.<br><button class="btn-secondary" onclick="location.reload()">Reintentar</button></div>`;
   }
+}
+
+function renderPregunta() {
+  const q = gameData.preguntas[qIdx];
+  const el = document.getElementById('pp-q');
+  el.style.animation = 'none'; void el.offsetWidth; el.style.animation = '';
+  el.textContent = q.pregunta;
+  document.getElementById('pp-a').textContent = q.a;
+  document.getElementById('pp-b').textContent = q.b;
+  document.getElementById('pp-a').classList.remove('pick');
+  document.getElementById('pp-b').classList.remove('pick');
+  document.getElementById('pp-prog').style.width = `${(qIdx / 3) * 100}%`;
+}
+
+function responder(letra) {
+  if (respuestas.length > qIdx) return;
+  document.getElementById(letra === 'A' ? 'pp-a' : 'pp-b').classList.add('pick');
+  respuestas.push(letra);
+  document.getElementById('pp-prog').style.width = `${(respuestas.length / 3) * 100}%`;
+  setTimeout(() => {
+    if (respuestas.length < 3) { qIdx++; renderPregunta(); return; }
+    const combo = respuestas.join('');
+    let idx = gameData.papeles.findIndex(p => (p.combo || '').toUpperCase() === combo);
+    if (idx < 0) idx = parseInt(combo.replace(/A/g, '0').replace(/B/g, '1'), 2) % gameData.papeles.length;
+    asignarPapel(idx);
+    showScreen('s-juego');
+  }, 260);
+}
+
+function asignarPapel(idx) {
+  papelIdx = idx; papel = gameData.papeles[idx];
+  document.getElementById('pp-emoji').textContent = papel.emoji || '🎭';
+  document.getElementById('pp-titulo').textContent = papel.titulo;
+  document.getElementById('pp-desc').textContent = papel.descripcion;
+  document.getElementById('pp-mision').textContent = papel.mision;
+  document.getElementById('pp-frase').textContent = papel.frase ? `«${papel.frase}»` : '';
+  if (papel.legendario) { document.getElementById('pp-legend').style.display = 'inline-block'; document.getElementById('pp-card').classList.add('legend'); }
 }
 
 function showScreen(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); document.getElementById(id).classList.add('active'); window.scrollTo(0, 0); }
@@ -108,7 +175,15 @@ async function revelar() {
   document.getElementById('pp-card').classList.add('flipped');
   setTimeout(() => { document.getElementById('pp-actions').classList.add('on'); document.getElementById('btn-menu-pre').style.display = 'none'; }, 500);
   try {
-    await fetch('/api/play', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG, correct: true, game_type: 'papel', choice: 0, elapsed: 0 }) });
+    await fetch('/api/play', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG, correct: true, game_type: 'papel', choice: papelIdx, elapsed: 0 }) });
+  } catch(e) {}
+  // Cuántos como tú hoy (opcional)
+  try {
+    const r = await fetch(`/api/papel-stats/${BAR_SLUG}`);
+    if (r.ok) {
+      const st = await r.json(); const n = st[String(papelIdx)] || 1;
+      document.getElementById('pp-count').textContent = n <= 1 ? 'Eres la primera persona con este papel hoy' : `Hoy sois ${n} con este papel`;
+    }
   } catch(e) {}
 }
 
@@ -121,7 +196,7 @@ function misionHecha() {
 function doShare() {
   if (!papel) return;
   const hecha = document.getElementById('btn-hecho').classList.contains('on');
-  const txt = nookShareText({ emoji: '🎭', titulo: 'Tu Papel de Hoy', resultado: `${papel.emoji || '🎭'} Hoy soy ${papel.titulo}${hecha ? ' · misión cumplida ✅' : ''}`, gancho: '¿Y tú? Descubre tu papel de hoy 👇' });
+  const txt = nookShareText({ emoji: '🎭', titulo: 'Tu Papel de Hoy', resultado: `${papel.emoji || '🎭'} Hoy soy ${papel.titulo}${papel.legendario ? ' ✨ LEGENDARIO' : ''}${hecha ? ' · misión cumplida ✅' : ''}`, gancho: 'Tres preguntas y te dice quién eres… ¿te atreves? 👇' });
   nookShareWithImage(txt, 'papel');
 }
 

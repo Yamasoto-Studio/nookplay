@@ -2924,6 +2924,18 @@ def papel_api():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/papel-stats/<bar_slug>')
+def papel_stats(bar_slug):
+    """Cuántas personas del espacio han sacado hoy cada papel (choice = índice)."""
+    db = get_db()
+    hoy = str(date.today())
+    filas = db.execute(
+        "SELECT choice, COUNT(*) n FROM plays WHERE bar_slug=? AND game_type='papel' AND played_on=? GROUP BY choice",
+        (bar_slug, hoy)).fetchall()
+    db.close()
+    return jsonify({str(r['choice']): r['n'] for r in filas})
+
+
 @app.route('/<bar_slug>/resena')
 def resena_page(bar_slug):
     db = get_db()
