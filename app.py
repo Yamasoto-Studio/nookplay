@@ -2906,9 +2906,19 @@ def papel_api():
     if pregenerated:
         import json as _json
         game_data = _json.loads(pregenerated['content'])
-        _game_cache[cache_key] = game_data
-        db.close()
-        return jsonify(game_data)
+        if isinstance(game_data.get('preguntas'), list) and len(game_data['preguntas']) >= 3:
+            _game_cache[cache_key] = game_data
+            db.close()
+            return jsonify(game_data)
+        # Pieza de formato antiguo (sin test): se descarta y se regenera a continuación
+        viejos = db.execute("SELECT id FROM generated_games WHERE bar_id = ? AND game_type = 'papel' AND game_date = ?", (bar_id, today)).fetchall()
+        ids = [r['id'] for r in viejos]
+        if ids:
+            marcas = ','.join('?' * len(ids))
+            db.execute(f"DELETE FROM variant_views WHERE gg_id IN ({marcas})", ids)
+            db.execute(f"DELETE FROM generated_games WHERE id IN ({marcas})", ids)
+            db.commit()
+        _game_cache.pop(cache_key, None)
     db.close()
     try:
         _dbev = get_db()

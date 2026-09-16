@@ -62,12 +62,16 @@ def get_variant_hint():
 def _parse_ia_json(text):
     """Parsea JSON de una respuesta de IA de forma tolerante.
 
+    Si ya es un objeto parseado (dict/list), lo devuelve tal cual.
+
     1. Limpia fences de markdown (```json ... ```).
     2. Intenta json.loads normal.
     3. Si falla, intenta extraer el primer objeto {...} del texto.
     4. Si sigue fallando, intenta reparar truncamiento (cerrar comillas/llaves).
     Lanza json.JSONDecodeError si todo falla.
     """
+    if isinstance(text, (dict, list)):
+        return text
     if text is None:
         raise ValueError("Respuesta IA vacía (None)")
 
@@ -465,7 +469,7 @@ IMPORTANTE: "culpable" es el índice base 0 (0 = primer sospechoso) y "culpable_
                     idx = c if isinstance(c, int) and 0 <= c < len(sosp) else None
                 if idx is not None:
                     obj['culpable'] = idx
-                    return _json.dumps(obj, ensure_ascii=False)
+                    return obj
         except Exception:
             pass
     return raw
@@ -533,7 +537,7 @@ La afirmación en la posición """ + str(falsa_idx) + """ (índice 0-3) debe ser
                     idx = c if isinstance(c, int) and 0 <= c < len(afs) else None
                 if idx is not None:
                     obj['falsa'] = idx
-                    return _json.dumps(obj, ensure_ascii=False)
+                    return obj
         except Exception:
             pass
     return raw
@@ -1503,10 +1507,10 @@ IMPORTANTE: "correcta" es la posición 1-indexada (1 = primera opción). "respue
                     idx = next((i for i, o in enumerate(ops) if resp in _norm(o) or _norm(o) in resp), None)
                 if idx is not None:
                     obj['correcta'] = idx + 1
-                    return _json.dumps(obj, ensure_ascii=False)
+                    return obj
                 c = obj.get('correcta')
                 if isinstance(c, int) and 1 <= c <= 4:
-                    return _json.dumps(obj, ensure_ascii=False)
+                    return obj
         except Exception:
             pass
     return raw
@@ -1563,7 +1567,7 @@ Exactamente 3 preguntas y 8 papeles con las 8 combinaciones distintas.""" + _blo
             for k, p in enumerate(ps):
                 p['legendario'] = (k == (legend[0] if legend else get_day_seed(bar_slug) % 8))
             obj['preguntas'] = pq; obj['papeles'] = ps
-            return _json.dumps(obj, ensure_ascii=False)
+            return obj
         except Exception:
             pass
     return raw
@@ -1624,7 +1628,7 @@ IMPORTANTE: "correcta" es 1-indexada (1 = primera opción) y "respuesta" repite 
                     obj['mensajes'] = {'0': '0 de 4 — Las estrellas te han nublado. ⭐', '1': '1 de 4 — Reseñista en prácticas.',
                                        '2': '2 de 4 — Lector de medias verdades.', '3': '3 de 4 — Ojo crítico notable. 👏',
                                        '4': '4 de 4 — Crítico legendario. 🏆'}
-                return _json.dumps(obj, ensure_ascii=False)
+                return obj
         except Exception:
             pass
     return raw
@@ -1700,7 +1704,7 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
         try:
             obj = _parse_ia_json(raw)
             if _validar_lista(obj, 'preguntas', 'jugadores', None, 3, corte=None):
-                return _json.dumps(obj, ensure_ascii=False)
+                return obj
         except Exception:
             pass
     return raw
@@ -1774,7 +1778,7 @@ IMPORTANTE: los índices "correcta" deben variar entre preguntas (no siempre la 
         try:
             obj = _parse_ia_json(raw)
             if _validar_lista(obj, 'preguntas', 'opciones', 4, 5, corte=5):
-                return _json.dumps(obj, ensure_ascii=False)
+                return obj
         except Exception:
             pass
     return raw
@@ -1832,7 +1836,7 @@ Devuelve SOLO un objeto JSON válido, sin markdown, donde "correcta" es el índi
         try:
             obj = _parse_ia_json(raw)
             if _anclar_item(obj, 'opciones', 4):
-                return _json.dumps(obj, ensure_ascii=False)
+                return obj
         except Exception:
             pass
     return raw
@@ -1925,7 +1929,7 @@ Devuelve SOLO un objeto JSON valido, sin markdown:
         try:
             obj = _parse_ia_json(raw)
             if _anclar_item(obj, 'opciones', 4):
-                return _json.dumps(obj, ensure_ascii=False)
+                return obj
         except Exception:
             pass
     return raw
@@ -2030,7 +2034,7 @@ Genera exactamente 6 preguntas, una por peldano, en orden de dificultad crecient
         try:
             obj = _parse_ia_json(raw)
             if _validar_lista(obj, 'preguntas', 'opciones', None, 6, corte=6):
-                return _json.dumps(obj, ensure_ascii=False)
+                return obj
         except Exception:
             pass
     return raw
@@ -2111,7 +2115,7 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
         try:
             obj = _parse_ia_json(raw)
             if _anclar_item(obj, 'opciones', None):
-                return _json.dumps(obj, ensure_ascii=False)
+                return obj
         except Exception:
             pass
     return raw
@@ -2166,7 +2170,7 @@ Devuelve SOLO un objeto JSON válido, sin markdown, donde "correcta" es el índi
         try:
             obj = _parse_ia_json(raw)
             if _anclar_item(obj, 'opciones', 4):
-                return _json.dumps(obj, ensure_ascii=False)
+                return obj
         except Exception:
             pass
     return raw
@@ -2335,7 +2339,7 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
                         '2': '2 de 3 — Buen nivel. Casi opositor. 💪',
                         '3': '3 de 3 — Mente prodigiosa. 🏆'
                     }
-                return _json.dumps(obj, ensure_ascii=False)
+                return obj
         except Exception:
             pass
     return raw  # último recurso: el cliente ya tolera menos de 3
