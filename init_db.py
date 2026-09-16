@@ -337,27 +337,6 @@ if not veredicto_exists:
     db.commit()
     print('Juego El Veredicto añadido.')
 
-# Orden curado del catálogo y grupos (se reaplica en cada arranque: fuente única)
-CATALOGO_ORDEN = [
-    # Para empezar — la primera fila: universales, con gancho, tematizables
-    ('trivia', 'empezar'), ('crimen', 'empezar'), ('resena', 'empezar'), ('conexiones', 'empezar'),
-    # Deducción y personas
-    ('perfil', 'deduccion'), ('impostor', 'deduccion'), ('veredicto', 'deduccion'), ('dilema', 'deduccion'),
-    # Palabras y cultura
-    ('letra', 'palabras'), ('definicion', 'palabras'), ('titular', 'palabras'), ('sinopsis', 'palabras'), ('constitucion', 'palabras'),
-    # Lógica y puzzle
-    ('reinas', 'logica'), ('equilibrio', 'logica'), ('carta', 'logica'), ('orden', 'logica'), ('escalera', 'logica'), ('menteagil', 'logica'),
-    # Curiosidades del mundo
-    ('oraculo', 'curiosidades'), ('muertes', 'curiosidades'), ('donde', 'curiosidades'), ('local', 'curiosidades'), ('vestuario', 'curiosidades'),
-    # Crear
-    ('poema', 'crear'), ('papel', 'crear'),
-    # A dobles
-    ('freep', 'dobles'), ('dosverdades', 'dobles'), ('masomenos', 'dobles'), ('quienmas', 'dobles'), ('pensamiento', 'dobles'),
-]
-for _pos, (_slug, _grupo) in enumerate(CATALOGO_ORDEN, start=1):
-    db.execute("UPDATE games SET position = ?, grupo = ? WHERE slug = ?", (_pos, _grupo, _slug))
-db.commit()
-
 # Compartidos (métrica de viralidad)
 db.execute('''CREATE TABLE IF NOT EXISTS shares (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -457,7 +436,27 @@ for slug, name, desc, pos in [
         print(f'Juego {name} añadido.')
 
 # Reordenar juegos por tipo de experiencia (orden lógico de UX)
-# (El orden del catálogo vive en CATALOGO_ORDEN, más arriba: fuente única.)
+# Orden curado del catálogo y grupos (se reaplica en cada arranque: fuente única)
+CATALOGO_ORDEN = [
+    # Para empezar — la primera fila: universales, con gancho, tematizables
+    ('trivia', 'empezar'), ('crimen', 'empezar'), ('resena', 'empezar'), ('conexiones', 'empezar'),
+    # Deducción y personas
+    ('perfil', 'deduccion'), ('impostor', 'deduccion'), ('veredicto', 'deduccion'), ('dilema', 'deduccion'),
+    # Palabras y cultura
+    ('letra', 'palabras'), ('definicion', 'palabras'), ('titular', 'palabras'), ('sinopsis', 'palabras'), ('constitucion', 'palabras'),
+    # Lógica y puzzle
+    ('reinas', 'logica'), ('equilibrio', 'logica'), ('carta', 'logica'), ('orden', 'logica'), ('escalera', 'logica'), ('menteagil', 'logica'),
+    # Curiosidades del mundo
+    ('oraculo', 'curiosidades'), ('muertes', 'curiosidades'), ('donde', 'curiosidades'), ('local', 'curiosidades'), ('vestuario', 'curiosidades'),
+    # Crear
+    ('poema', 'crear'), ('papel', 'crear'),
+    # A dobles
+    ('freep', 'dobles'), ('dosverdades', 'dobles'), ('masomenos', 'dobles'), ('quienmas', 'dobles'), ('pensamiento', 'dobles'),
+]
+for _pos, (_slug, _grupo) in enumerate(CATALOGO_ORDEN, start=1):
+    db.execute("UPDATE games SET position = ?, grupo = ? WHERE slug = ?", (_pos, _grupo, _slug))
+db.commit()
+
 
 # Actualizar descripciones de los juegos a dobles (quitar "2 jugadores"/"A dobles",
 # ya que están agrupados bajo la sección "Juegos para dos jugadores" en el menú).
