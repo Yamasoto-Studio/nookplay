@@ -10,13 +10,15 @@
 .pp-intro h2 { font-size: 22px; font-weight: 800; margin: 0 0 8px; color: var(--bar-accent-dark); }
 .pp-intro p { font-size: 15px; color: var(--text-sec); margin: 0; line-height: 1.5; }
 .pp-stage { perspective: 1200px; margin: 6px 0 18px; }
-.pp-card { position: relative; width: 100%; min-height: 260px; border-radius: 20px; transform-style: preserve-3d; transition: transform 0.7s cubic-bezier(.2,.8,.2,1); cursor: pointer; }
+.pp-card { position: relative; width: 100%; border-radius: 20px; transform-style: preserve-3d; transition: transform 0.7s cubic-bezier(.2,.8,.2,1); cursor: pointer; }
 .pp-card.flipped { transform: rotateY(180deg); cursor: default; }
-.pp-face { position: absolute; inset: 0; border-radius: 20px; backface-visibility: hidden; -webkit-backface-visibility: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 26px 22px; box-sizing: border-box; }
-.pp-front { background: var(--bar-primary); color: var(--bar-primary-text); box-shadow: 0 16px 40px rgba(0,0,0,0.18); }
+.pp-face { border-radius: 20px; backface-visibility: hidden; -webkit-backface-visibility: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 26px 22px; box-sizing: border-box; }
+/* La trasera va en flujo y define la altura de la carta; la delantera se superpone */
+.pp-back { position: relative; }
+.pp-front { position: absolute; inset: 0; background: var(--bar-primary); color: var(--bar-primary-text); box-shadow: 0 16px 40px rgba(0,0,0,0.18); }
 .pp-front .pp-mark { font-size: 54px; margin-bottom: 8px; }
 .pp-front .pp-tap { font-size: 12px; letter-spacing: 1.4px; text-transform: uppercase; opacity: .85; font-weight: 700; }
-.pp-back { background: white; border: 1.5px solid var(--border); transform: rotateY(180deg); box-shadow: 0 16px 40px rgba(0,0,0,0.12); }
+.pp-back { background: white; border: 1.5px solid var(--border); transform: rotateY(180deg); box-shadow: 0 16px 40px rgba(0,0,0,0.12); min-height: 240px; }
 .pp-emoji { font-size: 46px; line-height: 1; margin-bottom: 10px; }
 .pp-eyebrow { font-size: 10px; font-weight: 800; letter-spacing: 1.6px; text-transform: uppercase; color: var(--bar-primary); margin-bottom: 6px; }
 .pp-titulo { font-size: 21px; font-weight: 900; line-height: 1.15; color: var(--bar-accent-dark); margin-bottom: 10px; letter-spacing: .2px; }
