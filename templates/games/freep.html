@@ -253,7 +253,9 @@ html, body { overscroll-behavior: none; }
 .fp-btn:disabled { opacity: 0.45; cursor: default; }
 .fp-btn.up { background: #2E7D32; color: #fff; }
 .fp-btn.down { background: #2C5AA0; color: #fff; }
-.fp-btn.stand { background: var(--bar-bg-subtle); color: var(--text); border: 2px solid var(--border); }
+.fp-btn.stand { background: var(--bar-bg-subtle); color: var(--text); border: 2px solid var(--border); margin-top: 22px; transition: opacity .2s; }
+.fp-btn.stand.oculto { visibility: hidden; opacity: 0; pointer-events: none; }
+.fp-btn.stand.armando { pointer-events: none; opacity: .45; }
 .fp-btn.go { background: var(--bar-primary); color: var(--bar-primary-text); }
 .fp-btn .big { font-size: 22px; }
 
@@ -392,7 +394,7 @@ html, body { overscroll-behavior: none; }
           <button class="fp-btn up" id="g-btn-up" onclick="predict('up')"><span class="big">▲</span> Más</button>
           <button class="fp-btn down" id="g-btn-down" onclick="predict('down')"><span class="big">▼</span> Menos</button>
         </div>
-        <button class="fp-btn stand" id="g-btn-stand" onclick="stand()" style="display:none;">✋ Plantarme y guardar</button>
+        <button class="fp-btn stand oculto" id="g-btn-stand" onclick="stand()">✋ Plantarme y guardar</button>
       </div>
     </div>
 
@@ -726,8 +728,14 @@ function updateMeters() {
   actualizarRondaUI();
 }
 
+let _standArmTimer = null;
 function setStandVisible(v) {
-  document.getElementById('g-btn-stand').style.display = v ? 'block' : 'none';
+  const b = document.getElementById('g-btn-stand');
+  clearTimeout(_standArmTimer);
+  if (!v) { b.classList.add('oculto'); b.classList.remove('armando'); return; }
+  b.classList.remove('oculto');
+  b.classList.add('armando');               // visible pero no pulsable un instante
+  _standArmTimer = setTimeout(() => b.classList.remove('armando'), 450);
 }
 function setPredictEnabled(v) {
   document.getElementById('g-btn-up').disabled = !v;
@@ -832,6 +840,8 @@ function predict(dir) {
 
 function stand() {
   if (busy) return;
+  const b = document.getElementById('g-btn-stand');
+  if (b.classList.contains('oculto') || b.classList.contains('armando') || stack.length === 0) return;
   busy = true;
   // Plantarse: lo que queda en juego pasa a la pila de ganadas
   if (stack.length > 0) markProgress();
