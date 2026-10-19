@@ -186,7 +186,7 @@ html, body { overscroll-behavior: none; }
 .fp-card .corner { position: absolute; font-size: 18px; font-weight: 800; opacity: 0.9; }
 .fp-card .corner.tl { top: 8px; left: 11px; }
 .fp-card .corner.br { bottom: 8px; right: 11px; transform: rotate(180deg); }
-.fp-card-label { position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
+.fp-card-label { position: absolute; top: -16px; left: 50%; transform: translateX(-50%); z-index: 2;
   font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
   color: var(--text-muted); background: var(--bar-bg-card); padding: 1px 8px; border-radius: 6px; white-space: nowrap; }
 .fp-card-slot { position: relative; }
@@ -233,7 +233,9 @@ html, body { overscroll-behavior: none; }
   100% { transform: translateY(-180%) scale(0.6) rotate(4deg); opacity: 0; }
 }
 
-.fp-verdict { min-height: 30px; font-size: 18px; font-weight: 800; margin: 6px 0 12px; }
+.fp-verdict { min-height: 48px; font-size: 19px; font-weight: 800; margin: 6px 0 12px; line-height: 1.2; }
+.fp-verdict .fp-sub { display: block; font-size: 13px; font-weight: 600; opacity: .85; margin-top: 3px; animation: fpSubIn .25s .15s ease both; }
+@keyframes fpSubIn { from { opacity: 0; transform: translateY(3px); } }
 .fp-verdict.ok { color: #2E7D32; }
 .fp-verdict.bad { color: #C0392B; }
 .fp-verdict.tie { color: var(--bar-accent-dark); }
@@ -775,7 +777,7 @@ function predict(dir) {
     players[turnIndex].pile += 2;     // los dos cartas iguales van a la pila de ganadas
     markProgress();
     stack.pop();                      // la referencia que empató sale de "en juego" (ya asegurada)
-    verdict.textContent = '¡Empate! Aseguras las dos 🔒';
+    verdict.innerHTML = '¡Empate! 🔒' + '<span class="fp-sub">' + 'Las dos cartas van a tu montón' + '</span>';
     verdict.className = 'fp-verdict tie';
     madeFirstPrediction = true;
 
@@ -786,14 +788,14 @@ function predict(dir) {
       stack.push(fresh);
     }
     // Las dos cartas iguales se deslizan hacia el lado del jugador (las ha ganado)
-    setTimeout(() => { animarSalidaCartas('win'); }, 350);
+    setTimeout(() => { animarSalidaCartas('win'); }, 700);
     setTimeout(() => {
       renderRef();
       document.getElementById('g-next-slot').style.display = 'none';
       updateMeters();
       busy = false;
       readyNextPredict();
-    }, 950);
+    }, 1400);
     return;
   }
 
@@ -802,7 +804,8 @@ function predict(dir) {
   if (acierto) {
     stack.push(next);
     madeFirstPrediction = true;
-    verdict.textContent = '¡Acierto! ✔';
+    const enJuego = stack.length;
+    verdict.innerHTML = '¡Acierto! ✔' + '<span class="fp-sub">' + (enJuego === 1 ? '1 carta en juego' : enJuego + ' cartas en juego') + ' · sigue o plántate para guardarlas</span>';
     verdict.className = 'fp-verdict ok';
     setTimeout(() => {
       renderRef();
@@ -810,10 +813,11 @@ function predict(dir) {
       updateMeters();
       busy = false;
       readyNextPredict();
-    }, 600);
+    }, 1000);
   } else {
     // FALLO: todo lo en juego se pierde (va al mazo de fallos en orden)
-    verdict.textContent = '¡Fallo! Pasa al rival ✘';
+    const perdidas = stack.length + 1;
+    verdict.innerHTML = '¡Fallo! ✘' + '<span class="fp-sub">' + (perdidas === 1 ? 'La carta se va a falladas' : perdidas + ' cartas se van a falladas') + ' · turno del rival</span>';
     verdict.className = 'fp-verdict bad';
     nextEl.classList.add('fp-shake');   // sacude la carta revelada para enfatizar el fallo
     for (const card of stack) failPile.push(card);
@@ -821,8 +825,8 @@ function predict(dir) {
     stack = [];
     updateMeters();
     // Tras la sacudida y una pausa para leer el fallo, las cartas suben hacia los descartes
-    setTimeout(() => { animarSalidaCartas('lose'); }, 950);
-    setTimeout(() => { busy = false; endTurn(); }, 1700);
+    setTimeout(() => { animarSalidaCartas('lose'); }, 1300);
+    setTimeout(() => { busy = false; endTurn(); }, 2300);
   }
 }
 
@@ -831,17 +835,18 @@ function stand() {
   busy = true;
   // Plantarse: lo que queda en juego pasa a la pila de ganadas
   if (stack.length > 0) markProgress();
+  const guardadas = stack.length;
   players[turnIndex].pile += stack.length;
   stack = [];
   setPredictEnabled(false);
   setStandVisible(false);
   const verdict = document.getElementById('g-verdict');
-  verdict.textContent = '🔒 Cartas aseguradas';
+  verdict.innerHTML = '🔒 ¡Guardadas!' + '<span class="fp-sub">' + (guardadas === 1 ? '1 carta' : guardadas + ' cartas') + ' a tu montón · turno del rival</span>';
   verdict.className = 'fp-verdict ok';
   // La carta de referencia se desliza hacia el lado del jugador (se las lleva)
-  animarSalidaCartas('win');
+  setTimeout(() => { animarSalidaCartas('win'); }, 350);
   updateMeters();
-  setTimeout(() => { busy = false; endTurn(); }, 750);
+  setTimeout(() => { busy = false; endTurn(); }, 1500);
 }
 
 function endTurn() {
