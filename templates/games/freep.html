@@ -765,7 +765,7 @@ function predict(dir) {
   const c = FP_COLORS[next] || '#555';
   nextEl.style.background = c;
   nextEl.className = 'fp-card reveal-anim';
-  nextEl.innerHTML = `<span class="corner tl">${next}</span>${next}<span class="corner br">${next}</span>`;
+  nextEl.innerHTML = cardInner(next);
   slot.style.display = 'block';
 
   const verdict = document.getElementById('g-verdict');
