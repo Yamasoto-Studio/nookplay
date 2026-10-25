@@ -8,7 +8,7 @@
 <style>
 .reinas-reglas {
   background: var(--bar-bg-subtle); border-radius: var(--radius-md);
-  padding: 12px 14px; margin-bottom: 16px; font-size: 13px;
+  padding: 12px 14px; margin-bottom: 16px; font-size: 14px;
   color: var(--text-secondary); line-height: 1.8;
 }
 .reinas-board {
@@ -25,7 +25,7 @@
   aspect-ratio: 1; font-weight: 700;
 }
 .reinas-cell:active { filter: brightness(0.85); }
-.reinas-cell.state-x { color: rgba(0,0,0,0.5); font-size: 16px; }
+.reinas-cell.state-x { color: rgba(0,0,0,0.5); font-size: 17px; }
 .reinas-cell.state-queen { font-size: 28px; }
 .reinas-cell.conflict {
   outline: 3px solid #E24B4A; outline-offset: -3px;
@@ -39,14 +39,14 @@
   50% { filter: brightness(1.3); }
 }
 
-.reinas-counter { text-align:center; font-size:13px; color:var(--text-muted); margin-bottom:8px; }
-.reinas-status { text-align:center; font-size:14px; font-weight:500; min-height:20px; margin-bottom:10px; }
+.reinas-counter { text-align:center; font-size:14px; color:var(--text-muted); margin-bottom:8px; }
+.reinas-status { text-align:center; font-size:15px; font-weight:500; min-height:20px; margin-bottom:10px; }
 
 .btn-hint {
   position: relative; overflow: hidden; flex: 1;
   background: transparent; color: var(--text-secondary);
   border: 1px solid var(--border); border-radius: var(--radius-md);
-  padding: 10px 8px; font-size: 12px; cursor: pointer;
+  padding: 10px 8px; font-size: 14px; cursor: pointer;
   font-family: inherit; text-align: center;
 }
 .btn-hint:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -76,7 +76,7 @@
 }
 .heg-cell {
   height: 40px; display: flex; align-items: center;
-  justify-content: center; font-size: 16px;
+  justify-content: center; font-size: 17px;
 }
 
 /* Resultado */
@@ -106,7 +106,7 @@
   <div class="reinas-board" id="reinas-board"></div>
   <div class="reinas-status" id="reinas-status"></div>
   <div style="display:flex;gap:8px;margin-bottom:10px;">
-    <button class="btn-secondary" onclick="resetBoard()" style="flex:1;padding:10px;font-size:13px;">↺ Reiniciar</button>
+    <button class="btn-secondary" onclick="resetBoard()" style="flex:1;padding:10px;font-size:14px;">↺ Reiniciar</button>
     <button class="btn-hint" id="hint-1" onclick="useHint(0)">
       <div class="btn-hint-bar" id="hint-bar-0"></div>
       💡 Pista 1
@@ -115,7 +115,7 @@
       <div class="btn-hint-bar" id="hint-bar-1"></div>
       💡 Pista 2
     </button>
-    <button class="btn-secondary" onclick="openHelp()" style="flex:1;padding:10px;font-size:13px;">? Normas</button>
+    <button class="btn-secondary" onclick="openHelp()" style="flex:1;padding:10px;font-size:14px;">? Normas</button>
   </div>
   <button class="btn-back-game" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
 </div>
@@ -126,7 +126,7 @@
   <div class="result-big correct" style="text-align:center;">👑 ¡Resuelto!</div>
   <p class="result-sub" style="text-align:center;" id="r-sub"></p>
   <div class="reinas-result-time" id="r-time"></div>
-  <div style="text-align:center;font-size:14px;color:var(--text-secondary);margin-bottom:20px;">tiempo</div>
+  <div style="text-align:center;font-size:15px;color:var(--text-secondary);margin-bottom:20px;">tiempo</div>
   {% include "components/stats.html" %}
   <button class="btn-share" onclick="doShare()">📤 Compartir</button>
   <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
@@ -140,11 +140,11 @@
       <div style="font-size:17px;font-weight:600;">Cómo se juega</div>
       <button onclick="closeHelp()" style="background:transparent;border:none;font-size:22px;cursor:pointer;color:var(--text-muted);padding:0;">✕</button>
     </div>
-    <div style="font-size:14px;color:var(--text-secondary);margin-bottom:20px;line-height:1.7;">
+    <div style="font-size:15px;color:var(--text-secondary);margin-bottom:20px;line-height:1.7;">
       Coloca exactamente <strong>una 👑 por cada fila, columna y región de color</strong>.<br>
       Dos reinas no pueden tocarse, ni en diagonal.
     </div>
-    <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px;">Ejemplos</div>
+    <div style="font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px;">Ejemplos</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
 
       <div style="background:var(--bar-bg-subtle);border-radius:10px;padding:12px;text-align:center;">
@@ -159,8 +159,8 @@
           <div class="heg-cell" style="background:#51CF66;"></div>
           <div class="heg-cell" style="background:#339AF0;"></div>
         </div>
-        <div style="font-size:12px;font-weight:600;margin-bottom:2px;">1 toque → ✕</div>
-        <div style="font-size:11px;color:var(--text-muted);">Marca donde no puede ir</div>
+        <div style="font-size:14px;font-weight:600;margin-bottom:2px;">1 toque → ✕</div>
+        <div style="font-size:12px;color:var(--text-muted);">Marca donde no puede ir</div>
       </div>
 
       <div style="background:var(--bar-bg-subtle);border-radius:10px;padding:12px;text-align:center;">
@@ -175,8 +175,8 @@
           <div class="heg-cell" style="background:#51CF66;"></div>
           <div class="heg-cell" style="background:#339AF0;"></div>
         </div>
-        <div style="font-size:12px;font-weight:600;margin-bottom:2px;">2 toques → 👑</div>
-        <div style="font-size:11px;color:var(--text-muted);">Coloca la reina</div>
+        <div style="font-size:14px;font-weight:600;margin-bottom:2px;">2 toques → 👑</div>
+        <div style="font-size:12px;color:var(--text-muted);">Coloca la reina</div>
       </div>
 
       <div style="background:var(--bar-bg-subtle);border-radius:10px;padding:12px;text-align:center;">
@@ -191,8 +191,8 @@
           <div class="heg-cell" style="background:#51CF66;"></div>
           <div class="heg-cell" style="background:#339AF0;"></div>
         </div>
-        <div style="font-size:12px;font-weight:600;color:#E24B4A;margin-bottom:2px;">❌ Misma fila</div>
-        <div style="font-size:11px;color:var(--text-muted);">Dos reinas en la misma fila</div>
+        <div style="font-size:14px;font-weight:600;color:#E24B4A;margin-bottom:2px;">❌ Misma fila</div>
+        <div style="font-size:12px;color:var(--text-muted);">Dos reinas en la misma fila</div>
       </div>
 
       <div style="background:var(--bar-bg-subtle);border-radius:10px;padding:12px;text-align:center;">
@@ -207,11 +207,11 @@
           <div class="heg-cell" style="background:#51CF66;"></div>
           <div class="heg-cell" style="background:#339AF0;"></div>
         </div>
-        <div style="font-size:12px;font-weight:600;color:#E24B4A;margin-bottom:2px;">❌ Diagonal</div>
-        <div style="font-size:11px;color:var(--text-muted);">Dos reinas se tocan</div>
+        <div style="font-size:14px;font-weight:600;color:#E24B4A;margin-bottom:2px;">❌ Diagonal</div>
+        <div style="font-size:12px;color:var(--text-muted);">Dos reinas se tocan</div>
       </div>
     </div>
-    <button onclick="closeHelp()" style="width:100%;padding:13px;background:var(--bar-primary);color:var(--bar-primary-text);border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;">¡Entendido, a jugar!</button>
+    <button onclick="closeHelp()" style="width:100%;padding:13px;background:var(--bar-primary);color:var(--bar-primary-text);border:none;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;font-family:inherit;">¡Entendido, a jugar!</button>
   </div>
 </div>
 

@@ -11,23 +11,23 @@
   text-align: center; margin-bottom: 14px; line-height: 1.3;
 }
 .mu-historia {
-  font-size: 16px; line-height: 1.7; color: var(--text);
+  font-size: 17px; line-height: 1.7; color: var(--text);
   background: var(--bar-bg-subtle); border: 1px solid var(--border);
   border-radius: var(--radius-md); padding: 18px 16px; margin-bottom: 22px;
 }
-.mu-pregunta { font-size: 15px; font-weight: 700; color: var(--text); text-align: center; margin-bottom: 14px; }
+.mu-pregunta { font-size: 16px; font-weight: 700; color: var(--text); text-align: center; margin-bottom: 14px; }
 .mu-opciones { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
 .mu-opcion {
   padding: 14px 16px; border-radius: var(--radius-md);
   border: 2px solid var(--border); background: var(--bar-bg-subtle);
-  font-size: 15px; font-weight: 500; color: var(--text);
+  font-size: 16px; font-weight: 500; color: var(--text);
   cursor: pointer; font-family: inherit; text-align: left;
   display: flex; align-items: center; gap: 10px; transition: all 0.15s; line-height: 1.3;
 }
 .mu-opcion .mu-letra {
   width: 26px; height: 26px; border-radius: 50%;
   background: var(--border); color: var(--text-secondary);
-  font-size: 12px; font-weight: 700; flex-shrink: 0;
+  font-size: 14px; font-weight: 700; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center; transition: all 0.15s;
 }
 .mu-opcion:hover { border-color: var(--bar-primary); }
@@ -48,10 +48,10 @@
 .mu-dato {
   background: var(--bar-bg-subtle); border: 1px solid var(--border);
   border-left: 3px solid var(--bar-primary); border-radius: var(--radius-md);
-  padding: 12px 14px; margin: 12px 0; font-size: 13px; line-height: 1.6; color: var(--text);
+  padding: 12px 14px; margin: 12px 0; font-size: 14px; line-height: 1.6; color: var(--text);
 }
 .mu-dato-label {
-  font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
   color: var(--bar-primary); margin-bottom: 4px;
 }
 </style>
@@ -144,10 +144,10 @@ function showResult(correct, stats) {
   const banner = document.getElementById('r-resultado');
   if (correct) {
     banner.className = 'mu-resultado correcto';
-    banner.innerHTML = `✓ ¡Correcto!<div style="font-size:13px;font-weight:500;opacity:0.8;margin-top:4px;">Buena intuición macabra</div>`;
+    banner.innerHTML = `✓ ¡Correcto!<div style="font-size:14px;font-weight:500;opacity:0.8;margin-top:4px;">Buena intuición macabra</div>`;
   } else {
     banner.className = 'mu-resultado incorrecto';
-    banner.innerHTML = `✗ No era esa<div style="font-size:13px;font-weight:500;opacity:0.8;margin-top:4px;">La realidad supera la ficción</div>`;
+    banner.innerHTML = `✗ No era esa<div style="font-size:14px;font-weight:500;opacity:0.8;margin-top:4px;">La realidad supera la ficción</div>`;
   }
   document.getElementById('r-opciones').innerHTML = gameData.opciones.map((op, i) => {
     let cls = 'mu-opcion disabled';

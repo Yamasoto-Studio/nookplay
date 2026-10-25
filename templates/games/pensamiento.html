@@ -6,13 +6,13 @@
 
 {% block game_content %}
 <style>
-.pe-intro { font-size: 13px; color: var(--text-secondary); text-align: center; margin-bottom: 16px; line-height: 1.5; }
+.pe-intro { font-size: 14px; color: var(--text-secondary); text-align: center; margin-bottom: 16px; line-height: 1.5; }
 .pe-categoria-wrap {
   background: var(--bar-bg-subtle); border: 1px solid var(--border);
   border-radius: var(--radius-md); padding: 22px 18px; margin-bottom: 18px; text-align: center;
 }
 .pe-categoria-label {
-  font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
   color: var(--text-muted); margin-bottom: 8px;
 }
 .pe-categoria { font-size: 24px; font-weight: 800; color: var(--bar-primary); line-height: 1.25; }
@@ -23,7 +23,7 @@
   color: var(--text); margin-bottom: 12px;
 }
 .pe-input:focus { border-color: var(--bar-primary); }
-.pe-pista { font-size: 12px; color: var(--text-muted); text-align: center; font-style: italic; margin-bottom: 18px; }
+.pe-pista { font-size: 14px; color: var(--text-muted); text-align: center; font-style: italic; margin-bottom: 18px; }
 
 /* Resultado */
 .pe-mi-resultado {
@@ -31,11 +31,11 @@
   margin-bottom: 18px; background: var(--bar-bg); border: 2px solid var(--bar-primary);
 }
 .pe-mi-pct { font-size: 44px; font-weight: 900; color: var(--bar-primary); line-height: 1; }
-.pe-mi-texto { font-size: 14px; color: var(--text); margin-top: 6px; }
+.pe-mi-texto { font-size: 15px; color: var(--text); margin-top: 6px; }
 .pe-mi-respuesta { font-weight: 700; }
 
 .pe-ranking-label {
-  font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
   color: var(--text-muted); margin-bottom: 10px;
 }
 .pe-ranking { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
@@ -48,13 +48,13 @@
 .pe-rank-pos {
   width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0;
   background: var(--bar-primary); color: var(--bar-primary-text);
-  font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center;
 }
-.pe-rank-texto { flex: 1; font-size: 14px; font-weight: 600; color: var(--text); text-transform: capitalize; }
+.pe-rank-texto { flex: 1; font-size: 15px; font-weight: 600; color: var(--text); text-transform: capitalize; }
 .pe-rank-bar-wrap { flex: 1.5; }
 .pe-rank-bar-track { height: 8px; background: var(--border); border-radius: 8px; overflow: hidden; }
 .pe-rank-bar-fill { height: 100%; background: var(--bar-primary); border-radius: 8px; transition: width 0.8s ease; }
-.pe-rank-pct { font-size: 12px; font-weight: 700; color: var(--text-secondary); min-width: 34px; text-align: right; }
+.pe-rank-pct { font-size: 14px; font-weight: 700; color: var(--text-secondary); min-width: 34px; text-align: right; }
 </style>
 
 <div class="screen active" id="s-loading">

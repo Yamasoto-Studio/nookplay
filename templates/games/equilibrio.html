@@ -7,7 +7,7 @@
 {% block game_content %}
 <style>
 .eq-intro {
-  font-size: 14px; color: var(--text-secondary);
+  font-size: 15px; color: var(--text-secondary);
   text-align: center; margin-bottom: 16px; line-height: 1.5;
 }
 .eq-board {
@@ -37,17 +37,17 @@
   background: #fff;
   border: 1.5px solid var(--border);
   display: flex; align-items: center; justify-content: center;
-  font-size: 13px; font-weight: 400; color: #888;
+  font-size: 14px; font-weight: 400; color: #888;
   pointer-events: none;
   transform: translate(-50%, -50%);
 }
 
 .eq-status {
-  text-align: center; font-size: 14px; font-weight: 500;
+  text-align: center; font-size: 15px; font-weight: 500;
   min-height: 20px; margin-bottom: 10px;
 }
 .eq-counter {
-  text-align: center; font-size: 13px; color: var(--text-muted); margin-bottom: 8px;
+  text-align: center; font-size: 14px; color: var(--text-muted); margin-bottom: 8px;
 }
 
 /* Pista buttons */
@@ -55,7 +55,7 @@
   position: relative; overflow: hidden; flex: 1;
   background: transparent; color: var(--text-secondary);
   border: 1px solid var(--border); border-radius: var(--radius-md);
-  padding: 10px 8px; font-size: 12px; cursor: pointer;
+  padding: 10px 8px; font-size: 14px; cursor: pointer;
   font-family: inherit; text-align: center;
 }
 .btn-hint:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -118,14 +118,14 @@
   <div class="eq-board" id="eq-board"></div>
   <div class="eq-status" id="eq-status"></div>
   <div style="display:flex;gap:8px;margin-bottom:10px;">
-    <button class="btn-secondary" onclick="resetBoard()" style="flex:1;padding:10px;font-size:13px;">↺ Reiniciar</button>
+    <button class="btn-secondary" onclick="resetBoard()" style="flex:1;padding:10px;font-size:14px;">↺ Reiniciar</button>
     <button class="btn-hint" id="hint-1" onclick="useHint(0)">
       <div class="btn-hint-bar" id="hint-bar-0"></div>💡 Pista 1
     </button>
     <button class="btn-hint" id="hint-2" onclick="useHint(1)">
       <div class="btn-hint-bar" id="hint-bar-1"></div>💡 Pista 2
     </button>
-    <button class="btn-secondary" onclick="openHelp()" style="flex:1;padding:10px;font-size:13px;">? Normas</button>
+    <button class="btn-secondary" onclick="openHelp()" style="flex:1;padding:10px;font-size:14px;">? Normas</button>
   </div>
   <button class="btn-back-game" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
 </div>
@@ -136,7 +136,7 @@
   <div class="result-big correct" style="text-align:center;">☀️🌙 ¡Equilibrio!</div>
   <p class="result-sub" style="text-align:center;" id="r-sub"></p>
   <div class="eq-result-time" id="r-time"></div>
-  <div style="text-align:center;font-size:14px;color:var(--text-secondary);margin-bottom:20px;">tiempo</div>
+  <div style="text-align:center;font-size:15px;color:var(--text-secondary);margin-bottom:20px;">tiempo</div>
   {% include "components/stats.html" %}
   <button class="btn-share" onclick="doShare()">📤 Compartir</button>
   <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
@@ -150,11 +150,11 @@
       <div style="font-size:17px;font-weight:600;">Cómo se juega</div>
       <button onclick="closeHelp()" style="background:transparent;border:none;font-size:22px;cursor:pointer;color:var(--text-muted);padding:0;">✕</button>
     </div>
-    <div style="font-size:14px;color:var(--text-secondary);margin-bottom:20px;line-height:1.7;">
+    <div style="font-size:15px;color:var(--text-secondary);margin-bottom:20px;line-height:1.7;">
       Rellena el tablero con ☀️ y 🌙 siguiendo las reglas.<br>
       <strong>Toca</strong> para cambiar entre ☀️, 🌙 y vacío.
     </div>
-    <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px;">Las 3 reglas</div>
+    <div style="font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px;">Las 3 reglas</div>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
 
@@ -166,8 +166,8 @@
           <div class="hmc">☀️</div><div class="hmc">🌙</div><div class="hmc">🌙</div><div class="hmc">☀️</div>
           <div class="hmc">🌙</div><div class="hmc">☀️</div><div class="hmc">☀️</div><div class="hmc">🌙</div>
         </div>
-        <div style="font-size:12px;font-weight:600;margin-bottom:2px;">Equilibrio</div>
-        <div style="font-size:11px;color:var(--text-muted);">Mismo número de ☀️ y 🌙 en cada fila y columna</div>
+        <div style="font-size:14px;font-weight:600;margin-bottom:2px;">Equilibrio</div>
+        <div style="font-size:12px;color:var(--text-muted);">Mismo número de ☀️ y 🌙 en cada fila y columna</div>
       </div>
 
       <!-- Regla 2: no 3 seguidos -->
@@ -178,8 +178,8 @@
           <div class="hmc">☀️</div><div class="hmc">🌙</div><div class="hmc">🌙</div><div class="hmc">☀️</div>
           <div class="hmc">🌙</div><div class="hmc">☀️</div><div class="hmc">🌙</div><div class="hmc">🌙</div>
         </div>
-        <div style="font-size:12px;font-weight:600;color:#E24B4A;margin-bottom:2px;">❌ No 3 seguidos</div>
-        <div style="font-size:11px;color:var(--text-muted);">Nunca 3 iguales seguidos en fila o columna</div>
+        <div style="font-size:14px;font-weight:600;color:#E24B4A;margin-bottom:2px;">❌ No 3 seguidos</div>
+        <div style="font-size:12px;color:var(--text-muted);">Nunca 3 iguales seguidos en fila o columna</div>
       </div>
 
       <!-- Regla 3: pista = -->
@@ -195,8 +195,8 @@
           <div class="hmc">☀️</div><div class="hmc">🌙</div><div class="hmc">☀️</div><div class="hmc">🌙</div>
           <div class="hmc">🌙</div><div class="hmc">☀️</div><div class="hmc">🌙</div><div class="hmc">☀️</div>
         </div>
-        <div style="font-size:12px;font-weight:600;margin-bottom:2px;">Pista <strong>=</strong></div>
-        <div style="font-size:11px;color:var(--text-muted);">Las dos celdas deben tener el mismo símbolo</div>
+        <div style="font-size:14px;font-weight:600;margin-bottom:2px;">Pista <strong>=</strong></div>
+        <div style="font-size:12px;color:var(--text-muted);">Las dos celdas deben tener el mismo símbolo</div>
       </div>
 
       <!-- Regla 4: pista ≠ -->
@@ -212,12 +212,12 @@
           <div class="hmc">☀️</div><div class="hmc">🌙</div><div class="hmc">☀️</div><div class="hmc">🌙</div>
           <div class="hmc">🌙</div><div class="hmc">☀️</div><div class="hmc">🌙</div><div class="hmc">☀️</div>
         </div>
-        <div style="font-size:12px;font-weight:600;margin-bottom:2px;">Pista <strong>≠</strong></div>
-        <div style="font-size:11px;color:var(--text-muted);">Las dos celdas deben tener símbolos distintos</div>
+        <div style="font-size:14px;font-weight:600;margin-bottom:2px;">Pista <strong>≠</strong></div>
+        <div style="font-size:12px;color:var(--text-muted);">Las dos celdas deben tener símbolos distintos</div>
       </div>
     </div>
 
-    <button onclick="closeHelp()" style="width:100%;padding:13px;background:var(--bar-primary);color:var(--bar-primary-text);border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;">¡Entendido, a jugar!</button>
+    <button onclick="closeHelp()" style="width:100%;padding:13px;background:var(--bar-primary);color:var(--bar-primary-text);border:none;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;font-family:inherit;">¡Entendido, a jugar!</button>
   </div>
 </div>
 

@@ -7,7 +7,7 @@
 {% block game_content %}
 <style>
 .conn-instruccion {
-  font-size: 14px; color: var(--text-secondary);
+  font-size: 15px; color: var(--text-secondary);
   text-align: center; margin-bottom: 20px; line-height: 1.5;
 }
 .conn-intentos {
@@ -31,7 +31,7 @@
   background: var(--bar-bg-subtle);
   border: 2px solid var(--border);
   border-radius: var(--radius-md);
-  font-size: 15px; font-weight: 700;
+  font-size: 16px; font-weight: 700;
   text-align: center; cursor: pointer;
   transition: all 0.15s; user-select: none;
   letter-spacing: 0.5px;
@@ -77,18 +77,18 @@
 @keyframes fadeIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
 
 .conn-grupo-nombre {
-  font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
+  font-size: 12px; font-weight: 700; letter-spacing: 1.5px;
   text-transform: uppercase; opacity: 0.8; margin-bottom: 6px;
 }
 .conn-grupo-palabras {
-  font-size: 14px; font-weight: 600; line-height: 1.6;
+  font-size: 15px; font-weight: 600; line-height: 1.6;
 }
 
 .btn-confirmar {
   width: 100%; padding: 14px;
   background: var(--bar-accent-dark); color: #fff;
   border: none; border-radius: var(--radius-md);
-  font-size: 15px; font-weight: 600; cursor: pointer;
+  font-size: 16px; font-weight: 600; cursor: pointer;
   font-family: inherit; transition: opacity 0.15s;
   margin-bottom: 10px;
 }
@@ -96,7 +96,7 @@
 .btn-confirmar:not(:disabled):hover { opacity: 0.85; }
 
 .conn-feedback {
-  text-align: center; font-size: 14px; font-weight: 500;
+  text-align: center; font-size: 15px; font-weight: 500;
   min-height: 22px; margin-bottom: 8px;
   color: var(--bar-primary);
 }
@@ -109,17 +109,17 @@
 .conn-result-title.ganado { color: var(--success, #3A7D44); }
 .conn-result-title.perdido { color: var(--danger, #B03030); }
 .conn-result-sub {
-  font-size: 15px; color: var(--text-secondary);
+  font-size: 16px; color: var(--text-secondary);
   text-align: center; margin-bottom: 20px; line-height: 1.6;
 }
 .conn-explicacion {
   background: var(--bar-bg-subtle); border: 1px solid var(--border);
   border-radius: var(--radius-md); padding: 14px;
-  margin-bottom: 10px; font-size: 13px; line-height: 1.6;
+  margin-bottom: 10px; font-size: 14px; line-height: 1.6;
   color: var(--text-secondary);
 }
 .conn-trampa-label {
-  font-size: 11px; font-weight: 700; letter-spacing: 1px;
+  font-size: 12px; font-weight: 700; letter-spacing: 1px;
   text-transform: uppercase; color: var(--bar-primary); margin-bottom: 4px;
 }
 </style>
@@ -353,7 +353,7 @@ async function mostrarResultado() {
     div.innerHTML = `
       <div class="conn-grupo-nombre">${g.nombre}</div>
       <div class="conn-grupo-palabras">${g.palabras.join(' · ')}</div>
-      <div style="font-size:12px; opacity:0.7; margin-top:4px;">${g.explicacion}</div>
+      <div style="font-size:14px; opacity:0.7; margin-top:4px;">${g.explicacion}</div>
     `;
     rGrupos.appendChild(div);
   });

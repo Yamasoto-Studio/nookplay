@@ -11,25 +11,25 @@
 .re-dot.activa { background: var(--bar-primary); }
 .re-dot.ok { background: #2E7D32; }
 .re-dot.ko { background: #C0392B; }
-.re-num { font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); text-align: center; margin-bottom: 14px; }
+.re-num { font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); text-align: center; margin-bottom: 14px; }
 .re-card { background: var(--bar-bg-subtle); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 20px 18px; margin-bottom: 18px; }
 .re-stars { font-size: 20px; letter-spacing: 2px; margin-bottom: 10px; }
-.re-texto { font-size: 16px; line-height: 1.7; color: var(--text); font-style: italic; }
+.re-texto { font-size: 17px; line-height: 1.7; color: var(--text); font-style: italic; }
 .re-opciones { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
-.re-op { text-align: left; font-family: inherit; font-size: 15px; padding: 13px 15px; border-radius: var(--radius-sm); border: 1.5px solid var(--border); background: white; cursor: pointer; transition: all 0.15s; line-height: 1.4; }
+.re-op { text-align: left; font-family: inherit; font-size: 16px; padding: 13px 15px; border-radius: var(--radius-sm); border: 1.5px solid var(--border); background: white; cursor: pointer; transition: all 0.15s; line-height: 1.4; }
 .re-op:hover { border-color: var(--bar-primary); }
 .re-op.sel { border-color: var(--bar-primary); background: var(--bar-bg-subtle); font-weight: 600; }
 .re-op.ok { border-color: #2E7D32; background: #E8F5E9; font-weight: 700; }
 .re-op.ko { border-color: #C0392B; background: #FDECEA; }
 .re-op:disabled { cursor: default; opacity: 1; color: var(--text); }
 .re-op:disabled:not(.ok):not(.ko) { opacity: 0.55; }
-.re-cierre { font-size: 14px; line-height: 1.6; color: var(--text-sec); background: var(--bar-bg-subtle); border-left: 3px solid var(--bar-primary); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: 12px 14px; margin-bottom: 14px; display: none; }
+.re-cierre { font-size: 15px; line-height: 1.6; color: var(--text-sec); background: var(--bar-bg-subtle); border-left: 3px solid var(--bar-primary); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: 12px 14px; margin-bottom: 14px; display: none; }
 .re-resultado { text-align: center; margin-bottom: 8px; }
 .re-score { font-size: 52px; font-weight: 800; color: var(--bar-primary); line-height: 1; }
-.re-score-de { font-size: 15px; color: var(--text-muted); margin-top: 2px; margin-bottom: 10px; }
-.re-msg { font-size: 16px; font-weight: 600; margin-bottom: 18px; }
+.re-score-de { font-size: 16px; color: var(--text-muted); margin-top: 2px; margin-bottom: 10px; }
+.re-msg { font-size: 17px; font-weight: 600; margin-bottom: 18px; }
 .re-repaso { display: flex; flex-direction: column; gap: 8px; text-align: left; margin-bottom: 18px; }
-.re-repaso-item { font-size: 14px; padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border); }
+.re-repaso-item { font-size: 15px; padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border); }
 .re-repaso-item.ok { background: #E8F5E9; }
 .re-repaso-item.ko { background: #FDECEA; }
 </style>
@@ -51,7 +51,7 @@
     <div class="re-stars">⭐⭐⭐⭐⭐</div>
     <div class="re-texto" id="re-texto"></div>
   </div>
-  <p style="font-size:13px; color:var(--text-muted); margin-bottom:10px;">¿Qué se está reseñando?</p>
+  <p style="font-size:14px; color:var(--text-muted); margin-bottom:10px;">¿Qué se está reseñando?</p>
   <div class="re-opciones" id="re-opciones"></div>
   <div class="re-cierre" id="re-cierre"></div>
   <button class="btn-primary" id="btn-sig" onclick="siguiente()" style="display:none; width:100%;">Siguiente reseña →</button>

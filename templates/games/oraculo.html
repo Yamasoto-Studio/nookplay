@@ -7,7 +7,7 @@
 {% block game_content %}
 <style>
 .oraculo-intro {
-  font-size: 15px; color: var(--text-secondary);
+  font-size: 16px; color: var(--text-secondary);
   text-align: center; margin-bottom: 20px; line-height: 1.5;
 }
 .signos-grid {
@@ -32,7 +32,7 @@
   background: color-mix(in srgb, var(--bar-primary) 12%, white);
 }
 .signo-emoji { font-size: 38px; line-height: 1; }
-.signo-nombre { font-size: 11px; font-weight: 600; color: var(--text); letter-spacing: 0.3px; }
+.signo-nombre { font-size: 12px; font-weight: 600; color: var(--text); letter-spacing: 0.3px; }
 .signo-fechas { font-size: 9px; color: var(--text-muted); }
 
 /* Predicción */
@@ -52,21 +52,21 @@
 }
 .pred-emoji { font-size: 32px; }
 .pred-signo { font-size: 20px; font-weight: 700; color: var(--text); }
-.pred-fechas { font-size: 12px; color: var(--text-muted); }
+.pred-fechas { font-size: 14px; color: var(--text-muted); }
 .pred-texto {
-  font-size: 16px; line-height: 1.7;
+  font-size: 17px; line-height: 1.7;
   color: var(--text); margin-bottom: 14px;
 }
 .pred-consejo {
   background: rgba(255,255,255,0.7);
   border-radius: var(--radius-sm);
   padding: 10px 14px;
-  font-size: 13px; color: var(--text-secondary);
+  font-size: 14px; color: var(--text-secondary);
   line-height: 1.5;
   border-left: 3px solid var(--bar-primary);
 }
 .pred-consejo-label {
-  font-size: 10px; font-weight: 700; letter-spacing: 1px;
+  font-size: 11px; font-weight: 700; letter-spacing: 1px;
   text-transform: uppercase; color: var(--bar-primary);
   margin-bottom: 4px;
 }
@@ -77,12 +77,12 @@
   border-radius: var(--radius-md);
   padding: 14px;
   text-align: center;
-  font-size: 14px; color: var(--text-secondary);
+  font-size: 15px; color: var(--text-secondary);
   font-style: italic; line-height: 1.6;
   margin-bottom: 16px;
 }
 .frase-dia-label {
-  font-size: 10px; font-weight: 700; letter-spacing: 1px;
+  font-size: 11px; font-weight: 700; letter-spacing: 1px;
   text-transform: uppercase; color: var(--text-muted);
   margin-bottom: 6px;
 }
@@ -93,7 +93,7 @@
   color: var(--text-secondary);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  font-size: 14px; cursor: pointer;
+  font-size: 15px; cursor: pointer;
   font-family: inherit; margin-bottom: 10px;
 }
 .btn-ver-todos:hover { background: var(--bar-bg-subtle); }
@@ -106,8 +106,8 @@
 }
 .mini-signo:last-child { border-bottom: none; }
 .mini-emoji { font-size: 20px; flex-shrink: 0; margin-top: 2px; }
-.mini-nombre { font-size: 12px; font-weight: 700; color: var(--bar-primary); margin-bottom: 3px; }
-.mini-pred { font-size: 13px; color: var(--text); line-height: 1.5; }
+.mini-nombre { font-size: 14px; font-weight: 700; color: var(--bar-primary); margin-bottom: 3px; }
+.mini-pred { font-size: 14px; color: var(--text); line-height: 1.5; }
 </style>
 
 <!-- LOADING -->

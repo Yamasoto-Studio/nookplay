@@ -7,24 +7,24 @@
 {% block game_content %}
 <style>
 .esc-wrap { text-align: center; }
-.esc-lead { font-size: 14px; color: var(--text-secondary); line-height: 1.55; margin-bottom: 18px; }
+.esc-lead { font-size: 15px; color: var(--text-secondary); line-height: 1.55; margin-bottom: 18px; }
 
 /* Escalera visual de peldaños */
 .esc-ladder { display: flex; flex-direction: column-reverse; gap: 4px; margin: 0 auto 18px; max-width: 240px; }
-.esc-step { display: flex; align-items: center; gap: 10px; padding: 7px 12px; border-radius: 8px; background: var(--bar-bg-subtle); border: 1px solid var(--border); font-size: 13px; color: var(--text-muted); transition: all 0.3s; }
-.esc-step .esc-step-n { width: 22px; height: 22px; border-radius: 50%; background: var(--border); color: var(--text-secondary); font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.esc-step { display: flex; align-items: center; gap: 10px; padding: 7px 12px; border-radius: 8px; background: var(--bar-bg-subtle); border: 1px solid var(--border); font-size: 14px; color: var(--text-muted); transition: all 0.3s; }
+.esc-step .esc-step-n { width: 22px; height: 22px; border-radius: 50%; background: var(--border); color: var(--text-secondary); font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .esc-step.done { background: #F0FFF4; border-color: #81C784; color: #2E7D32; }
 .esc-step.done .esc-step-n { background: #2E7D32; color: #fff; }
 .esc-step.current { background: var(--bar-bg); border-color: var(--bar-primary); border-width: 2px; color: var(--text); font-weight: 700; }
 .esc-step.current .esc-step-n { background: var(--bar-primary); color: var(--bar-primary-text); }
 
-.esc-nivel-tag { display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; padding: 4px 14px; border-radius: 20px; background: var(--bar-primary); color: var(--bar-primary-text); margin-bottom: 14px; }
-.esc-tema { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+.esc-nivel-tag { display: inline-block; font-size: 14px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; padding: 4px 14px; border-radius: 20px; background: var(--bar-primary); color: var(--bar-primary-text); margin-bottom: 14px; }
+.esc-tema { font-size: 14px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
 .esc-pregunta { font-size: 18px; font-weight: 700; color: var(--text); line-height: 1.4; margin-bottom: 20px; }
 
 .esc-opciones { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
-.esc-op { padding: 14px 16px; border-radius: var(--radius-md); border: 2px solid var(--border); background: var(--bar-bg-subtle); font-size: 15px; font-weight: 500; color: var(--text); cursor: pointer; font-family: inherit; text-align: left; display: flex; align-items: center; gap: 10px; transition: all 0.15s; box-sizing: border-box; }
-.esc-op .esc-letra { width: 26px; height: 26px; border-radius: 6px; background: var(--border); color: var(--text-secondary); font-size: 12px; font-weight: 700; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+.esc-op { padding: 14px 16px; border-radius: var(--radius-md); border: 2px solid var(--border); background: var(--bar-bg-subtle); font-size: 16px; font-weight: 500; color: var(--text); cursor: pointer; font-family: inherit; text-align: left; display: flex; align-items: center; gap: 10px; transition: all 0.15s; box-sizing: border-box; }
+.esc-op .esc-letra { width: 26px; height: 26px; border-radius: 6px; background: var(--border); color: var(--text-secondary); font-size: 14px; font-weight: 700; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
 .esc-op:hover { border-color: var(--bar-primary); }
 .esc-op.correcta { border-color: #2E7D32; background: #F0FFF4; }
 .esc-op.correcta .esc-letra { background: #2E7D32; color: #fff; }
@@ -33,13 +33,13 @@
 .esc-op.disabled { pointer-events: none; opacity: 0.6; }
 
 .esc-decision { background: var(--bar-bg-subtle); border: 2px solid var(--bar-primary); border-radius: var(--radius-md); padding: 18px; margin-bottom: 14px; }
-.esc-decision-bote { font-size: 14px; color: var(--text-secondary); margin-bottom: 4px; }
+.esc-decision-bote { font-size: 15px; color: var(--text-secondary); margin-bottom: 4px; }
 .esc-decision-num { font-size: 34px; font-weight: 800; color: var(--bar-accent-dark); line-height: 1; margin-bottom: 12px; }
-.esc-decision-q { font-size: 14px; color: var(--text); font-weight: 600; margin-bottom: 14px; }
+.esc-decision-q { font-size: 15px; color: var(--text); font-weight: 600; margin-bottom: 14px; }
 .esc-botones-2 { display: flex; gap: 10px; }
 .esc-botones-2 button { flex: 1; box-sizing: border-box; }
 
-.esc-explica { font-size: 13px; color: var(--text-secondary); line-height: 1.5; background: var(--bar-bg-subtle); border-radius: var(--radius-md); padding: 12px; margin-bottom: 14px; }
+.esc-explica { font-size: 14px; color: var(--text-secondary); line-height: 1.5; background: var(--bar-bg-subtle); border-radius: var(--radius-md); padding: 12px; margin-bottom: 14px; }
 
 .esc-resultado { text-align: center; padding: 22px 16px; border-radius: var(--radius-md); margin-bottom: 16px; }
 .esc-resultado.gana { background: #F0FFF4; border: 2px solid #81C784; }
@@ -48,7 +48,7 @@
 .esc-resultado-tit { font-size: 22px; font-weight: 800; margin-bottom: 6px; }
 .esc-resultado.gana .esc-resultado-tit { color: #2E7D32; }
 .esc-resultado.pierde .esc-resultado-tit { color: #C0392B; }
-.esc-resultado-sub { font-size: 14px; color: var(--text-secondary); line-height: 1.5; }
+.esc-resultado-sub { font-size: 15px; color: var(--text-secondary); line-height: 1.5; }
 </style>
 
 <!-- LOADING -->
@@ -103,7 +103,7 @@
       <div class="esc-resultado-sub" id="r-sub"></div>
     </div>
     <div class="esc-ladder" id="r-ladder"></div>
-    <div id="r-pct" style="display:none; text-align:center; padding:10px; background:var(--bar-bg-subtle); border-radius:var(--radius-md); border:1px solid var(--border); font-size:13px; color:var(--text-secondary); margin-bottom:12px;"></div>
+    <div id="r-pct" style="display:none; text-align:center; padding:10px; background:var(--bar-bg-subtle); border-radius:var(--radius-md); border:1px solid var(--border); font-size:14px; color:var(--text-secondary); margin-bottom:12px;"></div>
     <button class="btn-primary" onclick="location.reload()" style="width:100%;">↻ Intentar de nuevo</button>
     <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
     <div class="tomorrow">{{ bar.tomorrow_message or "Mañana, otra escalera nueva." }}</div>

@@ -6,12 +6,12 @@
 
 {% block game_content %}
 <style>
-.impostor-instruccion { font-size: 13px; color: var(--text-secondary); margin-bottom: 12px; }
+.impostor-instruccion { font-size: 14px; color: var(--text-secondary); margin-bottom: 12px; }
 .afirmacion-btn {
   width: 100%; text-align: left;
   background: var(--bar-bg-subtle); border: 1px solid var(--border);
   border-radius: var(--radius-md); padding: 14px 16px; margin-bottom: 10px;
-  cursor: pointer; font-family: inherit; font-size: 14px; color: var(--text);
+  cursor: pointer; font-family: inherit; font-size: 15px; color: var(--text);
   line-height: 1.5; transition: all 0.15s;
   display: flex; gap: 10px; align-items: flex-start;
 }
@@ -23,13 +23,13 @@
   width: 22px; height: 22px; border-radius: 50%;
   background: var(--bar-primary); color: var(--bar-primary-text);
   display: flex; align-items: center; justify-content: center;
-  font-size: 11px; font-weight: 700; flex-shrink: 0; margin-top: 1px;
+  font-size: 12px; font-weight: 700; flex-shrink: 0; margin-top: 1px;
 }
-.impostor-falsa { font-size: 14px; color: #cc2222; font-weight: 500; line-height: 1.5; margin-top: 4px; }
-.impostor-explicacion { font-size: 15px; line-height: 1.75; color: var(--text); margin: 12px 0; }
+.impostor-falsa { font-size: 15px; color: #cc2222; font-weight: 500; line-height: 1.5; margin-top: 4px; }
+.impostor-explicacion { font-size: 16px; line-height: 1.75; color: var(--text); margin: 12px 0; }
 .bonus-wrap { background: var(--bar-bg-subtle); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px 14px; margin: 12px 0; }
-.bonus-label { font-size: 10px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px; }
-.bonus-text { font-size: 14px; color: var(--text); line-height: 1.6; }
+.bonus-label { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px; }
+.bonus-text { font-size: 15px; color: var(--text); line-height: 1.6; }
 </style>
 
 <!-- LOADING -->
@@ -41,7 +41,7 @@
 <div class="screen" id="s-game">
   <div class="game-tag" style="display:block; text-align:center; width:fit-content; margin:0 auto 12px;">El Impostor</div>
   <h2 class="headline" id="imp-tema" style="text-align:center; margin-bottom:8px;"></h2>
-  <p class="body-text" id="imp-intro" style="color:var(--text-secondary); font-size:14px; margin-bottom:16px;"></p>
+  <p class="body-text" id="imp-intro" style="color:var(--text-secondary); font-size:15px; margin-bottom:16px;"></p>
   <p class="impostor-instruccion">¿Cuál de estas afirmaciones es <strong>falsa</strong>?</p>
   <div id="imp-afirmaciones"></div>
   <button class="btn-primary" id="imp-btn" disabled onclick="revelar()">Revelar respuesta</button>

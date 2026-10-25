@@ -6,18 +6,18 @@
 
 {% block game_content %}
 <style>
-.co-sub { font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); text-align: center; margin-bottom: 16px; }
+.co-sub { font-size: 14px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); text-align: center; margin-bottom: 16px; }
 .co-afirmacion {
   font-size: 18px; line-height: 1.7; color: var(--text);
   background: var(--bar-bg-subtle); border: 1px solid var(--border);
   border-left: 4px solid var(--bar-primary); border-radius: var(--radius-md);
   padding: 20px 18px; margin-bottom: 22px; text-align: center;
 }
-.co-pregunta { font-size: 16px; font-weight: 700; text-align: center; color: var(--text); margin-bottom: 18px; }
+.co-pregunta { font-size: 17px; font-weight: 700; text-align: center; color: var(--text); margin-bottom: 18px; }
 .co-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
 .co-btn {
   padding: 20px 12px; border-radius: var(--radius-md); border: 2px solid var(--border);
-  font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit;
+  font-size: 16px; font-weight: 700; cursor: pointer; font-family: inherit;
   background: var(--bar-bg-subtle); color: var(--text); transition: all 0.15s;
   display: flex; flex-direction: column; align-items: center; gap: 6px; min-height: 72px; justify-content: center;
 }
@@ -29,10 +29,10 @@
 .co-resultado { text-align: center; padding: 20px 16px; border-radius: var(--radius-md); margin-bottom: 16px; font-size: 20px; font-weight: 800; }
 .co-resultado.acierto { background: #F0FFF4; color: #2E7D32; border: 2px solid #81C784; }
 .co-resultado.fallo { background: #FFF0EE; color: #C0392B; border: 2px solid #F1948A; }
-.co-resultado .co-rsub { font-size: 13px; font-weight: 500; opacity: 0.8; margin-top: 4px; }
+.co-resultado .co-rsub { font-size: 14px; font-weight: 500; opacity: 0.8; margin-top: 4px; }
 
 .co-veredicto-real {
-  text-align: center; font-size: 15px; font-weight: 700; padding: 12px;
+  text-align: center; font-size: 16px; font-weight: 700; padding: 12px;
   border-radius: var(--radius-md); margin-bottom: 14px;
 }
 .co-veredicto-real.es-v { background: #E8F5E9; color: #2E7D32; }
@@ -41,9 +41,9 @@
 .co-explicacion {
   background: var(--bar-bg-subtle); border: 1px solid var(--border);
   border-left: 3px solid var(--bar-primary); border-radius: var(--radius-md);
-  padding: 14px; margin-bottom: 12px; font-size: 14px; line-height: 1.6; color: var(--text);
+  padding: 14px; margin-bottom: 12px; font-size: 15px; line-height: 1.6; color: var(--text);
 }
-.co-dato { font-size: 13px; line-height: 1.6; color: var(--text-secondary); padding: 10px 14px; font-style: italic; }
+.co-dato { font-size: 14px; line-height: 1.6; color: var(--text-secondary); padding: 10px 14px; font-style: italic; }
 </style>
 
 <div class="screen active" id="s-loading">
