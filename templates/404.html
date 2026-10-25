@@ -3,7 +3,12 @@
 {% block content %}
 <div class="nook home">
   <div class="nook-logo">N</div>
+  {% if pausado %}
+  <h1 class="nook-title">En pausa</h1>
+  <p class="nook-sub">{{ pausado }} no tiene juegos activos ahora mismo.<br>Vuelve a pasarte más adelante.</p>
+  {% else %}
   <h1 class="nook-title">404</h1>
   <p class="nook-sub">Esta página no existe.<br>Comprueba el QR de tu tarjeta.</p>
+  {% endif %}
 </div>
 {% endblock %}

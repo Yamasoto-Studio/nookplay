@@ -1161,6 +1161,16 @@
       const d = await r.json().catch(() => null);
       if (!d || !d.ok) { st.textContent = '❌ ' + ((d && d.error) || 'Error ' + r.status); btn.disabled = false; return; }
     } catch(e) { st.textContent = '❌ Error de red'; btn.disabled = false; return; }
+    seguirPregen();
+  }
+
+  // Seguimiento del progreso. Se usa al pulsar el botón y también al abrir el
+  // panel: si hay una generación en curso (lanzada desde otra pestaña o antes
+  // de recargar), se retoma el seguimiento en vez de no mostrar nada.
+  function seguirPregen() {
+    const btn = document.getElementById('btn-pregen'), st = document.getElementById('pregen-status');
+    if (!btn) return;
+    btn.disabled = true;
     const poll = setInterval(async () => {
       try {
         const e = await (await fetch('/admin/api/pregen-estado')).json();
@@ -1174,6 +1184,17 @@
       } catch(err) {}
     }, 2000);
   }
+
+  (async function () {
+    if (!document.getElementById('btn-pregen')) return;
+    try {
+      const e = await (await fetch('/admin/api/pregen-estado')).json();
+      if (e && e.corriendo) {
+        document.getElementById('pregen-status').textContent = `Generando ${e.hechos}/${e.total}…`;
+        seguirPregen();
+      }
+    } catch (err) {}
+  })();
 
   async function loadGames() {
     try {
@@ -1333,6 +1354,20 @@
 
   {% if admin_role == 'superadmin' %}
   <div style="margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--border);">
+    <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 10px;">Pausa</div>
+    {% if bar.active %}
+    <button type="button" onclick="toggleBarActive(false)" style="background: transparent; color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 10px 18px; font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit;">
+      ⏸ Pausar este {{ 'evento' if es_evento else 'local' }}
+    </button>
+    <div style="font-size:12px; color:var(--text-muted); margin-top:8px;">Deja de verse al público y de generar contenido, pero conserva todo (juegos, códigos, productos, partidas). Se puede reactivar cuando quieras.</div>
+    {% else %}
+    <div style="display:inline-block; background:#FBE8DC; color:#A8410E; border:1px solid #E8C4AC; border-radius:8px; padding:8px 12px; font-size:13px; margin-bottom:10px;">⏸ Este {{ 'evento' if es_evento else 'local' }} está en pausa: no es visible al público.</div><br>
+    <button type="button" onclick="toggleBarActive(true)" style="background: var(--primary, #C4622D); color: #fff; border: none; border-radius: 8px; padding: 10px 18px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;">
+      ▶ Reactivar este {{ 'evento' if es_evento else 'local' }}
+    </button>
+    {% endif %}
+  </div>
+  <div style="margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--border);">
     <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 10px;">Zona de peligro</div>
     <button type="button" onclick="openDeleteModal()" style="background: transparent; color: #cc2222; border: 1px solid #cc2222; border-radius: 8px; padding: 10px 18px; font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit;">
       Eliminar este {{ 'evento' if es_evento else 'local' }} permanentemente
@@ -1817,6 +1852,17 @@ async function changePassword() {
     msg.textContent = '⚠️ ' + (data.error || 'Error desconocido');
   }
 }
+
+  async function toggleBarActive(activar) {
+    const msg = activar ? '¿Reactivar este espacio? Volverá a verse al público y a generar contenido.' : '¿Pausar este espacio? Dejará de verse al público. No se borra nada.';
+    if (!window.confirm(msg)) return;
+    try {
+      const r = await fetch('/admin/api/toggle-bar-active', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ bar_slug: PANEL_BAR_SLUG, active: !!activar }) });
+      const d = await r.json().catch(() => null);
+      if (!d || !d.ok) { window.alert((d && d.error) || 'No se pudo cambiar el estado'); return; }
+      location.reload();
+    } catch (e) { window.alert('Error de red'); }
+  }
 </script>
 {% endif %}
 

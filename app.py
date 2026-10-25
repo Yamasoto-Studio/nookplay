@@ -598,7 +598,52 @@ def _persistir_generado(bar_id, game_type, game_data, es_global=False):
         print(f"[FALLBACK] No se pudo persistir {game_type}/{bar_id}: {e}")
         return False
 import threading as _threading
-_pregen_estado = {
+
+
+class _PregenEstado(dict):
+    """Progreso de la pre-generación. Se persiste en app_state en cada cambio
+    para que CUALQUIER worker (y el panel tras recargar) pueda consultarlo: el
+    hilo corre en un solo proceso y antes la memoria de los otros decía
+    "no está corriendo" aunque sí lo estuviera."""
+    CLAVE = 'pregen_estado'
+    PLAZO_VIVO = 400  # s sin novedades -> se considera muerto (un juego en batch tarda < 200 s)
+
+    def _persistir(self):
+        try:
+            datos = {k: self.get(k) for k in ('corriendo', 'total', 'hechos', 'actual')}
+            datos['errores'] = len(self.get('error') or [])
+            datos['ts'] = time.time()
+            db = get_db()
+            db.execute("INSERT OR REPLACE INTO app_state (key, value) VALUES (?, ?)", (self.CLAVE, json.dumps(datos)))
+            db.commit()
+            db.close()
+        except Exception:
+            pass
+
+    def __setitem__(self, k, v):
+        super().__setitem__(k, v)
+        self._persistir()
+
+    def update(self, *a, **kw):
+        super().update(*a, **kw)
+        self._persistir()
+
+    @classmethod
+    def leer(cls):
+        """Estado compartido (BD). Si lleva demasiado sin novedades, no corre."""
+        try:
+            db = get_db()
+            row = db.execute("SELECT value FROM app_state WHERE key = ?", (cls.CLAVE,)).fetchone()
+            db.close()
+            d = json.loads(row['value']) if row and row['value'] else {}
+        except Exception:
+            d = {}
+        corriendo = bool(d.get('corriendo')) and (time.time() - float(d.get('ts') or 0)) < cls.PLAZO_VIVO
+        return {'corriendo': corriendo, 'hechos': d.get('hechos', 0), 'total': d.get('total', 0),
+                'errores': d.get('errores', 0), 'actual': d.get('actual', '')}
+
+
+_pregen_estado = _PregenEstado({
     'corriendo': False,
     'total': 0,
     'hechos': 0,
@@ -607,7 +652,7 @@ _pregen_estado = {
     'error': [],
     'inicio': None,
     'fin': None,
-}
+})
 _pregen_lock = _threading.Lock()
 
 
@@ -1897,7 +1942,7 @@ def admin_pregen_hoy():
     db.close()
     if not bar:
         return jsonify({'ok': False, 'error': 'No encontrado'}), 404
-    if _pregen_estado.get('corriendo') or not _intentar_claim_pregen():
+    if _PregenEstado.leer()['corriendo'] or not _intentar_claim_pregen():
         return jsonify({'ok': False, 'error': 'Ya hay una generación en curso; espera a que termine'}), 409
     import threading
     _pregen_estado.update({'corriendo': True, 'hechos': 0, 'total': 0, 'actual': '', 'ok': [], 'error': []})
@@ -1917,9 +1962,7 @@ def admin_pregen_hoy():
 def admin_pregen_estado():
     if session.get('admin_role') != 'superadmin':
         return jsonify({'ok': False}), 403
-    e = _pregen_estado
-    return jsonify({'corriendo': bool(e.get('corriendo')), 'hechos': e.get('hechos', 0), 'total': e.get('total', 0),
-                    'errores': len(e.get('error') or []), 'actual': e.get('actual', '')})
+    return jsonify(_PregenEstado.leer())
 
 
 @app.route('/admin/api/regen-game', methods=['POST'])
@@ -2202,7 +2245,10 @@ def bar(bar_slug):
     db = get_db()
     bar = db.execute("SELECT * FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
     if not bar:
+        pausado = db.execute("SELECT name FROM bars WHERE slug = ? AND active = 0", (bar_slug,)).fetchone()
         db.close()
+        if pausado:
+            return render_template('404.html', pausado=pausado['name']), 404
         return render_template('404.html'), 404
     products = db.execute(
         "SELECT * FROM bar_products WHERE bar_id = ? AND active = 1 ORDER BY position",
@@ -5332,6 +5378,30 @@ def admin_delete_product_image():
         return jsonify({'ok': False, 'error': str(e)})
 
 
+@app.route('/admin/api/toggle-bar-active', methods=['POST'])
+@admin_required
+def admin_toggle_bar_active():
+    """Pausa o reactiva un espacio sin borrar nada: con active=0 su página
+    pública muestra 'en pausa', no entra en la pre-generación ni en el listado
+    de activos, y conserva juegos, códigos, productos, partidas y accesos."""
+    if session.get('admin_role') != 'superadmin':
+        return jsonify({'ok': False, 'error': 'No autorizado'}), 403
+    data = request.get_json() or {}
+    bar_slug = (data.get('bar_slug') or '').strip()
+    activo = 1 if data.get('active') else 0
+    if not bar_slug:
+        return jsonify({'ok': False, 'error': 'Falta el espacio'}), 400
+    db = get_db()
+    bar = db.execute("SELECT id FROM bars WHERE slug = ?", (bar_slug,)).fetchone()
+    if not bar:
+        db.close()
+        return jsonify({'ok': False, 'error': 'No encontrado'}), 404
+    db.execute("UPDATE bars SET active = ? WHERE id = ?", (activo, bar['id']))
+    db.commit()
+    db.close()
+    return jsonify({'ok': True, 'active': activo})
+
+
 @app.route('/admin/api/delete-bar', methods=['POST'])
 @admin_required
 def admin_delete_bar():
@@ -5382,6 +5452,7 @@ def admin_dashboard():
         bar_dict = dict(bar)
         bar_dict['plays_count'] = plays
         bars.append(bar_dict)
+    bars_pausados = [dict(b) for b in db.execute("SELECT * FROM bars WHERE active = 0 ORDER BY name").fetchall()]
     stats = {
         'total_bars': len(bars),
         'plays_today': db.execute("SELECT COUNT(*) as n FROM plays WHERE played_on = ?", (today,)).fetchone()['n'],
@@ -5389,7 +5460,7 @@ def admin_dashboard():
         'plays_total': db.execute("SELECT COUNT(*) as n FROM plays").fetchone()['n'],
     }
     db.close()
-    return render_template('admin/dashboard.html', bars=bars, stats=stats)
+    return render_template('admin/dashboard.html', bars=bars, bars_pausados=bars_pausados, stats=stats)
 
 @app.route('/admin/api/create-bar', methods=['POST'])
 @admin_required

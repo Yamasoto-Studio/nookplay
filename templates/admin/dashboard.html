@@ -143,6 +143,26 @@
   </div>
 </div>
 
+{% if bars_pausados %}
+<div class="section" style="margin-top:18px; opacity:0.75;">
+  <div class="section-title" style="display:flex; align-items:center; gap:8px;">En pausa <span style="font-size:12px; font-weight:400; color:#A89B91;">({{ bars_pausados|length }}) · no aparecen al público ni se generan; se pueden reactivar desde su panel</span></div>
+  <div class="bars-table">
+    {% for bar in bars_pausados %}
+    <div class="bar-row">
+      <div>
+        <div class="bar-name">⏸ {{ bar.name }}{% if (bar.space_kind or 'local') == 'evento' %} <span style="display:inline-block; font-size:10px; font-weight:700; background:#EEE; color:#777; border:1px solid #DDD; border-radius:6px; padding:1px 7px; vertical-align:middle;">EVENTO</span>{% endif %}</div>
+        <div class="bar-city">{{ bar.city }}{% if (bar.space_kind or 'local') == 'evento' and bar.event_start %} · {{ bar.event_start }} → {{ bar.event_end }}{% endif %}</div>
+      </div>
+      <div></div>
+      <div><span style="font-size:12px; color:#A89B91;">En pausa</span></div>
+      <div></div>
+      <div><a href="/admin/{{ bar.slug }}" class="btn-edit">Gestionar →</a></div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
 <!-- Modal nuevo bar -->
 <div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
   <div class="modal">
