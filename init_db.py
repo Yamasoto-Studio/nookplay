@@ -12,10 +12,25 @@ def generate_weekly_code():
     chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
     return ''.join(random.choices(chars, k=5))
 
+os.environ.setdefault('TZ', 'Europe/Madrid')
+try:
+    import time as _time
+    _time.tzset()
+except AttributeError:
+    pass
+
 os.makedirs('/data', exist_ok=True)
 db_path = '/data/nookplay.db'
 db = sqlite3.connect(db_path)
 db.row_factory = sqlite3.Row
+
+# WAL: los lectores no se bloquean con las escrituras (una por partida, variante
+# servida y compartido). Es persistente: basta fijarlo una vez por fichero.
+try:
+    db.execute("PRAGMA journal_mode=WAL")
+    db.execute("PRAGMA synchronous=NORMAL")
+except sqlite3.Error:
+    pass
 
 # ── Crear tablas si no existen ──────────────────────────────────────────────
 
@@ -284,7 +299,8 @@ db.execute("""
         icon        TEXT NOT NULL,
         plan_min    TEXT NOT NULL DEFAULT 'starter',
         active      INTEGER NOT NULL DEFAULT 1,
-        position    INTEGER NOT NULL DEFAULT 0
+        position    INTEGER NOT NULL DEFAULT 0,
+        grupo       TEXT DEFAULT ''
     )
 """)
 
@@ -296,6 +312,7 @@ db.execute("""
         bar_id      INTEGER NOT NULL,
         game_slug   TEXT NOT NULL,
         active      INTEGER NOT NULL DEFAULT 1,
+        settings    TEXT DEFAULT '',
         UNIQUE(bar_id, game_slug),
         FOREIGN KEY (bar_id) REFERENCES bars(id)
     )
@@ -347,6 +364,13 @@ db.execute('''CREATE TABLE IF NOT EXISTS shares (
     shared_at TEXT NOT NULL
 )''')
 db.execute("CREATE INDEX IF NOT EXISTS idx_shares_bar_day ON shares (bar_slug, shared_on)")
+# Índices de las consultas calientes en vivo (lectura de pieza del día, ✓ de
+# jugado por dispositivo, variantes vistas, analítica por espacio y día)
+db.execute("CREATE INDEX IF NOT EXISTS idx_gg_bar_type_date ON generated_games (bar_id, game_type, game_date)")
+db.execute("CREATE INDEX IF NOT EXISTS idx_plays_bar_day ON plays (bar_slug, played_on)")
+db.execute("CREATE INDEX IF NOT EXISTS idx_plays_device_day ON plays (device_id, played_on, game_type)")
+db.execute("CREATE INDEX IF NOT EXISTS idx_vv_device ON variant_views (device_id)")
+db.execute("CREATE INDEX IF NOT EXISTS idx_access_log_bar ON access_log (bar_id, accessed_at)")
 db.commit()
 
 # Añadir papel si no existe

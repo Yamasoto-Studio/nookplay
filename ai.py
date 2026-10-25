@@ -47,6 +47,23 @@ def get_event_theme():
 # 0 = sin pool, comportamiento normal.
 _variant_hint_ctx = contextvars.ContextVar('variant_hint', default=0)
 
+# Modo de llamada a la IA. 'hot' = bajo demanda con un visitante esperando
+# (timeout corto y un solo reintento, para no superar el timeout del worker);
+# 'batch' = pre-generación de fondo (cron o 'Generar todo hoy'), donde se
+# puede esperar más y reintentar.
+_ia_mode_ctx = contextvars.ContextVar('ia_mode', default='hot')
+IA_TIMEOUT = {'hot': 30, 'batch': 60}
+IA_MAX_REINTENTOS = {'hot': 1, 'batch': 2}
+
+def set_ia_mode(modo):
+    return _ia_mode_ctx.set(modo if modo in IA_TIMEOUT else 'hot')
+
+def reset_ia_mode(token):
+    _ia_mode_ctx.reset(token)
+
+def get_ia_mode():
+    return _ia_mode_ctx.get()
+
 def set_variant_hint(n):
     """Fija el número de variante activo (0 para desactivar)."""
     return _variant_hint_ctx.set(int(n or 0))
@@ -188,6 +205,9 @@ def _post_ia(prompt, max_tokens, api_key, reintentos=2, modelo='claude-sonnet-4-
         prompt = (f"VARIANTE {_vh} DE HOY: hoy se generan varias versiones de este juego. "
                   f"Crea una versión claramente DISTINTA de las demás (otros protagonistas, "
                   f"otro enfoque, otros datos, otro escenario).\n") + prompt
+    _modo = _ia_mode_ctx.get()
+    reintentos = min(int(reintentos), IA_MAX_REINTENTOS[_modo])
+    _timeout = IA_TIMEOUT[_modo]
     ultimo_error = None
     for intento in range(reintentos + 1):
         try:
@@ -204,7 +224,7 @@ def _post_ia(prompt, max_tokens, api_key, reintentos=2, modelo='claude-sonnet-4-
                     'system': _SISTEMA_NOOKPLAY,
                     'messages': [{'role': 'user', 'content': prompt}]
                 },
-                timeout=60
+                timeout=_timeout
             )
             data = response.json()
             if 'content' not in data:
@@ -2263,7 +2283,7 @@ REGLAS:
         'https://api.anthropic.com/v1/messages',
         headers={'x-api-key': api_key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json'},
         json={'model': 'claude-sonnet-4-6', 'max_tokens': 500, 'messages': [{'role': 'user', 'content': prompt}]},
-        timeout=60
+        timeout=IA_TIMEOUT['hot']
     )
     data = response.json()
     if 'content' not in data:

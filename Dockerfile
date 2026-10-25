@@ -12,4 +12,4 @@ RUN echo "Cache bust: $CACHEBUST"
 
 EXPOSE 80
 
-CMD ["sh", "-c", "python init_db.py && gunicorn app:app --bind 0.0.0.0:80 --workers 2 --timeout 120 --preload"]
+CMD ["sh", "-c", "python init_db.py && gunicorn app:app --bind 0.0.0.0:80 --workers 2 --worker-class gthread --threads 4 --timeout 120 --preload"]

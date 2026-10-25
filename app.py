@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 from datetime import date, datetime, timedelta
 import sqlite3
-from ai import generate_game, generate_impostor, generate_dilema, generate_conexiones, generate_oraculo, generate_donde, generate_carta, generate_reinas, generate_conexion_local, generate_equilibrio, generate_veredicto, generate_perfil, generate_vestuario, generate_trivia, generate_sinopsis, generate_muertes, generate_letra, generate_pensamiento, generate_poema, generate_menteagil, generate_constitucion, generate_orden, generate_titular, generate_definicion, generate_masomenos, generate_escalera, generate_quienmas, generate_resena, generate_papel, build_bar_context, set_game_knobs, reset_game_knobs, get_day_seed, set_event_theme, reset_event_theme, set_variant_hint
+from ai import set_ia_mode, reset_ia_mode, generate_game, generate_impostor, generate_dilema, generate_conexiones, generate_oraculo, generate_donde, generate_carta, generate_reinas, generate_conexion_local, generate_equilibrio, generate_veredicto, generate_perfil, generate_vestuario, generate_trivia, generate_sinopsis, generate_muertes, generate_letra, generate_pensamiento, generate_poema, generate_menteagil, generate_constitucion, generate_orden, generate_titular, generate_definicion, generate_masomenos, generate_escalera, generate_quienmas, generate_resena, generate_papel, build_bar_context, set_game_knobs, reset_game_knobs, get_day_seed, set_event_theme, reset_event_theme, set_variant_hint
 import os
 import smtplib
 from email.mime.text import MIMEText
@@ -10,6 +10,15 @@ import json
 import random
 import string
 import time
+
+# Zona horaria del proceso: el contenedor corre en UTC y el "día" de juegos,
+# estadísticas e informes debe ser el de Madrid (entre las 0:00 y la 1:00 el
+# día cambiaba una hora tarde). TZ se fija antes de cualquier date.today().
+os.environ.setdefault('TZ', 'Europe/Madrid')
+try:
+    time.tzset()
+except AttributeError:
+    pass
 
 app = Flask(__name__)
 
@@ -40,6 +49,20 @@ def get_db():
     db = sqlite3.connect(_db_path, timeout=10)
     db.row_factory = sqlite3.Row
     return db
+
+MENSAJE_ERROR_JUEGO = "Este juego está descansando un momento. Prueba otro del menú o vuelve en un minuto."
+
+
+def _error_juego(e):
+    """Respuesta de error de un endpoint de juego: el detalle va al log del
+    servidor, el visitante recibe siempre un mensaje amable y un 503 (temporal)
+    para que el cliente no lo trate como fallo definitivo."""
+    try:
+        print(f"[JUEGO] Error en {request.path}: {e}", flush=True)
+    except Exception:
+        pass
+    return jsonify({'error': MENSAJE_ERROR_JUEGO, 'temporal': True}), 503
+
 
 def init_db():
     db = get_db()
@@ -652,9 +675,18 @@ def pregen_daily_games(solo_bar_slug=None, forzar=False):
     forzar: ignora la regla de ahorro de eventos fuera de fechas."""
     today = str(date.today())
     resumen = {'ok': [], 'error': []}
+    # Trabajo de fondo: la IA puede esperar y reintentar (nadie mira un spinner)
+    _modo_tok = set_ia_mode('batch')
+    try:
+        return _pregen_daily_games_impl(solo_bar_slug, forzar, today, resumen)
+    finally:
+        reset_ia_mode(_modo_tok)
+
+
+def _pregen_daily_games_impl(solo_bar_slug, forzar, today, resumen):
     # Juegos por-bar: los únicos que un evento genera (y en pool si procede)
     POOL_GAME_TYPES = EVENT_GAME_TYPES
-    GAME_TYPES = ['crimen', 'impostor', 'dilema', 'conexiones', 'oraculo', 'donde', 'local', 'veredicto', 'perfil', 'vestuario', 'trivia', 'sinopsis', 'muertes', 'letra', 'pensamiento', 'menteagil', 'constitucion', 'titular', 'definicion', 'masomenos', 'escalera', 'quienmas', 'orden']
+    GAME_TYPES = ['crimen', 'impostor', 'dilema', 'conexiones', 'oraculo', 'donde', 'local', 'veredicto', 'perfil', 'vestuario', 'trivia', 'sinopsis', 'muertes', 'letra', 'pensamiento', 'menteagil', 'constitucion', 'titular', 'definicion', 'masomenos', 'escalera', 'quienmas', 'orden', 'resena', 'papel']
 
     db = get_db()
     if solo_bar_slug:
@@ -990,6 +1022,8 @@ def admin_pregen_now():
     Borra primero los contenidos de hoy para forzar una regeneración real."""
     if session.get('admin_role') != 'superadmin':
         return jsonify({'ok': False, 'error': 'No autorizado'}), 403
+    if not (request.get_json(silent=True) or {}).get('confirmar'):
+        return jsonify({'ok': False, 'error': 'Falta confirmación: esta acción borra y regenera el contenido de hoy.'}), 400
     today = str(date.today())
 
     # Claim atómico del lock a nivel de BD (compartido y seguro entre los 2 workers
@@ -1003,7 +1037,14 @@ def admin_pregen_now():
             # Limpiar errores previos y borrar contenido de hoy para regenerar
             dbx = get_db()
             dbx.execute("INSERT OR REPLACE INTO app_state (key, value) VALUES ('pregen_errores', '')", ())
-            dbx.execute("DELETE FROM generated_games WHERE game_date = ?", (today,))
+            # Nunca borrar el contenido de hoy de un evento EN CURSO: dejaría la mesa
+            # sin juegos hasta que termine la regeneración. Para esos espacios la
+            # pre-generación solo rellena lo que falte.
+            dbx.execute("""DELETE FROM generated_games WHERE game_date = ?
+                           AND (bar_id IS NULL OR bar_id NOT IN (
+                               SELECT id FROM bars WHERE COALESCE(space_kind,'local') = 'evento'
+                                 AND event_start <> '' AND event_end <> ''
+                                 AND event_start <= ? AND event_end >= ?))""", (today, today, today))
             dbx.commit()
             dbx.close()
             global _game_cache
@@ -2413,6 +2454,88 @@ def teasers_api():
     return jsonify(out)
 
 
+# Lock de generación bajo demanda. Cuando varios visitantes abren a la vez un
+# juego que aún no tiene pieza del día, solo el primero genera; los demás
+# esperan a que la pieza aparezca en la BD (hasta GEN_ESPERA_MAX s) en vez de
+# lanzar N llamadas a la IA en paralelo y bloquear todos los workers.
+GEN_LOCK_TTL = 90        # s; si la generación muere, el lock caduca solo
+GEN_ESPERA_MAX = 25      # s que espera quien no gana el lock
+GEN_ESPERA_PASO = 0.5
+
+
+def _gen_lock_key(bar_id, game_type, today):
+    return f"genlock_{bar_id}_{game_type}_{today}"
+
+
+def _tomar_lock_generacion(bar_id, game_type, today):
+    """True si este proceso debe generar; False si otro ya está en ello."""
+    key = _gen_lock_key(bar_id, game_type, today)
+    ahora = time.time()
+    db = get_db()
+    try:
+        db.execute("BEGIN IMMEDIATE")
+        row = db.execute("SELECT value FROM app_state WHERE key = ?", (key,)).fetchone()
+        ocupado = False
+        if row and row['value']:
+            try:
+                ocupado = (ahora - float(row['value'])) < GEN_LOCK_TTL
+            except (ValueError, TypeError):
+                ocupado = False
+        if ocupado:
+            db.execute("ROLLBACK")
+            return False
+        db.execute("INSERT OR REPLACE INTO app_state (key, value) VALUES (?, ?)", (key, str(ahora)))
+        db.execute("COMMIT")
+        return True
+    except Exception:
+        try:
+            db.execute("ROLLBACK")
+        except Exception:
+            pass
+        return True  # ante la duda, generar (comportamiento anterior)
+    finally:
+        db.close()
+
+
+POEMA_MAX_POR_DIA = 3
+
+
+def _consumir_cuota(key, maximo):
+    """Contador atómico en app_state. True si quedaba cuota (y la consume)."""
+    db = get_db()
+    try:
+        db.execute("BEGIN IMMEDIATE")
+        row = db.execute("SELECT value FROM app_state WHERE key = ?", (key,)).fetchone()
+        try:
+            usados = int(row['value']) if row and row['value'] else 0
+        except (ValueError, TypeError):
+            usados = 0
+        if usados >= maximo:
+            db.execute("ROLLBACK")
+            return False
+        db.execute("INSERT OR REPLACE INTO app_state (key, value) VALUES (?, ?)", (key, str(usados + 1)))
+        db.execute("COMMIT")
+        return True
+    except Exception:
+        try:
+            db.execute("ROLLBACK")
+        except Exception:
+            pass
+        return True
+    finally:
+        db.close()
+
+
+def _liberar_lock_generacion(bar_id, game_type, today):
+    try:
+        db = get_db()
+        db.execute("DELETE FROM app_state WHERE key = ?", (_gen_lock_key(bar_id, game_type, today),))
+        db.commit()
+        db.close()
+    except Exception:
+        pass
+
+
 def _leer_pregenerado(db, bar_id, game_type, today):
     """Lee el contenido pre-generado de un juego. Devuelve una fila con
     ['content'] o None (compatible con el fetchone() al que sustituye).
@@ -2420,13 +2543,27 @@ def _leer_pregenerado(db, bar_id, game_type, today):
     Con una sola pieza (bares, o eventos sin pool): idéntico a antes.
     Con varias (pool de evento): elige variante por dispositivo — la primera
     no vista, o la vista hace más tiempo si ya las vio todas — y registra
-    la vista en variant_views."""
-    rows = db.execute(
-        "SELECT id, content FROM generated_games WHERE bar_id = ? AND game_type = ? AND game_date = ? ORDER BY id",
-        (bar_id, game_type, today)
-    ).fetchall()
+    la vista en variant_views.
+
+    Si no hay pieza: toma el lock de generación. Si lo gana, devuelve None y
+    el llamador genera. Si no, espera a que otro la guarde y la devuelve."""
+    def _rows():
+        return db.execute(
+            "SELECT id, content FROM generated_games WHERE bar_id = ? AND game_type = ? AND game_date = ? ORDER BY id",
+            (bar_id, game_type, today)
+        ).fetchall()
+    rows = _rows()
     if not rows:
-        return None
+        if _tomar_lock_generacion(bar_id, game_type, today):
+            return None
+        limite = time.time() + GEN_ESPERA_MAX
+        while time.time() < limite:
+            time.sleep(GEN_ESPERA_PASO)
+            rows = _rows()
+            if rows:
+                break
+        if not rows:
+            return None  # el que generaba falló o tarda demasiado: lo intentamos nosotros
     if len(rows) == 1:
         return rows[0]
     device_id = ''
@@ -2468,14 +2605,32 @@ class _GameCache(dict):
             return key.rsplit('_', 2)[0] in _pool_slugs()
         except Exception:
             return False
+    # TTL: la caché vive en cada worker; cuando el admin regenera un juego desde
+    # el otro worker, este seguiría sirviendo la pieza vieja hasta el reinicio.
+    # Caducar a los 60 s acota ese desfase sin coste apreciable (relee de la BD).
+    TTL = 60
+    _ts = {}
     def __contains__(self, key):
         if self._es_pool(key):
             return False
-        return super().__contains__(key)
+        if not super().__contains__(key):
+            return False
+        if time.time() - self._ts.get(key, 0) > self.TTL:
+            try:
+                super().__delitem__(key)
+            except KeyError:
+                pass
+            self._ts.pop(key, None)
+            return False
+        return True
     def __setitem__(self, key, value):
         if self._es_pool(key):
             return
+        self._ts[key] = time.time()
         super().__setitem__(key, value)
+    def __delitem__(self, key):
+        self._ts.pop(key, None)
+        super().__delitem__(key)
 
 
 _game_cache = _GameCache()
@@ -2543,7 +2698,7 @@ def game():
         db2.close()
         return jsonify(game_data)
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return _error_juego(e)
 
 
 @app.route('/api/impostor', methods=['POST'])
@@ -2598,7 +2753,7 @@ def impostor():
         db2.close()
         return jsonify(game_data)
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return _error_juego(e)
 
 # --------------------------------------------------------------------------
 # API — Stats
@@ -2765,7 +2920,7 @@ def dilema_api():
         _game_cache[cache_key] = game_data
         return jsonify(game_data)
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return _error_juego(e)
 
 @app.route('/<bar_slug>/veredicto')
 def veredicto_page(bar_slug):
@@ -2832,7 +2987,7 @@ def veredicto_api():
         _game_cache[cache_key] = game_data
         return jsonify(game_data)
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return _error_juego(e)
 
 
 @app.route('/api/veredicto-stats/<bar_slug>')
@@ -2933,7 +3088,7 @@ def papel_api():
         _game_cache[cache_key] = game_data
         return jsonify(game_data)
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return _error_juego(e)
 
 
 @app.route('/api/papel-stats/<bar_slug>')
@@ -3011,7 +3166,7 @@ def resena_api():
         _game_cache[cache_key] = game_data
         return jsonify(game_data)
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return _error_juego(e)
 
 
 @app.route('/api/perfil', methods=['POST'])
@@ -3065,7 +3220,7 @@ def perfil_api():
         _game_cache[cache_key] = game_data
         return jsonify(game_data)
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return _error_juego(e)
 
 
 @app.route('/api/perfil-stats/<bar_slug>')
@@ -3156,7 +3311,7 @@ def vestuario_api():
         _game_cache[cache_key] = game_data
         return jsonify(game_data)
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return _error_juego(e)
 
 
 @app.route('/api/vestuario-stats/<bar_slug>')
@@ -3246,7 +3401,7 @@ def trivia_api():
         _game_cache[cache_key] = game_data
         return jsonify(game_data)
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return _error_juego(e)
 
 
 @app.route('/api/trivia-stats/<bar_slug>')
@@ -3336,7 +3491,7 @@ def sinopsis_api():
         _game_cache[cache_key] = game_data
         return jsonify(game_data)
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return _error_juego(e)
 
 
 @app.route('/api/sinopsis-stats/<bar_slug>')
@@ -3419,7 +3574,7 @@ def titular_api():
         _game_cache[cache_key] = game_data
         return jsonify(game_data)
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return _error_juego(e)
 
 
 @app.route('/api/titular-stats/<bar_slug>')
@@ -3502,7 +3657,7 @@ def definicion_api():
         _game_cache[cache_key] = game_data
         return jsonify(game_data)
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return _error_juego(e)
 
 
 @app.route('/api/definicion-stats/<bar_slug>')
@@ -3609,7 +3764,7 @@ def masomenos_api():
         _game_cache[cache_key] = game_data
         return jsonify(game_data)
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return _error_juego(e)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -3682,7 +3837,7 @@ def escalera_api():
         _game_cache[cache_key] = game_data
         return jsonify(game_data)
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return _error_juego(e)
 
 
 @app.route('/api/escalera-stats/<bar_slug>')
@@ -3773,7 +3928,7 @@ def quienmas_api():
         _game_cache[cache_key] = game_data
         return jsonify(game_data)
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return _error_juego(e)
 
 
 @app.route('/<bar_slug>/muertes')
@@ -3836,7 +3991,7 @@ def muertes_api():
         _game_cache[cache_key] = game_data
         return jsonify(game_data)
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return _error_juego(e)
 
 
 @app.route('/api/muertes-stats/<bar_slug>')
@@ -3925,7 +4080,7 @@ def letra_api():
         _game_cache[cache_key] = game_data
         return jsonify(game_data)
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return _error_juego(e)
 
 
 @app.route('/api/letra-stats/<bar_slug>')
@@ -4000,7 +4155,7 @@ def pensamiento_api():
         _game_cache[cache_key] = game_data
         return jsonify(game_data)
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return _error_juego(e)
 
 
 def _normalizar_respuesta(txt):
@@ -4056,7 +4211,7 @@ def pensamiento_responder():
             'ranking': [{'respuesta': r, 'count': c, 'pct': round((c/total)*100)} for r, c in top]
         })
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return _error_juego(e)
 
 
 @app.route('/<bar_slug>/poema')
@@ -4096,11 +4251,17 @@ def poema_api():
     tono = data.get('tono', 'divertido')
     nivel = data.get('nivel', 'normal')
 
+    # Límite por dispositivo y día: el poema es la única pieza generada en vivo
+    # por visitante; sin tope, un grupo en bucle bloquea los workers y la factura.
+    device_id = str(data.get('device_id') or '')[:80]
+    if device_id and not _consumir_cuota(f"poema_{bar_slug}_{device_id}_{today}", POEMA_MAX_POR_DIA):
+        return jsonify({'error': f'Hoy ya has pedido {POEMA_MAX_POR_DIA} poemas. Mañana habrá más.', 'cuota': True}), 429
+
     try:
         result = generate_poema(nombre, sobre, nombre_objeto, tono, nivel)
         return jsonify(result)
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return _error_juego(e)
 
 
 @app.route('/<bar_slug>/menteagil')
@@ -4155,7 +4316,7 @@ def menteagil_api():
         _game_cache[cache_key] = game_data
         return jsonify(game_data)
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return _error_juego(e)
 
 
 @app.route('/api/menteagil-stats/<bar_slug>')
@@ -4228,7 +4389,7 @@ def constitucion_api():
         _game_cache[cache_key] = game_data
         return jsonify(game_data)
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return _error_juego(e)
 
 
 @app.route('/api/constitucion-stats/<bar_slug>')
@@ -4358,7 +4519,7 @@ def conexiones_api():
         _game_cache[cache_key] = game_data
         return jsonify(game_data)
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return _error_juego(e)
 
 
 @app.route('/<bar_slug>/oraculo')
@@ -4423,7 +4584,7 @@ def oraculo_api():
         _game_cache[cache_key] = game_data
         return jsonify(game_data)
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return _error_juego(e)
 
 
 @app.route('/<bar_slug>/donde')
@@ -4491,7 +4652,7 @@ def donde_api():
         _game_cache[cache_key] = game_data
         return jsonify(game_data)
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return _error_juego(e)
 
 
 @app.route('/<bar_slug>/carta')
@@ -4769,7 +4930,7 @@ def local_api():
         _game_cache[cache_key] = game_data
         return jsonify(game_data)
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return _error_juego(e)
 
 
 @app.route('/<bar_slug>/equilibrio')

@@ -65,12 +65,66 @@
         }
       }
     } catch(e){}
-    return _fetch.call(this, url, opts);
+    // Llamadas /api/: corte a los NOOK_FETCH_TIMEOUT ms (red de feria, worker ocupado)
+    // y errores del servidor convertidos en un Error con mensaje amable, para que
+    // ningún juego se quede con el spinner eterno ni pinte un JSON de error.
+    var esApi = (typeof url === 'string' && url.indexOf('/api/') !== -1);
+    if (!esApi) return _fetch.call(this, url, opts);
+    var ctrl = (window.AbortController) ? new AbortController() : null;
+    var timer = null;
+    if (ctrl && !(opts && opts.signal)) {
+      opts = Object.assign({}, opts || {}, { signal: ctrl.signal });
+      timer = setTimeout(function(){ try { ctrl.abort(); } catch(e){} }, window.NOOK_FETCH_TIMEOUT || 40000);
+    }
+    return _fetch.call(this, url, opts).then(function(res){
+      if (timer) clearTimeout(timer);
+      if (res.ok || res.status === 403 || res.status === 404) return res;
+      return res.clone().json().catch(function(){ return {}; }).then(function(j){
+        var err = new Error((j && j.error) || window.NOOK_MSG_ERROR);
+        err.nookAmable = true; err.status = res.status;
+        throw err;
+      });
+    }, function(e){
+      if (timer) clearTimeout(timer);
+      var err = new Error(e && e.name === 'AbortError' ? window.NOOK_MSG_LENTO : window.NOOK_MSG_RED);
+      err.nookAmable = true; err.causa = e;
+      throw err;
+    });
   };
+
+  window.NOOK_MSG_ERROR = 'Este juego está descansando un momento. Prueba otro del menú o vuelve en un minuto.';
+  window.NOOK_MSG_LENTO = 'Está tardando más de lo normal. Puedes esperar un poco o probar otro juego.';
+  window.NOOK_MSG_RED   = 'No hay conexión ahora mismo. Comprueba la red y vuelve a intentarlo.';
+
+  // Pantalla de fallo única para todos los juegos (se muestra si un error llega
+  // sin que el juego lo capture). Siempre deja una salida: volver al menú.
+  function nookMostrarFallo(msg){
+    try {
+      if (document.getElementById('nook-fallo')) return;
+      var d = document.createElement('div');
+      d.id = 'nook-fallo';
+      d.setAttribute('role', 'alert');
+      d.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(247,242,235,.96);display:flex;align-items:center;justify-content:center;padding:24px;';
+      d.innerHTML = '<div style="max-width:360px;width:100%;background:#fff;border-radius:18px;padding:26px 22px;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.08);font-family:inherit">'
+        + '<div style="font-size:34px;line-height:1;margin-bottom:10px">☕</div>'
+        + '<p style="margin:0 0 18px;font-size:15px;line-height:1.45;color:#1A1A1A"></p>'
+        + '<a href="/{{ bar.slug }}?code={{ code }}" style="display:block;background:var(--bar-primary,#C4622D);color:var(--bar-primary-text,#fff);text-decoration:none;border-radius:12px;padding:13px;font-weight:600;margin-bottom:8px">Volver al menú</a>'
+        + '<button type="button" style="display:block;width:100%;background:none;border:1px solid #ddd;border-radius:12px;padding:12px;font-size:14px;color:#555">Reintentar</button>'
+        + '</div>';
+      d.querySelector('p').textContent = msg || window.NOOK_MSG_ERROR;
+      d.querySelector('button').onclick = function(){ location.reload(); };
+      document.body.appendChild(d);
+    } catch(e){}
+  }
+  window.nookMostrarFallo = nookMostrarFallo;
+  window.addEventListener('unhandledrejection', function(ev){
+    var r = ev && ev.reason;
+    if (r && r.nookAmable) { ev.preventDefault(); nookMostrarFallo(r.message); }
+  });
 })();
 </script>
 <script src="/static/js/stats.js"></script>
-<script src="/static/js/share.js?v=2"></script>
+<script src="/static/js/share.js?v=3"></script>
 <script>
 const GAME_PRODUCTS = {{ products_json|default('[]') }};
 function showResultPromo() {

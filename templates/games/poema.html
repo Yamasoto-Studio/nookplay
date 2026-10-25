@@ -194,7 +194,7 @@ async function generar() {
     window.scrollTo(0, 0);
   } catch(e) {
     showScreen('s-form');
-    alert('No se pudo crear el poema. Inténtalo de nuevo.');
+    nookMostrarFallo((e && e.nookAmable && e.message) || 'No se pudo crear el poema ahora mismo. Inténtalo de nuevo en un momento.');
   }
 }
 function otroPoema() {

@@ -358,12 +358,14 @@ function startPolling() {
 
 async function forcePregen() {
   const msg = document.getElementById('sys-msg');
+  const ok = window.prompt('Esto BORRA el contenido de hoy de todos los espacios (salvo eventos en curso) y lo regenera. Para un solo espacio usa "Generar todo hoy" en su panel.\n\nEscribe REGENERAR para continuar:');
+  if ((ok || '').trim().toUpperCase() !== 'REGENERAR') { msg.textContent = 'Cancelado.'; return; }
   msg.textContent = '⏳ Iniciando regeneración...';
   try {
     const res = await fetch('/admin/api/pregen-now', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({})
+      body: JSON.stringify({ confirmar: true })
     });
     const data = await res.json();
     if (data.ok) {

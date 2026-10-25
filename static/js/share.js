@@ -39,26 +39,74 @@ function shareGame({ correct, gameTitle, pct, gameSlug, gancho, emoji }) {
   nookShareWithImage(txt, gameSlug);
 }
 
-/* ─── Compartir con imagen del juego (Web Share API Level 2) ─── */
-async function nookShareWithImage(txt, gameSlug) {
+/* ─── Compartir con imagen del juego (Web Share API Level 2) ───
+   iOS Safari solo permite navigator.share() DENTRO del gesto del usuario: un
+   await previo (descargar la imagen) consume la activación y el share falla en
+   silencio. Por eso la imagen se precarga al abrir la página y el handler
+   llama a share() de forma síncrona. Si no hay imagen lista, se comparte
+   solo texto; si share() no existe, se copia al portapapeles. */
+var _nookImg = { slug: '', file: null };
+
+function nookPrecargarImagen(slug) {
+  if (!slug || !window.File || !window.fetch) return;
+  if (_nookImg.slug === slug && _nookImg.file) return;
+  _nookImg.slug = slug;
+  fetch('/static/games/' + slug + '.webp')
+    .then(function (r) { return r.ok ? r.blob() : null; })
+    .then(function (b) { if (b && _nookImg.slug === slug) _nookImg.file = new File([b], 'nookplay.webp', { type: b.type || 'image/webp' }); })
+    .catch(function () {});
+}
+
+function nookSlugDePagina() {
+  try {
+    var p = location.pathname.split('/').filter(Boolean);
+    return p.length >= 2 ? p[p.length - 1] : '';
+  } catch (e) { return ''; }
+}
+
+function nookAvisoCopiado() {
+  try {
+    var d = document.createElement('div');
+    d.textContent = 'Texto copiado. Pégalo donde quieras.';
+    d.style.cssText = 'position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:#1A1A1A;color:#fff;padding:10px 16px;border-radius:999px;font-size:14px;z-index:9999;opacity:0;transition:opacity .2s';
+    document.body.appendChild(d);
+    requestAnimationFrame(function () { d.style.opacity = '1'; });
+    setTimeout(function () { d.style.opacity = '0'; setTimeout(function () { d.remove(); }, 250); }, 2200);
+  } catch (e) {}
+}
+
+function nookShareWithImage(txt, gameSlug) {
   nookTrackShare(gameSlug);
-  const url = nookSpaceUrl();
-  if (gameSlug && navigator.canShare) {
-    try {
-      const resp = await fetch(`/static/games/${gameSlug}.webp`);
-      const blob = await resp.blob();
-      const file = new File([blob], 'nookplay.webp', { type: blob.type });
-      if (navigator.canShare({ files: [file], text: txt })) {
-        await navigator.share({ files: [file], text: txt });
-        return;
-      }
-    } catch (e) { /* fallback abajo */ }
-  }
+  var file = (gameSlug && _nookImg.slug === gameSlug) ? _nookImg.file : null;
+  var conImagen = !!(file && navigator.canShare && navigator.canShare({ files: [file], text: txt }));
   if (navigator.share) {
-    navigator.share({ text: txt }).catch(() => {});
-  } else {
-    navigator.clipboard.writeText(txt).then(() => alert('¡Copiado! Compártelo donde quieras.')).catch(() => {});
+    var p = conImagen ? navigator.share({ files: [file], text: txt }) : navigator.share({ text: txt });
+    p.catch(function (e) {
+      // Cancelado por el usuario: nada. Otro fallo con imagen: reintento solo texto
+      // (ya fuera del gesto, puede no abrirse; si no, portapapeles).
+      if (e && e.name === 'AbortError') return;
+      if (conImagen) {
+        navigator.share({ text: txt }).catch(function () { nookCopiar(txt); });
+      } else {
+        nookCopiar(txt);
+      }
+    });
+    return;
   }
+  nookCopiar(txt);
+}
+
+function nookCopiar(txt) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(txt).then(nookAvisoCopiado).catch(function () {});
+  }
+}
+
+// Precarga de la imagen del juego actual en cuanto carga la página
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', function () { nookPrecargarImagen(nookSlugDePagina()); });
+} else {
+  nookPrecargarImagen(nookSlugDePagina());
 }
 
 /* ─── Celebración de victoria (puzzles) ─── */
