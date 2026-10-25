@@ -1113,6 +1113,16 @@
 
   <script>
   const PANEL_BAR_SLUG = '{{ bar.slug }}';
+  async function toggleBarActive(activar) {
+    const msg = activar ? '¿Reactivar este espacio? Volverá a verse al público y a generar contenido.' : '¿Pausar este espacio? Dejará de verse al público. No se borra nada.';
+    if (!window.confirm(msg)) return;
+    try {
+      const r = await fetch('/admin/api/toggle-bar-active', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ bar_slug: PANEL_BAR_SLUG, active: !!activar }) });
+      const d = await r.json().catch(() => null);
+      if (!d || !d.ok) { window.alert((d && d.error) || 'No se pudo cambiar el estado'); return; }
+      location.reload();
+    } catch (e) { window.alert('Error de red'); }
+  }
   let CURRENT_PLAN = '{{ bar.plan or "starter" }}';
 
   const PLAN_CFG = {
@@ -1853,16 +1863,6 @@ async function changePassword() {
   }
 }
 
-  async function toggleBarActive(activar) {
-    const msg = activar ? '¿Reactivar este espacio? Volverá a verse al público y a generar contenido.' : '¿Pausar este espacio? Dejará de verse al público. No se borra nada.';
-    if (!window.confirm(msg)) return;
-    try {
-      const r = await fetch('/admin/api/toggle-bar-active', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ bar_slug: PANEL_BAR_SLUG, active: !!activar }) });
-      const d = await r.json().catch(() => null);
-      if (!d || !d.ok) { window.alert((d && d.error) || 'No se pudo cambiar el estado'); return; }
-      location.reload();
-    } catch (e) { window.alert('Error de red'); }
-  }
 </script>
 {% endif %}
 
