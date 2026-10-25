@@ -79,7 +79,7 @@
   <div class="sa-stats">
     <div class="sa-stat">
       <div class="sa-stat-val">{{ stats.total_bars }}</div>
-      <div class="sa-stat-label">Locales activos</div>
+      <div class="sa-stat-label">Espacios activos</div>
     </div>
     <div class="sa-stat">
       <div class="sa-stat-val">{{ stats.plays_today }}</div>
@@ -111,13 +111,13 @@
 
   <!-- Lista de bares -->
   <div class="sa-section-title">
-    <span>Locales</span>
+    <span>Locales / eventos</span>
     <a href="#" class="btn-new-bar" onclick="openModal()">+ Nuevo espacio</a>
   </div>
 
   <div class="bars-table">
     <div class="bar-row bar-row-header">
-      <div>Local</div>
+      <div>Local / evento</div>
       <div>Plan</div>
       <div>Estado</div>
       <div>Partidas</div>
@@ -144,23 +144,36 @@
 </div>
 
 {% if bars_pausados %}
-<div class="section" style="margin-top:18px; opacity:0.75;">
-  <div class="section-title" style="display:flex; align-items:center; gap:8px;">En pausa <span style="font-size:12px; font-weight:400; color:#A89B91;">({{ bars_pausados|length }}) · no aparecen al público ni se generan; se pueden reactivar desde su panel</span></div>
-  <div class="bars-table">
+  <div class="sa-section-title" style="margin-top:28px;">
+    <span>En pausa <span style="font-size:12px; font-weight:400; color:#A89B91;">· no se ven al público ni generan contenido; se reactivan desde su panel</span></span>
+  </div>
+
+  <div class="bars-table" style="opacity:0.8;">
+    <div class="bar-row bar-row-header">
+      <div>Local / evento</div>
+      <div>Plan</div>
+      <div>Estado</div>
+      <div>Partidas</div>
+      <div></div>
+    </div>
     {% for bar in bars_pausados %}
     <div class="bar-row">
       <div>
-        <div class="bar-name">⏸ {{ bar.name }}{% if (bar.space_kind or 'local') == 'evento' %} <span style="display:inline-block; font-size:10px; font-weight:700; background:#EEE; color:#777; border:1px solid #DDD; border-radius:6px; padding:1px 7px; vertical-align:middle;">EVENTO</span>{% endif %}</div>
-        <div class="bar-city">{{ bar.city }}{% if (bar.space_kind or 'local') == 'evento' and bar.event_start %} · {{ bar.event_start }} → {{ bar.event_end }}{% endif %}</div>
+        <div class="bar-name">{{ bar.name }}{% if (bar.space_kind or 'local') == 'evento' %} <span style="display:inline-block; font-size:10px; font-weight:700; background:#F0ECE7; color:#8A7F76; border:1px solid #E0D8D0; border-radius:6px; padding:1px 7px; vertical-align:middle; letter-spacing:0.4px;">🎪 EVENTO</span>{% endif %}</div>
+        <div class="bar-city">{{ bar.city }}{% if bar.province %}, {{ bar.province }}{% endif %}{% if (bar.space_kind or 'local') == 'evento' and bar.event_start %} · {{ bar.event_start }} → {{ bar.event_end }}{% endif %}</div>
       </div>
-      <div></div>
-      <div><span style="font-size:12px; color:#A89B91;">En pausa</span></div>
-      <div></div>
+      <div>
+          <span class="plan-badge plan-{{ bar.plan or 'gift' }}">
+            {{ '🥉' if (bar.plan or 'gift') == 'starter' else ('🥈' if (bar.plan or 'gift') == 'pro' else ('🥇' if (bar.plan or 'gift') == 'total' else '🎁')) }}
+            {{ (bar.plan or 'gift')|capitalize }}
+          </span>
+        </div>
+      <div><span style="font-size:12px; font-weight:500; color:#A89B91;">⏸ En pausa</span></div>
+      <div class="plays-count">{{ bar.plays_count }}</div>
       <div><a href="/admin/{{ bar.slug }}" class="btn-edit">Gestionar →</a></div>
     </div>
     {% endfor %}
   </div>
-</div>
 {% endif %}
 
 <!-- Modal nuevo bar -->

@@ -5452,7 +5452,11 @@ def admin_dashboard():
         bar_dict = dict(bar)
         bar_dict['plays_count'] = plays
         bars.append(bar_dict)
-    bars_pausados = [dict(b) for b in db.execute("SELECT * FROM bars WHERE active = 0 ORDER BY name").fetchall()]
+    bars_pausados = []
+    for bar in db.execute("SELECT * FROM bars WHERE active = 0 ORDER BY name").fetchall():
+        bd = dict(bar)
+        bd['plays_count'] = db.execute("SELECT COUNT(*) as n FROM plays WHERE bar_slug = ?", (bar['slug'],)).fetchone()['n']
+        bars_pausados.append(bd)
     stats = {
         'total_bars': len(bars),
         'plays_today': db.execute("SELECT COUNT(*) as n FROM plays WHERE played_on = ?", (today,)).fetchone()['n'],
