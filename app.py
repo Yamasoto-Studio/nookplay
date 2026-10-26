@@ -2496,6 +2496,28 @@ def teasers_api():
         foco = k.get('Foco de las preguntas')
         if foco:
             out['trivia'] = foco[:70]
+    # Eventos con pool: progreso por dispositivo (variantes vistas / variantes de hoy),
+    # para que el ✓ de "jugado" no esconda que aún queda contenido nuevo.
+    try:
+        if int(bar['event_pool_size'] or 1) > 1:
+            pool = {}
+            for slug in activos:
+                ids = [r['id'] for r in db.execute(
+                    "SELECT id FROM generated_games WHERE bar_id = ? AND game_type = ? AND game_date = ?",
+                    (bar['id'], slug, today)).fetchall()]
+                if len(ids) <= 1:
+                    continue
+                vistas = 0
+                if device_id:
+                    marcas = ','.join('?' * len(ids))
+                    vistas = db.execute(
+                        f"SELECT COUNT(*) AS n FROM variant_views WHERE device_id = ? AND gg_id IN ({marcas})",
+                        [device_id] + ids).fetchone()['n']
+                pool[slug] = {'vistas': int(vistas), 'total': len(ids)}
+            if pool:
+                out['_pool'] = pool
+    except Exception:
+        pass
     db.close()
     return jsonify(out)
 

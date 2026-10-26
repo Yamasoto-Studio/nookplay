@@ -42,6 +42,8 @@
   .teaser-hoy { display: inline-block; font-size: 9px; font-weight: 800; letter-spacing: 0.8px; text-transform: uppercase; color: var(--bar-primary); margin-right: 6px; vertical-align: 1px; }
   .activity-card-grid.played { opacity: 0.72; }
   .activity-card-grid.played .activity-desc { color: #2E7D32; font-weight: 600; }
+  /* Jugado pero con versiones por ver (eventos con pool): ni apagado ni en verde */
+  .activity-card-grid.played-partial .played-badge { background: var(--bar-primary); color: var(--bar-primary-text); width: auto; min-width: 22px; padding: 0 7px; border-radius: 11px; font-size: 11px; }
   .demo-wall-overlay {
     position: fixed; inset: 0; z-index: 2000;
     background: rgba(0,0,0,0.55);
@@ -625,7 +627,7 @@ async function cargarGanchos() {
   try {
     const r = await fetch('/api/teasers', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG, device_id: nookDeviceId() })
+      body: JSON.stringify({ code: (validatedCode || urlCode || DEMO_CODE || ''), bar_slug: BAR_SLUG, device_id: nookDeviceId() })
     });
     if (!r.ok) return;
     window.__nookTeasers = await r.json();
@@ -636,9 +638,32 @@ async function cargarGanchos() {
 function aplicarGanchos() {
   const t = window.__nookTeasers;
   if (!t) return;
+  // Eventos con varias variantes por juego: un juego jugado con variantes por ver
+  // pasa de "Hecho" a "1 de 3 · hay más" y deja de verse apagado.
+  const pool = t._pool || {};
+  Object.entries(pool).forEach(([slug, p]) => {
+    const card = document.querySelector(`.activity-card-grid[data-slug="${slug}"]`);
+    if (!card || !card.classList.contains('played')) return;
+    if (p.vistas >= p.total) {
+      card.querySelector('.played-badge')?.setAttribute('title', `Has jugado las ${p.total} versiones de hoy`);
+      return;
+    }
+    card.classList.remove('played');
+    card.classList.add('played-partial');
+    const badge = card.querySelector('.played-badge');
+    if (badge) { badge.textContent = `${p.vistas}/${p.total}`; badge.title = `Jugado ${p.vistas} de ${p.total} versiones de hoy`; }
+    const desc = card.querySelector('.activity-desc');
+    if (desc) { desc.textContent = `Jugado ${p.vistas} de ${p.total} · aún hay más`; desc.classList.remove('teaser'); }
+  });
   Object.entries(t).forEach(([slug, texto]) => {
+    if (slug === '_pool' || typeof texto !== 'string') return;
     const el = document.querySelector(`.activity-card-grid[data-slug="${slug}"]:not(.played) .activity-desc`);
-    if (el && texto && !el.classList.contains('teaser')) { el.innerHTML = `<span class="teaser-hoy">Hoy</span>${texto.replace(/</g, '&lt;')}`; el.classList.add('teaser'); }
+    if (!el || !texto || el.classList.contains('teaser')) return;
+    const card = el.closest('.activity-card-grid');
+    const p = card && card.classList.contains('played-partial') ? pool[slug] : null;
+    const etiqueta = p ? `${p.vistas}/${p.total} · nuevo` : 'Hoy';
+    el.innerHTML = `<span class="teaser-hoy">${etiqueta}</span>${texto.replace(/</g, '&lt;')}`;
+    el.classList.add('teaser');
   });
 }
 
