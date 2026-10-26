@@ -2341,7 +2341,10 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
     # Validación estricta: exactamente 3 preguntas bien formadas (reintento si no)
     import json as _json
     raw = None
-    for _intento in range(2):
+    mejores = []  # las preguntas válidas del mejor intento, por si ninguno llega a 3
+    # En pre-generación (batch) hay tiempo para un tercer intento; en caliente, dos.
+    _intentos = 3 if get_ia_mode() == 'batch' else 2
+    for _intento in range(_intentos):
         raw = _post_ia(prompt, 1100, api_key)
         try:
             obj = _parse_ia_json(raw)
@@ -2349,6 +2352,12 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
                   if p.get('enunciado') and isinstance(p.get('opciones'), list)
                   and len(p['opciones']) == 4 and isinstance(p.get('correcta'), int)
                   and 0 <= p['correcta'] <= 3 and p.get('explicacion')]
+            # Acumular válidas de intentos distintos: dos de uno y una de otro suman tres
+            for p in pr:
+                if all(p.get('enunciado') != q.get('enunciado') for q in mejores):
+                    mejores.append(p)
+            if len(pr) < 3 and len(mejores) >= 3:
+                pr = mejores
             if len(pr) >= 3:
                 obj['preguntas'] = pr[:3]
                 msgs = obj.get('mensajes') or {}
@@ -2362,7 +2371,10 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
                 return obj
         except Exception:
             pass
-    return raw  # último recurso: el cliente ya tolera menos de 3
+    # Último recurso: lo válido que haya (el cliente tolera menos de 3)
+    if mejores and isinstance(raw, dict):
+        raw['preguntas'] = mejores[:3]
+    return raw
 
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -115,7 +115,7 @@
 
 <!-- LOADING -->
 <div class="screen active" id="s-loading">
-  <div class="loading"><div class="loading-spinner"></div><p>Cronómetro en marcha… 10 segundos por pregunta.</p></div>
+  <div class="loading"><div class="loading-spinner"></div><p>Cronómetro en marcha… 20 segundos por pregunta.</p></div>
 </div>
 
 <!-- JUEGO -->
@@ -172,7 +172,7 @@ let respuestas = []; // {correcta: bool, elegida: str, correctaTexto: str}
 let seleccionActual = null;
 let startTime = null;
 let tiempoTotal = 0;
-const SEGUNDOS_POR_PREGUNTA = 10;
+const SEGUNDOS_POR_PREGUNTA = 20;
 let timerInterval = null;   // tick del cronómetro
 let timerFin = 0;           // timestamp de agotamiento
 let avanceTimeout = null;   // avance automático tras agotarse
@@ -191,7 +191,7 @@ function pintarTimer(restante) {
   const r = Math.max(0, restante);
   fill.style.width = (r / SEGUNDOS_POR_PREGUNTA * 100) + '%';
   num.textContent = Math.ceil(r) + ' s';
-  wrap.classList.toggle('urgente', r <= 3);
+  wrap.classList.toggle("urgente", r <= 5);
 }
 
 function arrancarTimer() {
@@ -438,7 +438,7 @@ function doShare() {
   const score = respuestas.filter(r => r.correcta).length;
   const grid = respuestas.map(r => r.correcta ? '🟩' : '🟥').join('');
   const seg = tiempos.reduce((a, b) => a + b, 0);
-  const txt = nookShareText({ emoji: '⚡', titulo: 'Mente Ágil', resultado: `${grid} ${score}/${respuestas.length}` + (seg ? ` · ${seg}s` : ''), gancho: '3 preguntas psicotécnicas, 10 segundos cada una. ¿Me superas?' });
+  const txt = nookShareText({ emoji: '⚡', titulo: 'Mente Ágil', resultado: `${grid} ${score}/${respuestas.length}` + (seg ? ` · ${seg}s` : ''), gancho: '3 preguntas psicotécnicas, 20 segundos cada una. ¿Me superas?' });
   nookShareWithImage(txt, 'menteagil');
 }
 
