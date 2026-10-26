@@ -459,6 +459,15 @@ for slug, name, desc, pos in [
         db.commit()
         print(f'Juego {name} añadido.')
 
+# Añadir El Prototipo si no existe
+if not db.execute("SELECT id FROM games WHERE slug = 'prototipo'").fetchone():
+    db.execute(
+        "INSERT INTO games (slug, name, description, icon, plan_min, position) VALUES (?,?,?,?,?,?)",
+        ('prototipo', 'El Prototipo', 'Diseña un juego en un minuto', '/static/games/prototipo.webp', 'starter_free', 32)
+    )
+    db.commit()
+    print('Juego El Prototipo añadido.')
+
 # Reordenar juegos por tipo de experiencia (orden lógico de UX)
 # Orden curado del catálogo y grupos (se reaplica en cada arranque: fuente única)
 CATALOGO_ORDEN = [
@@ -473,7 +482,7 @@ CATALOGO_ORDEN = [
     # Curiosidades del mundo
     ('oraculo', 'curiosidades'), ('muertes', 'curiosidades'), ('donde', 'curiosidades'), ('local', 'curiosidades'), ('vestuario', 'curiosidades'),
     # Crear
-    ('poema', 'crear'), ('papel', 'crear'),
+    ('prototipo', 'crear'), ('poema', 'crear'), ('papel', 'crear'),
     # A dobles
     ('freep', 'dobles'), ('dosverdades', 'dobles'), ('masomenos', 'dobles'), ('quienmas', 'dobles'), ('pensamiento', 'dobles'),
 ]

@@ -1592,6 +1592,140 @@ Exactamente 3 preguntas y 8 papeles con las 8 combinaciones distintas.""" + _blo
             pass
     return raw
 
+# ─────────────────────────────────────────────────────────────────────────────
+# El Prototipo: tres decisiones → una pieza "oficial" con tu nombre.
+# Preset por espacio (mando creativo): qué se inventa. El motor es el mismo:
+# 3 ejes × 3 opciones = 27 combinaciones pregenerables; cada combinación trae
+# 3 títulos (el jugador elige uno), tagline, texto de contraportada, ficha y
+# dos reseñas inventadas. Se genera en 1 + 3 llamadas (ejes, y 9 piezas por
+# cada opción del primer eje) para que cada JSON sea corto y fiable.
+# ─────────────────────────────────────────────────────────────────────────────
+PROTOTIPO_PRESETS = {
+    'juego': {
+        'nombre': 'juego de mesa',
+        'ejes': ['Tema', 'Mecánica', 'Tono'],
+        'ejemplo_ejes': '"Tema" (p. ej. piratas, abuelas, oficina), "Mecánica" (faroleo, memoria, subasta) y "Tono" (épico, absurdo, tierno)',
+        'pieza': 'la CONTRAPORTADA de la caja de un juego de mesa',
+        'ficha': ['Jugadores', 'Duración', 'Edad'],
+        'ejemplo_ficha': '["2–5", "20 min", "10+"]',
+        'resenas_de': 'reseñas de prensa o de jugadores inventados (medios y nombres ficticios y graciosos, p. ej. "Tu cuñado", "Revista Dado Cargado")',
+    },
+    'carta': {
+        'nombre': 'plato o bebida de la carta',
+        'ejes': ['Base', 'Toque', 'Personalidad'],
+        'ejemplo_ejes': '"Base" (café, cóctel, bocadillo), "Toque" (picante, dulce, ahumado) y "Personalidad" (elegante, canalla, de abuela)',
+        'pieza': 'la FICHA DE CARTA de un plato o bebida que no existe, tal como la escribiría un restaurante',
+        'ficha': ['Precio', 'Maridaje', 'Para'],
+        'ejemplo_ficha': '["4,50 €", "una tarde de lluvia", "indecisos"]',
+        'resenas_de': 'reseñas de clientes inventados (nombres ficticios y graciosos)',
+    },
+    'serie': {
+        'nombre': 'serie de televisión',
+        'ejes': ['Género', 'Protagonista', 'Giro'],
+        'ejemplo_ejes': '"Género" (thriller, comedia, época), "Protagonista" (una jubilada, un becario, un perro) y "Giro" (viaje en el tiempo, todos mienten, es un musical)',
+        'pieza': 'la SINOPSIS DE CONTRAPORTADA de una serie que no existe, en el estilo de una plataforma de streaming',
+        'ficha': ['Temporadas', 'Episodios', 'Para ver'],
+        'ejemplo_ficha': '["3 (ya renovada)", "8 de 45 min", "en maratón"]',
+        'resenas_de': 'citas de crítica inventadas (medios ficticios y graciosos)',
+    },
+}
+
+
+def _prototipo_valido(p, titulos_min=3):
+    return (isinstance(p, dict) and isinstance(p.get('titulos'), list)
+            and len([t for t in p['titulos'] if isinstance(t, str) and t.strip()]) >= titulos_min
+            and isinstance(p.get('tagline'), str) and p['tagline'].strip()
+            and isinstance(p.get('texto'), str) and len(p['texto'].strip()) >= 60
+            and isinstance(p.get('ficha'), list) and len(p['ficha']) >= 3
+            and isinstance(p.get('resenas'), list) and len([r for r in p['resenas'] if isinstance(r, str) and r.strip()]) >= 2)
+
+
+def generate_prototipo(bar_slug, preset='juego', evitar=None):
+    api_key = os.environ.get('ANTHROPIC_API_KEY')
+    P = PROTOTIPO_PRESETS.get(preset) or PROTOTIPO_PRESETS['juego']
+    import json as _json
+    intentos = 3 if get_ia_mode() == 'batch' else 2
+
+    # 1) Ejes: 3 ejes × 3 opciones, cortas y combinables
+    prompt_ejes = f"""Eres el diseñador de EL PROTOTIPO, un juego en el que cada persona inventa un {P['nombre']} en un minuto eligiendo UNA opción en cada uno de 3 ejes.
+
+Define hoy los 3 ejes: {P['ejemplo_ejes']}. Cada eje tiene EXACTAMENTE 3 opciones de 1-3 palabras, concretas, evocadoras y muy distintas entre sí, de modo que las 27 combinaciones den piezas claramente diferentes y con gracia. Inspírate en el universo del espacio si hay temática, sin nombrar marcas, productos ni personas reales.
+
+Responde SOLO con este JSON:
+{{"ejes": [{{"nombre": "{P['ejes'][0]}", "opciones": ["...", "...", "..."]}}, {{"nombre": "{P['ejes'][1]}", "opciones": ["...", "...", "..."]}}, {{"nombre": "{P['ejes'][2]}", "opciones": ["...", "...", "..."]}}]}}""" + _bloque_evitar(evitar)
+
+    ejes = None
+    for _ in range(intentos):
+        try:
+            obj = _parse_ia_json(_post_ia(prompt_ejes, 600, api_key))
+            ej = obj.get('ejes') or []
+            ok = (len(ej) == 3 and all(isinstance(e, dict) and isinstance(e.get('opciones'), list)
+                                       and len([o for o in e['opciones'] if isinstance(o, str) and o.strip()]) == 3 for e in ej))
+            if ok:
+                ejes = [{'nombre': str(e.get('nombre') or P['ejes'][i])[:30],
+                         'opciones': [str(o).strip()[:28] for o in e['opciones'][:3]]} for i, e in enumerate(ej)]
+                break
+        except Exception:
+            continue
+    if not ejes:
+        raise Exception('El Prototipo: no se pudieron generar los ejes')
+
+    # 2) Piezas: 9 por cada opción del primer eje (3 llamadas)
+    piezas = []
+    for i0, op0 in enumerate(ejes[0]['opciones']):
+        combos = [(i0, i1, i2) for i1 in range(3) for i2 in range(3)]
+        lista = '\n'.join(
+            f'- combo "{i0}-{i1}-{i2}": {ejes[0]["nombre"]} = {op0} · {ejes[1]["nombre"]} = {ejes[1]["opciones"][i1]} · {ejes[2]["nombre"]} = {ejes[2]["opciones"][i2]}'
+            for (_, i1, i2) in combos)
+        prompt_piezas = f"""Eres el redactor de EL PROTOTIPO. Para cada una de estas 9 combinaciones escribe {P['pieza']}, como si existiera de verdad y fuera un éxito:
+{lista}
+
+Cada pieza lleva:
+- "titulos": 3 títulos distintos y memorables (2-5 palabras, sin comillas), de los que el jugador elegirá uno.
+- "tagline": una frase de gancho de 6-12 palabras.
+- "texto": el texto de contraportada, 3-4 frases (60-110 palabras) en el registro exacto del género, que haga reír por lo convincente que suena. Debe reflejar las tres elecciones.
+- "ficha": 3 valores cortos para [{', '.join(P['ficha'])}], p. ej. {P['ejemplo_ficha']}.
+- "resenas": 2 {P['resenas_de']}, cada una como UNA cadena «cita» — Fuente, de máximo 14 palabras.
+
+Nada ofensivo; sin marcas, productos ni personas reales. Responde SOLO con este JSON:
+{{"piezas": [{{"combo": "{i0}-0-0", "titulos": ["...", "...", "..."], "tagline": "...", "texto": "...", "ficha": ["...", "...", "..."], "resenas": ["«...» — ...", "«...» — ..."]}}]}}
+Exactamente 9 piezas, una por combo, con los combos indicados."""
+        lote = None
+        for _ in range(intentos):
+            try:
+                obj = _parse_ia_json(_post_ia(prompt_piezas, 4200, api_key))
+                cand = {str(p.get('combo')).strip(): p for p in (obj.get('piezas') or []) if _prototipo_valido(p)}
+                esperados = [f'{a}-{b}-{c}' for (a, b, c) in combos]
+                if all(k in cand for k in esperados):
+                    lote = [cand[k] for k in esperados]
+                    break
+                # Tolerancia: si faltan ≤2, se rellenan con la más parecida (mismo i1)
+                if len([k for k in esperados if k in cand]) >= 7:
+                    lote = []
+                    for k in esperados:
+                        if k in cand:
+                            lote.append(cand[k]); continue
+                        i1 = k.split('-')[1]
+                        sustituto = next((cand[j] for j in esperados if j in cand and j.split('-')[1] == i1), next(iter(cand.values())))
+                        copia = dict(sustituto); copia['combo'] = k
+                        lote.append(copia)
+                    break
+            except Exception:
+                continue
+        if not lote:
+            raise Exception(f'El Prototipo: no se pudieron generar las piezas de "{op0}"')
+        for p in lote:
+            p['combo'] = str(p['combo']).strip()
+            p['titulos'] = [str(t).strip().strip('«»"')[:50] for t in p['titulos'] if isinstance(t, str) and t.strip()][:3]
+            p['tagline'] = str(p['tagline']).strip()[:120]
+            p['texto'] = str(p['texto']).strip()[:800]
+            p['ficha'] = [str(x).strip()[:30] for x in p['ficha'][:3]]
+            p['resenas'] = [str(r).strip()[:140] for r in p['resenas'] if isinstance(r, str) and r.strip()][:2]
+        piezas.extend(lote)
+
+    return {'preset': preset, 'producto': P['nombre'], 'ficha_labels': P['ficha'], 'ejes': ejes, 'piezas': piezas}
+
+
 def generate_resena(bar_slug, evitar=None):
     api_key = os.environ.get('ANTHROPIC_API_KEY')
     prompt = """Eres el redactor de LA RESEÑA, un juego de humor: reseñas de 5 estrellas absurdamente serias sobre objetos o situaciones COTIDIANOS del universo indicado, y el jugador adivina qué se está reseñando.

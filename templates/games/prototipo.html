@@ -1,0 +1,217 @@
+{% extends "game_base.html" %}
+{% block title %}El Prototipo — {{ bar.name }}{% endblock %}
+{% block og_title %}El Prototipo — {{ bar.name }}{% endblock %}
+{% block og_description %}Tres decisiones y tienes tu propio prototipo. Juega en {{ bar.name }} con Nookplay.{% endblock %}
+{% block og_url %}/{{ bar.slug }}/prototipo{% endblock %}
+
+{% block game_content %}
+<style>
+.pt-intro { text-align: center; padding: 8px 0 18px; }
+.pt-intro h2 { font-size: 22px; font-weight: 800; margin: 0 0 8px; color: var(--bar-accent-dark); }
+.pt-intro p { font-size: 16px; color: var(--text-sec); margin: 0; line-height: 1.5; }
+.pt-prog { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; margin: 0 0 18px; }
+.pt-prog-fill { height: 100%; width: 0; background: var(--bar-primary); border-radius: 2px; transition: width 0.3s cubic-bezier(.2,.8,.2,1); }
+.pt-eje { font-size: 12px; font-weight: 800; letter-spacing: 1.6px; text-transform: uppercase; color: var(--bar-primary); text-align: center; margin-bottom: 6px; }
+.pt-q { font-size: 21px; font-weight: 800; text-align: center; line-height: 1.25; color: var(--bar-accent-dark); margin: 0 0 18px; animation: pt-in 0.25s cubic-bezier(.2,.8,.2,1); }
+@keyframes pt-in { from { opacity: 0; transform: translateY(6px); } }
+.pt-opts { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
+.pt-opt { font-family: inherit; font-size: 18px; font-weight: 700; padding: 18px 14px; border-radius: 16px; border: 2px solid var(--border); background: white; color: var(--bar-accent-dark); cursor: pointer; transition: transform 0.12s, border-color 0.15s, background 0.15s; line-height: 1.25; text-align: left; display: flex; align-items: center; gap: 12px; }
+.pt-opt:active { transform: scale(.98); }
+.pt-opt.pick { border-color: var(--bar-primary); background: var(--bar-bg-subtle); }
+.pt-opt .pt-n { flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%; background: var(--bar-bg-subtle); color: var(--bar-primary); font-size: 13px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+.pt-elegido { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin: -6px 0 14px; }
+.pt-chip { font-size: 12px; font-weight: 700; color: var(--bar-accent-dark); background: var(--bar-bg-subtle); border: 1px solid var(--border); border-radius: 20px; padding: 4px 10px; }
+/* La pieza: caja / ficha / contraportada */
+.pt-stage { perspective: 1200px; margin: 6px 0 18px; }
+.pt-card { position: relative; width: 100%; border-radius: 20px; transform-style: preserve-3d; transition: transform 0.7s cubic-bezier(.2,.8,.2,1); cursor: pointer; }
+.pt-card.flipped { transform: rotateY(180deg); cursor: default; }
+.pt-face { border-radius: 20px; backface-visibility: hidden; -webkit-backface-visibility: hidden; box-sizing: border-box; padding: 24px 22px; }
+.pt-back { position: relative; transform: rotateY(180deg); background: white; border: 1.5px solid var(--border); box-shadow: 0 16px 40px rgba(0,0,0,0.12); min-height: 260px; text-align: left; }
+.pt-front { position: absolute; inset: 0; background: var(--bar-bg-subtle); border: 1.5px dashed var(--border); color: var(--bar-accent-dark); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.06); }
+.pt-front .pt-mark { font-size: 54px; margin-bottom: 10px; }
+.pt-front .pt-tap { font-size: 14px; letter-spacing: 1.4px; text-transform: uppercase; font-weight: 800; color: var(--bar-primary); }
+.pt-eyebrow { font-size: 11px; font-weight: 800; letter-spacing: 1.6px; text-transform: uppercase; color: var(--bar-primary); margin-bottom: 8px; }
+.pt-titulo { font-size: 26px; font-weight: 900; line-height: 1.1; color: var(--bar-accent-dark); margin-bottom: 6px; letter-spacing: -.2px; }
+.pt-tagline { font-size: 15px; font-weight: 700; font-style: italic; color: var(--bar-primary); margin-bottom: 14px; line-height: 1.35; }
+.pt-texto { font-size: 15px; line-height: 1.6; color: var(--text-sec); margin-bottom: 14px; }
+.pt-ficha { display: flex; gap: 8px; margin-bottom: 14px; }
+.pt-ficha div { flex: 1; background: var(--bar-bg-subtle); border-radius: 12px; padding: 10px 8px; text-align: center; }
+.pt-ficha .l { font-size: 10px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 3px; }
+.pt-ficha .v { font-size: 14px; font-weight: 800; color: var(--bar-accent-dark); }
+.pt-resenas { border-top: 1px dashed var(--border); padding-top: 12px; }
+.pt-resena { font-size: 14px; line-height: 1.45; color: var(--text-sec); margin-bottom: 6px; }
+.pt-autor { display: block; font-size: 12px; font-weight: 700; color: var(--bar-accent-dark); margin-top: 8px; text-align: right; }
+.pt-count { margin-top: 12px; font-size: 14px; font-weight: 700; color: var(--bar-primary); text-align: center; }
+.pt-actions { display: none; }
+.pt-actions.on { display: block; }
+</style>
+
+<div class="screen active" id="s-loading">
+  <div class="loading-spinner"></div>
+  <p style="text-align:center; color:var(--text-muted);">Preparando el taller...</p>
+</div>
+
+<div class="screen" id="s-intro">
+  <div class="pt-intro">
+    <h2 id="pt-h2">Diseña un juego en un minuto</h2>
+    <p id="pt-lead">Tres decisiones, un título y tienes tu propio prototipo con contraportada y todo.</p>
+  </div>
+  <button class="btn-primary" style="width:100%;" onclick="empezar()">Empezar a diseñar</button>
+  <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
+</div>
+
+<div class="screen" id="s-test">
+  <div class="pt-prog"><div class="pt-prog-fill" id="pt-prog"></div></div>
+  <div class="pt-elegido" id="pt-elegido"></div>
+  <div class="pt-eje" id="pt-eje"></div>
+  <div class="pt-q" id="pt-q"></div>
+  <div class="pt-opts" id="pt-opts"></div>
+  <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
+</div>
+
+<div class="screen" id="s-pieza">
+  <div class="pt-intro">
+    <h2 id="pt-listo">Tu prototipo está listo</h2>
+    <p>Toca para descubrirlo.</p>
+  </div>
+  <div class="pt-stage">
+    <div class="pt-card" id="pt-card" onclick="revelar()">
+      <div class="pt-face pt-front">
+        <div class="pt-mark">📦</div>
+        <div class="pt-tap">Toca para revelar</div>
+      </div>
+      <div class="pt-face pt-back">
+        <div class="pt-eyebrow" id="pt-eyebrow">Nuevo · edición limitada</div>
+        <div class="pt-titulo" id="pt-titulo"></div>
+        <div class="pt-tagline" id="pt-tagline"></div>
+        <div class="pt-texto" id="pt-texto"></div>
+        <div class="pt-ficha" id="pt-ficha"></div>
+        <div class="pt-resenas" id="pt-resenas"></div>
+        <span class="pt-autor" id="pt-autor"></span>
+        <div class="pt-count" id="pt-count"></div>
+      </div>
+    </div>
+  </div>
+  <div class="pt-actions" id="pt-actions">
+    <div id="result-promo" style="display:none;"></div>
+    <button class="btn-share" onclick="doShare()">📤 Compartir</button>
+    <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
+    <div class="tomorrow">{{ bar.tomorrow_message or "Mañana, otro taller con piezas nuevas." }}</div>
+  </div>
+  <button class="btn-menu" id="btn-menu-pre" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
+</div>
+
+<script>
+const BAR_SLUG = {{ bar.slug|tojson }};
+const BAR_NAME = {{ bar.name|tojson }};
+const CODE = new URLSearchParams(window.location.search).get('code') || '';
+let gameData = null, elecciones = [], paso = 0, pieza = null, tituloElegido = '', revelado = false;
+
+const COPY = {
+  juego: { h2: 'Diseña un juego en un minuto', lead: 'Tres decisiones, un título y tienes tu propio prototipo con contraportada y todo.', eyebrow: 'Nuevo · edición limitada', listo: 'Tu juego está listo', mark: '📦', emoji: '🧪', titulo: 'El Prototipo', gancho: 'Tres decisiones y tienes tu propio juego de mesa. ¿Cuál diseñas tú?' },
+  carta: { h2: 'Inventa el plato que falta en la carta', lead: 'Tres decisiones, un nombre y tienes tu propia ficha de carta.', eyebrow: 'Novedad de la casa', listo: 'Tu creación está lista', mark: '🍽️', emoji: '🍽️', titulo: 'El Prototipo', gancho: 'Tres decisiones y tienes tu propio plato o bebida. ¿Cuál inventas tú?' },
+  serie: { h2: 'Crea la serie que verías esta noche', lead: 'Tres decisiones, un título y tienes tu propia serie con sinopsis y críticas.', eyebrow: 'Estreno · ya disponible', listo: 'Tu serie está lista', mark: '📺', emoji: '📺', titulo: 'El Prototipo', gancho: 'Tres decisiones y tienes tu propia serie. ¿Cuál creas tú?' },
+};
+function copy() { return COPY[(gameData && gameData.preset) || 'juego'] || COPY.juego; }
+
+async function init() {
+  try {
+    const res = await fetch('/api/prototipo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG }) });
+    gameData = await res.json();
+    if (!Array.isArray(gameData.ejes) || gameData.ejes.length !== 3 || !Array.isArray(gameData.piezas) || !gameData.piezas.length) throw new Error('sin piezas');
+    const c = copy();
+    document.getElementById('pt-h2').textContent = c.h2;
+    document.getElementById('pt-lead').textContent = c.lead;
+    document.getElementById('pt-eyebrow').textContent = c.eyebrow;
+    document.getElementById('pt-listo').textContent = c.listo;
+    document.querySelector('.pt-front .pt-mark').textContent = c.mark;
+    showScreen('s-intro');
+  } catch(e) {
+    if (e && e.nookAmable) throw e;
+    document.getElementById('s-loading').innerHTML = `<div class="error-msg">No se pudo abrir el taller.<br><button class="btn-secondary" onclick="location.reload()">Reintentar</button></div>`;
+  }
+}
+
+function empezar() { elecciones = []; paso = 0; renderPaso(); showScreen('s-test'); }
+
+function renderPaso() {
+  const total = 4; // 3 ejes + título
+  document.getElementById('pt-prog').style.width = `${(paso / total) * 100}%`;
+  const chips = document.getElementById('pt-elegido');
+  chips.innerHTML = elecciones.map((i, k) => `<span class="pt-chip">${esc(gameData.ejes[k].opciones[i])}</span>`).join('');
+  const opts = document.getElementById('pt-opts');
+  const q = document.getElementById('pt-q');
+  q.style.animation = 'none'; void q.offsetWidth; q.style.animation = '';
+  if (paso < 3) {
+    const eje = gameData.ejes[paso];
+    document.getElementById('pt-eje').textContent = `${paso + 1} de 3 · ${eje.nombre}`;
+    q.textContent = paso === 0 ? `¿De qué va?` : (paso === 1 ? `¿Cómo se juega?` : `¿Qué tono tiene?`);
+    if (gameData.preset === 'carta') q.textContent = paso === 0 ? '¿Cuál es la base?' : (paso === 1 ? '¿Qué toque lleva?' : '¿Qué personalidad tiene?');
+    if (gameData.preset === 'serie') q.textContent = paso === 0 ? '¿De qué género es?' : (paso === 1 ? '¿Quién la protagoniza?' : '¿Cuál es el giro?');
+    opts.innerHTML = eje.opciones.map((o, i) => `<button class="pt-opt" onclick="elegir(${i})"><span class="pt-n">${i + 1}</span><span>${esc(o)}</span></button>`).join('');
+  } else {
+    pieza = piezaDe(elecciones);
+    document.getElementById('pt-eje').textContent = `Último paso · el título`;
+    q.textContent = '¿Cómo se llama?';
+    opts.innerHTML = (pieza.titulos || []).map((t, i) => `<button class="pt-opt" onclick="elegirTitulo(${i})"><span class="pt-n">${'ABC'[i] || i + 1}</span><span>${esc(t)}</span></button>`).join('');
+  }
+}
+
+function piezaDe(sel) {
+  const combo = sel.join('-');
+  return gameData.piezas.find(p => p.combo === combo) || gameData.piezas[(sel[0] * 9 + sel[1] * 3 + sel[2]) % gameData.piezas.length];
+}
+
+function elegir(i) {
+  if (elecciones.length > paso) return;
+  const btns = document.querySelectorAll('.pt-opt'); if (btns[i]) btns[i].classList.add('pick');
+  elecciones.push(i);
+  setTimeout(() => { paso++; renderPaso(); }, 220);
+}
+
+function elegirTitulo(i) {
+  if (tituloElegido) return;
+  const btns = document.querySelectorAll('.pt-opt'); if (btns[i]) btns[i].classList.add('pick');
+  tituloElegido = pieza.titulos[i] || pieza.titulos[0] || 'Sin título';
+  document.getElementById('pt-prog').style.width = '100%';
+  setTimeout(() => { pintarPieza(); showScreen('s-pieza'); }, 260);
+}
+
+function pintarPieza() {
+  const labels = gameData.ficha_labels || ['', '', ''];
+  document.getElementById('pt-titulo').textContent = tituloElegido;
+  document.getElementById('pt-tagline').textContent = pieza.tagline || '';
+  document.getElementById('pt-texto').textContent = pieza.texto || '';
+  document.getElementById('pt-ficha').innerHTML = (pieza.ficha || []).slice(0, 3).map((v, i) => `<div><div class="l">${esc(labels[i] || '')}</div><div class="v">${esc(v)}</div></div>`).join('');
+  document.getElementById('pt-resenas').innerHTML = (pieza.resenas || []).map(r => `<div class="pt-resena">${esc(r)}</div>`).join('');
+  document.getElementById('pt-autor').textContent = `Diseñado en ${BAR_NAME} · ${elecciones.map((i, k) => gameData.ejes[k].opciones[i]).join(' · ')}`;
+}
+
+function showScreen(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); document.getElementById(id).classList.add('active'); window.scrollTo(0, 0); }
+function esc(s) { return String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+async function revelar() {
+  if (revelado) return;
+  revelado = true;
+  document.getElementById('pt-card').classList.add('flipped');
+  setTimeout(() => { document.getElementById('pt-actions').classList.add('on'); document.getElementById('btn-menu-pre').style.display = 'none'; }, 500);
+  const idx = elecciones[0] * 9 + elecciones[1] * 3 + elecciones[2];
+  try {
+    await fetch('/api/play', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG, correct: true, game_type: 'prototipo', choice: idx, elapsed: 0 }) });
+  } catch(e) {}
+  try {
+    const r = await fetch(`/api/prototipo-stats/${BAR_SLUG}`);
+    if (r.ok) { const st = await r.json(); const n = st.hoy || 1; document.getElementById('pt-count').textContent = n <= 1 ? 'El primer prototipo de hoy' : `Hoy ya van ${n} prototipos`; }
+  } catch(e) {}
+}
+
+function doShare() {
+  if (!pieza) return;
+  const c = copy();
+  const txt = nookShareText({ emoji: c.emoji, titulo: c.titulo, resultado: `«${tituloElegido}»\n${pieza.tagline || ''}`, gancho: c.gancho });
+  nookShareWithImage(txt, 'prototipo');
+}
+
+init();
+</script>
+{% endblock %}
