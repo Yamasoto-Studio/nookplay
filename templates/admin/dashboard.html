@@ -140,8 +140,24 @@
       <div><a href="/admin/{{ bar.slug }}" class="btn-edit">Gestionar →</a></div>
     </div>
     {% endfor %}
+  </div>
+</div>
+
+{% if bars_pausados %}
+  <div class="sa-section-title" style="margin-top:28px;">
+    <span>En pausa <span style="font-size:12px; font-weight:400; color:#A89B91;">· no se ven al público ni generan contenido; se reactivan desde su panel</span></span>
+  </div>
+
+  <div class="bars-table" style="opacity:0.8;">
+    <div class="bar-row bar-row-header">
+      <div>Local / evento</div>
+      <div>Plan</div>
+      <div>Estado</div>
+      <div>Partidas</div>
+      <div></div>
+    </div>
     {% for bar in bars_pausados %}
-    <div class="bar-row" style="opacity:0.55;" title="En pausa: no se ve al público ni genera contenido. Se reactiva desde su panel.">
+    <div class="bar-row">
       <div>
         <div class="bar-name">{{ bar.name }}{% if (bar.space_kind or 'local') == 'evento' %} <span style="display:inline-block; font-size:10px; font-weight:700; background:#F0ECE7; color:#8A7F76; border:1px solid #E0D8D0; border-radius:6px; padding:1px 7px; vertical-align:middle; letter-spacing:0.4px;">🎪 EVENTO</span>{% endif %}</div>
         <div class="bar-city">{{ bar.city }}{% if bar.province %}, {{ bar.province }}{% endif %}{% if (bar.space_kind or 'local') == 'evento' and bar.event_start %} · {{ bar.event_start }} → {{ bar.event_end }}{% endif %}</div>
@@ -152,14 +168,13 @@
             {{ (bar.plan or 'gift')|capitalize }}
           </span>
         </div>
-      <div><span style="font-size:12px; font-weight:500; color:#8A7F76;">⏸ En pausa</span></div>
+      <div><span style="font-size:12px; font-weight:500; color:#A89B91;">⏸ En pausa</span></div>
       <div class="plays-count">{{ bar.plays_count }}</div>
       <div><a href="/admin/{{ bar.slug }}" class="btn-edit">Gestionar →</a></div>
     </div>
     {% endfor %}
   </div>
-</div>
-
+{% endif %}
 
 <!-- Modal nuevo bar -->
 <div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
