@@ -63,7 +63,7 @@
 
 <div class="screen" id="s-game">
   <div class="game-tag">El Mismo Pensamiento</div>
-  <p class="pe-intro">Escribe lo primero que se te ocurra.<br>Ganas si coincides con la mayoría del local.</p>
+  <p class="pe-intro">Escribe lo primero que se te ocurra.<br>Ganas si coincides con la mayoría de {{ 'la gente del evento' if (bar.space_kind or 'local') == 'evento' else 'el local' }}.</p>
   <div class="pe-categoria-wrap">
     <div class="pe-categoria-label">Dime...</div>
     <div class="pe-categoria" id="pe-categoria"></div>
@@ -172,7 +172,7 @@ function showResult(data, original) {
   window.scrollTo(0, 0);
 }
 function doShare() {
-  const txt = `🧠 El Mismo Pensamiento — ${BAR_NAME}\n\n"${gameData.categoria}"\nYo dije: ${miRespuesta}\n\nEl ${miPct}% pensó igual que yo.\n\n¿Coincidirías? → nookplay.app`;
+  const txt = nookShareText({ emoji: '🧠', titulo: 'El Mismo Pensamiento', resultado: `"${gameData.categoria}" → yo dije ${miRespuesta}\nEl ${miPct}% pensó igual`, gancho: '¿Piensas como la mayoría? Compruébalo.' });
   nookShareWithImage(txt, 'pensamiento');
 }
 init();

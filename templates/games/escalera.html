@@ -104,8 +104,8 @@
     </div>
     <div class="esc-ladder" id="r-ladder"></div>
     <div id="r-pct" style="display:none; text-align:center; padding:10px; background:var(--bar-bg-subtle); border-radius:var(--radius-md); border:1px solid var(--border); font-size:14px; color:var(--text-secondary); margin-bottom:12px;"></div>
-    <button class="btn-primary" onclick="location.reload()" style="width:100%;">↻ Intentar de nuevo</button>
-    <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
+    <button class="btn-share" onclick="doShare()">📤 Compartir</button>
+    <button class="btn-primary btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE" style="width:100%;">← Volver al menú</button>
     <div class="tomorrow">{{ bar.tomorrow_message or "Mañana, otra escalera nueva." }}</div>
   </div>
 </div>
@@ -265,5 +265,10 @@ async function finJuego(conservaBote, escaleraCompleta) {
 }
 
 init();
+function doShare() {
+  const n = conquistados;
+  const txt = nookShareText({ emoji: '🪜', titulo: 'La Escalera', resultado: n > 0 ? `Me planté en el peldaño ${n} de ${preguntas.length}` : 'Me caí en el primer peldaño 😅', gancho: '¿Hasta dónde llegas tú sin caerte?' });
+  nookShareWithImage(txt, 'escalera');
+}
 </script>
 {% endblock %}

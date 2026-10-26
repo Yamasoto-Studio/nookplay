@@ -33,9 +33,15 @@ html, body { overscroll-behavior: none; }
 .mm-name-row label { font-size: 14px; font-weight: 600; color: var(--text-secondary); width: 80px; flex-shrink: 0; }
 .mm-name-row input { flex: 1; padding: 11px 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 17px; font-family: inherit; background: var(--bar-bg-subtle); color: var(--text); }
 
-.mm-handoff-ico { font-size: 48px; margin-bottom: 14px; }
-#s-handoff #ho-title { font-size: 22px; font-weight: 800; color: var(--text); margin: 0 0 10px; }
-#s-handoff #ho-sub { font-size: 15px; color: var(--text-secondary); line-height: 1.55; margin: 0 0 28px; }
+.mm-turno-banda {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  padding: 12px 14px; border-radius: var(--radius-md); margin-bottom: 14px;
+  font-size: 16px; font-weight: 800; color: #fff; background: var(--bar-accent-dark);
+  animation: mm-turno-in 220ms ease-out;
+}
+.mm-turno-banda.p2 { background: var(--bar-primary); color: var(--bar-primary-text); }
+.mm-turno-banda small { font-size: 12px; font-weight: 600; opacity: 0.85; }
+@keyframes mm-turno-in { from { transform: translateY(-6px); opacity: 0; } to { transform: none; opacity: 1; } }
 
 .mm-turno-tag {
   display: inline-block;
@@ -94,7 +100,7 @@ html, body { overscroll-behavior: none; }
       <ol>
         <li>En tu turno aparecen <b>dos cosas</b>. Elige cuál crees que tiene la cifra <b>mayor</b>.</li>
         <li>Se revela quién gana y un dato curioso.</li>
-        <li>Pasas el móvil: le toca al rival con una pregunta nueva.</li>
+        <li>Al acabar la ronda, le toca al rival con una pregunta nueva.</li>
         <li>Gana quien <b>más aciertos</b> tenga tras 6 rondas (3 cada uno).</li>
       </ol>
     </div>
@@ -109,21 +115,10 @@ html, body { overscroll-behavior: none; }
   </div>
 </div>
 
-<!-- RELEVO -->
-<div class="screen" id="s-handoff">
-  <div class="mm-wrap">
-    <div class="mm-handoff-ico">🤝</div>
-    <h2 id="ho-title"></h2>
-    <p id="ho-sub"></p>
-    <button class="btn-primary" onclick="comenzarTurno()" style="width:100%;">Estoy listo</button>
-    <button class="btn-back-game" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Salir al menú</button>
-  </div>
-</div>
-
 <!-- JUEGO -->
 <div class="screen" id="s-game">
   <div class="mm-wrap">
-    <div class="mm-turno-tag" id="g-turno"></div>
+    <div class="mm-turno-banda" id="g-turno"></div>
     <div class="mm-pregunta" id="g-pregunta"></div>
     <div class="mm-opciones">
       <button class="mm-op" id="op-0" onclick="elegir(0)"></button>
@@ -158,8 +153,8 @@ html, body { overscroll-behavior: none; }
       <div class="mm-marcador-col"><div class="mm-marcador-num" id="f-p1">0</div><div class="mm-marcador-nom" id="f-n1"></div></div>
       <div class="mm-marcador-col"><div class="mm-marcador-num" id="f-p2">0</div><div class="mm-marcador-nom" id="f-n2"></div></div>
     </div>
-    <button class="btn-primary" onclick="location.reload()" style="width:100%; margin-top:8px;">↻ Jugar otra vez</button>
-    <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
+    <button class="btn-share" onclick="doShare()">📤 Compartir</button>
+    <button class="btn-primary btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE" style="width:100%; margin-top:8px;">← Volver al menú</button>
     <div class="tomorrow">{{ bar.tomorrow_message or "Mañana, otro duelo de cifras." }}</div>
   </div>
 </div>
@@ -216,19 +211,21 @@ function empezar() {
   players[1].name = document.getElementById('mm-n2').value.trim() || 'Jugador 2';
   players[0].score = 0; players[1].score = 0;
   ronda = 0; turno = 0;
-  irRelevo();
-}
-
-function irRelevo() {
-  document.getElementById('ho-title').textContent = `Turno de ${players[turno].name}`;
-  document.getElementById('ho-sub').innerHTML = `Ronda ${ronda + 1} de ${rondas.length}.<br>${players[turno].name}, coge el móvil.`;
-  showScreen('s-handoff');
+  // Partida iniciada: cuenta en la analítica aunque se abandone a medias
+  fetch('/api/play', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG, correct: false, game_type: 'masomenos', choice: -2, elapsed: 0 })
+  }).catch(() => {});
+  comenzarTurno();
 }
 
 function comenzarTurno() {
   const r = rondas[ronda];
   eleccion = null;
-  document.getElementById('g-turno').textContent = `${players[turno].name}, elige:`;
+  // Sin pantalla de relevo: no hay nada secreto, el turno se anuncia en la propia pregunta
+  const banda = document.getElementById('g-turno');
+  banda.className = 'mm-turno-banda' + (turno === 1 ? ' p2' : '');
+  banda.innerHTML = `👉 Turno de ${players[turno].name} <small>· ronda ${ronda + 1} de ${rondas.length}</small>`;
   document.getElementById('g-pregunta').textContent = r.pregunta || '¿Cuál es mayor?';
   const op0 = document.getElementById('op-0');
   const op1 = document.getElementById('op-1');
@@ -284,7 +281,7 @@ function siguienteRonda() {
   if (ronda + 1 >= rondas.length) { mostrarFinal(); return; }
   ronda++;
   turno = 1 - turno;
-  irRelevo();
+  comenzarTurno();
 }
 
 function mostrarFinal() {
@@ -304,5 +301,12 @@ function mostrarFinal() {
 }
 
 init();
+function doShare() {
+  const n1 = document.getElementById('f-n1').textContent, n2 = document.getElementById('f-n2').textContent;
+  const p1 = document.getElementById('f-p1').textContent, p2 = document.getElementById('f-p2').textContent;
+  const res = document.getElementById('f-resultado').textContent;
+  const txt = nookShareText({ emoji: '➕', titulo: 'Más o Menos', resultado: `${res}\n${n1} ${p1} · ${p2} ${n2}`, gancho: 'Duelo de cifras a dos. ¿Te atreves con alguien?' });
+  nookShareWithImage(txt, 'masomenos');
+}
 </script>
 {% endblock %}

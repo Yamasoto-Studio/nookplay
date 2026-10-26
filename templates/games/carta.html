@@ -119,13 +119,21 @@
     <button class="btn-secondary" style="flex:1; padding:10px;" onclick="resetBoard()">↺ Reiniciar</button>
     <button class="btn-primary" style="flex:2; padding:10px;" onclick="checkBoard()">Comprobar</button>
   </div>
+  <div id="rendir-confirm" style="display:none;background:var(--bar-bg-subtle);border:1px solid var(--border);border-radius:var(--radius-md);padding:12px 14px;margin-bottom:10px;text-align:center;">
+    <div style="font-size:14px;color:var(--text-secondary);margin-bottom:10px;">¿Ver la solución? La partida contará como no resuelta.</div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn-secondary" onclick="cancelarRendirse()" style="flex:1;padding:10px;font-size:14px;">Sigo intentándolo</button>
+      <button class="btn-secondary" onclick="rendirse()" style="flex:1;padding:10px;font-size:14px;">Ver solución</button>
+    </div>
+  </div>
+  <button class="btn-secondary" id="btn-rendir" onclick="pedirRendirse()" style="width:100%;padding:10px;font-size:14px;margin-bottom:10px;">🏳️ Me rindo</button>
   <button class="btn-back-game" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
 </div>
 
 <!-- RESULTADO -->
 <div class="screen" id="s-result">
   <div class="game-tag" style="display:block; text-align:center; width:fit-content; margin:0 auto 12px;">La Carta</div>
-  <div class="result-big correct" style="text-align:center;">¡Resuelta!</div>
+  <div class="result-big correct" style="text-align:center;" id="r-big">¡Resuelta!</div>
   <p class="result-sub" style="text-align:center;" id="r-sub"></p>
   <div class="carta-result-time" id="r-time"></div>
   <div class="carta-result-label">tiempo</div>
@@ -154,6 +162,7 @@ let selected = null;
 let startTime = null;
 let timerInterval = null;
 let errores = 0;
+let rendido = false;
 
 async function init() {
   try {
@@ -238,7 +247,7 @@ function renderBoard() {
         (r === 1 ? ' border-bottom' : '');
 
       cell.textContent = val ? items[val-1] : '';
-      if (!isFixed) cell.onclick = () => { selected = [r,c]; renderBoard(); };
+      if (!isFixed && !rendido) cell.onclick = () => { selected = [r,c]; renderBoard(); };
 
       board.appendChild(cell);
     }
@@ -246,7 +255,7 @@ function renderBoard() {
 }
 
 function inputEmoji(n) {
-  if (!selected) return;
+  if (!selected || rendido) return;
   const [r,c] = selected;
   if (gameData.puzzle[r][c] !== 0) return;
   userBoard[r][c] = n;
@@ -255,7 +264,7 @@ function inputEmoji(n) {
 }
 
 function deleteCell() {
-  if (!selected) return;
+  if (!selected || rendido) return;
   const [r,c] = selected;
   if (gameData.puzzle[r][c] !== 0) return;
   userBoard[r][c] = 0;
@@ -263,6 +272,7 @@ function deleteCell() {
 }
 
 function resetBoard() {
+  if (rendido) return;
   userBoard = gameData.puzzle.map(r => [...r]);
   selected = null;
   document.getElementById('carta-status').textContent = '';
@@ -270,6 +280,7 @@ function resetBoard() {
 }
 
 function checkBoard() {
+  if (rendido) return;
   const sol = gameData.solution;
   let complete = true;
   let correct = true;
@@ -301,19 +312,54 @@ function checkBoard() {
   }
 }
 
-async function mostrarResultado(elapsed) {
+async function registrarPartida(correct, elapsed) {
   try { await fetch('/api/play', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       code: CODE, bar_slug: BAR_SLUG,
-      correct: true, game_type: 'carta',
+      correct, game_type: 'carta',
       choice: errores, elapsed
     })
   }); } catch(e) {}
+}
+
+function pedirRendirse() {
+  if (rendido) return;
+  document.getElementById('rendir-confirm').style.display = 'block';
+  document.getElementById('btn-rendir').style.display = 'none';
+}
+function cancelarRendirse() {
+  document.getElementById('rendir-confirm').style.display = 'none';
+  document.getElementById('btn-rendir').style.display = '';
+}
+function rendirse() {
+  if (rendido) return;
+  rendido = true;
+  clearInterval(timerInterval);
+  const elapsed = getElapsed();
+  selected = null;
+  userBoard = gameData.solution.map(r => [...r]);
+  renderBoard();
+  document.querySelectorAll('.carta-cell').forEach(c => c.classList.add('correct-anim'));
+  document.getElementById('rendir-confirm').style.display = 'none';
+  document.getElementById('carta-status').textContent = 'Esta era la solución';
+  document.getElementById('carta-board').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  setTimeout(() => mostrarResultado(elapsed, false), 1800);
+}
+
+async function mostrarResultado(elapsed, acierto = true) {
+  await registrarPartida(acierto, elapsed);
 
   const items = gameData.categoria.items;
   let sub = errores === 0 ? '¡Sin errores! Perfecto.' : `Con ${errores} ${errores===1?'error':'errores'}.`;
+  const big = document.getElementById('r-big');
+  if (acierto) {
+    big.className = 'result-big correct'; big.textContent = '¡Resuelta!';
+  } else {
+    big.className = 'result-big'; big.textContent = 'Esta vez no, pero ya lo tienes';
+    sub = 'Has visto la solución. Mañana hay una carta nueva.';
+  }
 
   document.getElementById('r-sub').textContent = sub;
   document.getElementById('r-time').textContent = formatTime(elapsed);
@@ -327,9 +373,9 @@ async function mostrarResultado(elapsed) {
 
 function doShare() {
   const elapsed = document.getElementById('r-time').textContent;
-  const items = gameData.categoria.items.join('');
   const errorStr = errores === 0 ? 'sin errores' : `${errores} ${errores===1?'error':'errores'}`;
-  const txt = `${items}\n¡He resuelto La Carta en ${BAR_NAME}!\n\nTiempo: ${elapsed} · ${errorStr}\n\n¿Puedes tú? → nookplay.app`;
+  const resultado = rendido ? `❌ Me he rendido · lo intenté ${elapsed}` : `✅ Resuelto en ${elapsed} · ${errorStr}`;
+  const txt = nookShareText({ emoji: '🃏', titulo: 'La Carta', resultado, gancho: 'Un sudoku de símbolos nuevo cada día. ¿Lo haces en menos tiempo?' });
   nookShareWithImage(txt, 'carta');
 }
 

@@ -124,7 +124,8 @@
 })();
 </script>
 <script src="/static/js/stats.js"></script>
-<script src="/static/js/share.js?v=3"></script>
+<script>window.NOOK_ES_EVENTO = {{ 'true' if (bar.space_kind or 'local') == 'evento' else 'false' }};</script>
+<script src="/static/js/share.js?v=4"></script>
 <script>
 const GAME_PRODUCTS = {{ products_json|default('[]') }};
 function showResultPromo() {
@@ -146,6 +147,36 @@ function showResultPromo() {
     </div>`;
   el.style.display = 'block';
 }
+
+// La promo del espacio (Oferta, Freep, el café del día…) aparece en la pantalla
+// de resultado de TODOS los juegos sin que cada plantilla tenga que llamarla:
+// cuando #s-result o #s-final se activa, se crea el hueco si no existe (justo
+// antes del botón Compartir) y se pinta una vez.
+(function () {
+  if (!GAME_PRODUCTS || GAME_PRODUCTS.length === 0) return;
+  let hecho = false;
+  function intentar() {
+    if (hecho) return;
+    const pantalla = document.querySelector('#s-result.active, #s-final.active');
+    if (!pantalla) return;
+    let hueco = pantalla.querySelector('#result-promo') || document.getElementById('result-promo');
+    if (!hueco) {
+      hueco = document.createElement('div');
+      hueco.id = 'result-promo';
+      hueco.style.display = 'none';
+      const ancla = pantalla.querySelector('.btn-share') || pantalla.querySelector('.btn-menu') || pantalla.querySelector('.tomorrow');
+      if (ancla && ancla.parentNode) ancla.parentNode.insertBefore(hueco, ancla); else pantalla.appendChild(hueco);
+    }
+    hecho = true;
+    if (!hueco.innerHTML.trim()) showResultPromo();
+  }
+  const arrancar = () => {
+    intentar();
+    const mo = new MutationObserver(intentar);
+    document.querySelectorAll('.screen').forEach(s => mo.observe(s, { attributes: true, attributeFilter: ['class'] }));
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arrancar); else arrancar();
+})();
 </script>
 
 <div class="nook">

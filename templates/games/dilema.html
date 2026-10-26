@@ -216,13 +216,34 @@ function showResult(stats) {
   const pctA = Math.round((votosA / total) * 100);
   const pctB = 100 - pctA;
 
-  document.getElementById('r-pct-a').textContent = pctA + '%';
-  document.getElementById('r-pct-b').textContent = pctB + '%';
-
-  setTimeout(() => {
-    document.getElementById('r-bar-a').style.width = pctA + '%';
-    document.getElementById('r-bar-b').style.width = pctB + '%';
-  }, 100);
+  // Con menos de 3 votos no hay "mayoría" que mostrar: 0%/100% engaña.
+  // Se muestra el voto propio y una invitación, igual que en El Veredicto.
+  const pocosVotos = (stats.total || 0) < 3;
+  const barras = document.querySelector('#s-result .result-bars');
+  let aviso = document.getElementById('r-pocos');
+  if (pocosVotos) {
+    if (!aviso && barras) {
+      aviso = document.createElement('div');
+      aviso.id = 'r-pocos';
+      aviso.style.cssText = 'text-align:center; padding:12px; background:var(--bar-bg-subtle); border:1px solid var(--border); border-radius:var(--radius-md); margin:0 0 14px; font-size:15px; color:var(--text-secondary);';
+      barras.parentNode.insertBefore(aviso, barras);
+    }
+    if (aviso) {
+      const mia = myVote === 'a' ? gameData.opcion_a : gameData.opcion_b;
+      aviso.innerHTML = `Has elegido <strong>${mia}</strong>.<br>Eres de los primeros: comparte y mira cómo vota tu mesa.`;
+      aviso.style.display = 'block';
+    }
+    if (barras) barras.style.display = 'none';
+  } else {
+    if (aviso) aviso.style.display = 'none';
+    if (barras) barras.style.display = '';
+    document.getElementById('r-pct-a').textContent = pctA + '%';
+    document.getElementById('r-pct-b').textContent = pctB + '%';
+    setTimeout(() => {
+      document.getElementById('r-bar-a').style.width = pctA + '%';
+      document.getElementById('r-bar-b').style.width = pctB + '%';
+    }, 100);
+  }
 
   // Stats block
   if (stats.total >= 1) {
@@ -252,10 +273,8 @@ function showResult(stats) {
 }
 
 function doShare() {
-  const pctA = document.getElementById('r-pct-a').textContent;
-  const pctB = document.getElementById('r-pct-b').textContent;
   const myChoice = myVote === 'a' ? gameData.opcion_a : gameData.opcion_b;
-  const txt = `🤔 El Dilema de hoy en ${BAR_NAME}\n\n"${gameData.situacion}"\n\nYo: ${myChoice}\n\nResultado: ${gameData.opcion_a} ${pctA} · ${gameData.opcion_b} ${pctB}\n\n¿Y tú? → nookplay.app`;
+  const txt = nookShareText({ emoji: '🤔', titulo: 'El Dilema', resultado: `"${(gameData.situacion || '').substring(0, 90)}${(gameData.situacion || '').length > 90 ? '…' : ''}"\nYo: ${myChoice}`, gancho: '¿Qué harías tú? Vota y mira qué eligió la mayoría.' });
   nookShareWithImage(txt, 'dilema');
 }
 

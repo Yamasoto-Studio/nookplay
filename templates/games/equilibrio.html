@@ -127,13 +127,21 @@
     </button>
     <button class="btn-secondary" onclick="openHelp()" style="flex:1;padding:10px;font-size:14px;">? Normas</button>
   </div>
+  <div id="rendir-confirm" style="display:none;background:var(--bar-bg-subtle);border:1px solid var(--border);border-radius:var(--radius-md);padding:12px 14px;margin-bottom:10px;text-align:center;">
+    <div style="font-size:14px;color:var(--text-secondary);margin-bottom:10px;">¿Ver la solución? La partida contará como no resuelta.</div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn-secondary" onclick="cancelarRendirse()" style="flex:1;padding:10px;font-size:14px;">Sigo intentándolo</button>
+      <button class="btn-secondary" onclick="rendirse()" style="flex:1;padding:10px;font-size:14px;">Ver solución</button>
+    </div>
+  </div>
+  <button class="btn-secondary" id="btn-rendir" onclick="pedirRendirse()" style="width:100%;padding:10px;font-size:14px;margin-bottom:10px;">🏳️ Me rindo</button>
   <button class="btn-back-game" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
 </div>
 
 <!-- RESULTADO -->
 <div class="screen" id="s-result">
   <div class="game-tag" style="display:block;text-align:center;width:fit-content;margin:0 auto 12px;">Equilibrio</div>
-  <div class="result-big correct" style="text-align:center;">☀️🌙 ¡Equilibrio!</div>
+  <div class="result-big correct" style="text-align:center;" id="r-big">☀️🌙 ¡Equilibrio!</div>
   <p class="result-sub" style="text-align:center;" id="r-sub"></p>
   <div class="eq-result-time" id="r-time"></div>
   <div style="text-align:center;font-size:15px;color:var(--text-secondary);margin-bottom:20px;">tiempo</div>
@@ -233,6 +241,7 @@ let startTime = null;
 let solved = false;
 let hintsUsed = 0;
 let hintsPlaced = [];
+let rendido = false;
 let conflictTimeout = null;
 let pendingConflicts = new Set();
 
@@ -376,7 +385,7 @@ function renderBoard() {
     st.textContent = '';
   }
 
-  if (checkWin()) {
+  if (checkWin() && !rendido) {
     solved = true;
     setTimeout(() => nookCelebrate('¡Equilibrio perfecto!', () => mostrarResultado()), 350);
   }
@@ -405,6 +414,7 @@ function resetBoard() {
   hintsPlaced = [];
   hintsUsed = 0;
   solved = false;
+  rendido = false;
   startTime = Date.now();
   document.getElementById('eq-status').textContent = '';
   pendingConflicts = new Set();
@@ -452,20 +462,54 @@ function useHint(idx) {
   }, 3000);
 }
 
-async function mostrarResultado() {
-  const elapsed = getElapsed();
+async function registrarPartida(correct, elapsed) {
   try { await fetch('/api/play', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       code: CODE, bar_slug: BAR_SLUG,
-      correct: true, game_type: 'equilibrio',
+      correct, game_type: 'equilibrio',
       choice: hintsUsed, elapsed
     })
   }); } catch(e) {}
+}
+
+function pedirRendirse() {
+  if (solved) return;
+  document.getElementById('rendir-confirm').style.display = 'block';
+  document.getElementById('btn-rendir').style.display = 'none';
+}
+function cancelarRendirse() {
+  document.getElementById('rendir-confirm').style.display = 'none';
+  document.getElementById('btn-rendir').style.display = '';
+}
+function rendirse() {
+  if (solved) return;
+  rendido = true; solved = true;
+  if (conflictTimeout) clearTimeout(conflictTimeout);
+  pendingConflicts = new Set();
+  board = gameData.solution.map(r => [...r]);
+  renderBoard();
+  document.getElementById('rendir-confirm').style.display = 'none';
+  const st = document.getElementById('eq-status');
+  st.textContent = 'Esta era la solución'; st.style.color = 'var(--text-secondary)';
+  document.getElementById('eq-board').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  setTimeout(() => mostrarResultado(false), 1800);
+}
+
+async function mostrarResultado(acierto = true) {
+  const elapsed = getElapsed();
+  await registrarPartida(acierto, elapsed);
 
   let sub = hintsUsed === 0 ? '¡Sin pistas! Equilibrio perfecto.' : `Con ${hintsUsed} ${hintsUsed===1?'pista':'pistas'}.`;
   if (elapsed < 120 && hintsUsed === 0) sub = '¡Sin pistas y en tiempo récord!';
+  const big = document.getElementById('r-big');
+  if (acierto) {
+    big.className = 'result-big correct'; big.textContent = '☀️🌙 ¡Equilibrio!';
+  } else {
+    big.className = 'result-big'; big.textContent = 'Esta vez no, pero ya lo tienes';
+    sub = 'Has visto la solución. Mañana hay un tablero nuevo.';
+  }
 
   document.getElementById('r-sub').textContent = sub;
   document.getElementById('r-time').textContent = formatTime(elapsed);
@@ -477,7 +521,8 @@ async function mostrarResultado() {
 function doShare() {
   const elapsed = document.getElementById('r-time').textContent;
   const hintStr = hintsUsed === 0 ? 'sin pistas' : `${hintsUsed} ${hintsUsed===1?'pista':'pistas'}`;
-  const txt = `☀️🌙 He resuelto Equilibrio en ${BAR_NAME}\n\nTiempo: ${elapsed} · ${hintStr}\n\n¿Puedes tú? → nookplay.app`;
+  const resultado = rendido ? `❌ Me he rendido · lo intenté ${elapsed}` : `✅ Resuelto en ${elapsed} · ${hintStr}`;
+  const txt = nookShareText({ emoji: '☀️', titulo: 'Equilibrio', resultado, gancho: 'Soles y lunas, un puzzle nuevo cada día. ¿Más rápido que yo?' });
   nookShareWithImage(txt, 'equilibrio');
 }
 

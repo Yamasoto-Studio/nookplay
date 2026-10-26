@@ -168,8 +168,8 @@ html, body { overscroll-behavior: none; }
       <div class="dv-marcador-col"><div class="dv-marcador-num" id="f-p1">0</div><div class="dv-marcador-nom" id="f-n1"></div></div>
       <div class="dv-marcador-col"><div class="dv-marcador-num" id="f-p2">0</div><div class="dv-marcador-nom" id="f-n2"></div></div>
     </div>
-    <button class="btn-primary" onclick="location.reload()" style="width:100%; margin-top:8px;">↻ Jugar otra vez</button>
-    <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
+    <button class="btn-share" onclick="doShare()">📤 Compartir</button>
+    <button class="btn-primary btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE" style="width:100%; margin-top:8px;">← Volver al menú</button>
     <div class="tomorrow">{{ bar.tomorrow_message or ('Vuelve mañana: hay juego nuevo.' if (bar.space_kind or 'local') == 'evento' else 'Vuelve a tomar un café.') }}</div>
   </div>
 </div>
@@ -213,6 +213,11 @@ function empezar() {
   players[1].name = n2 || 'Jugador 2';
   ronda = 1; turno = 0;
   players[0].score = 0; players[1].score = 0;
+  // Partida iniciada: cuenta en la analítica aunque se abandone a medias
+  fetch('/api/play', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG, correct: false, game_type: 'dosverdades', choice: -2, elapsed: 0 })
+  }).catch(() => {});
   irRelevo();
 }
 
@@ -345,6 +350,13 @@ function mostrarFinal() {
   document.getElementById('f-n1').textContent = players[0].name;
   document.getElementById('f-n2').textContent = players[1].name;
   showScreen('s-final');
+}
+function doShare() {
+  const n1 = document.getElementById('f-n1').textContent, n2 = document.getElementById('f-n2').textContent;
+  const p1 = document.getElementById('f-p1').textContent, p2 = document.getElementById('f-p2').textContent;
+  const res = document.getElementById('f-resultado').textContent;
+  const txt = nookShareText({ emoji: '🎭', titulo: 'Dos Verdades, Una Mentira', resultado: `${res}\n${n1} ${p1} · ${p2} ${n2}`, gancho: '¿Pillas el farol de tu amigo?' });
+  nookShareWithImage(txt, 'dosverdades');
 }
 </script>
 {% endblock %}

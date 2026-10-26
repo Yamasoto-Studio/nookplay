@@ -336,7 +336,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let customMsg = BAR_WELCOME || `Bienvenido al ${BAR_NAME}.`;
     customMsg = customMsg.replace(/[.\s]*Elige tu pasatiempo de hoy.?/gi, '').trim();
     if (!customMsg) customMsg = `Bienvenido al ${BAR_NAME}.`;
-    el.innerHTML = `${customMsg}<br><span class="menu-welcome-sub">Es tu momento de respiro.</span>`;
+    el.innerHTML = `${customMsg}<br><span class="menu-welcome-sub">${EVENT_INFO && EVENT_INFO.evento ? 'Un juego nuevo cada día del evento.' : 'Es tu momento de respiro.'}</span>`;
   }
 });
 

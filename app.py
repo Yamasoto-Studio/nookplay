@@ -2824,19 +2824,27 @@ def register_play():
     # antiguo), caemos al comportamiento previo por (código, día, juego).
     if device_id:
         played = db.execute(
-            "SELECT id FROM plays WHERE device_id = ? AND played_on = ? AND game_type = ?",
+            "SELECT id, choice FROM plays WHERE device_id = ? AND played_on = ? AND game_type = ?",
             (device_id, today, game_type)
         ).fetchone()
     else:
         played = db.execute(
-            "SELECT id FROM plays WHERE code = ? AND played_on = ? AND game_type = ? AND (device_id IS NULL OR device_id = '')",
+            "SELECT id, choice FROM plays WHERE code = ? AND played_on = ? AND game_type = ? AND (device_id IS NULL OR device_id = '')",
             (code, today, game_type)
         ).fetchone()
 
+    # choice = -2 marca "partida empezada" (duelos largos: así los abandonos cuentan).
+    # Cuando llega el resultado final, se completa esa misma fila en vez de insertar otra.
     if not played:
         db.execute(
             "INSERT INTO plays (code, bar_slug, played_on, correct, game_type, choice, elapsed, played_at, device_id) VALUES (?,?,?,?,?,?,?,?,?)",
             (code, bar_slug, today, 1 if correct else 0, game_type, choice, elapsed, now_madrid_iso(), device_id)
+        )
+        db.commit()
+    elif played['choice'] == -2 and choice != -2:
+        db.execute(
+            "UPDATE plays SET correct = ?, choice = ?, elapsed = ?, played_at = ? WHERE id = ?",
+            (1 if correct else 0, choice, elapsed, now_madrid_iso(), played['id'])
         )
         db.commit()
     db.close()
@@ -4904,13 +4912,19 @@ def freep_api():
         return jsonify({'error': 'Invalid code'}), 403
     db.close()
 
-    # Composición oficial de Freep (solo numéricas en esta versión Lite)
-    counts = {1: 6, 2: 8, 3: 8, 4: 10, 5: 10, 6: 10, 7: 8, 8: 8, 9: 6}
+    # Composición oficial de Freep (solo numéricas en esta versión Lite): 74 cartas.
+    # Modo rápido (eventos, cola de feria): 25 cartas con la misma distribución,
+    # 3–5 minutos de duelo en vez de 8–15.
+    modo = str(data.get('modo') or '').strip()
+    if modo == 'rapido':
+        counts = {1: 2, 2: 3, 3: 3, 4: 3, 5: 3, 6: 3, 7: 3, 8: 3, 9: 2}
+    else:
+        counts = {1: 6, 2: 8, 3: 8, 4: 10, 5: 10, 6: 10, 7: 8, 8: 8, 9: 6}
     deck = []
     for value, n in counts.items():
         deck.extend([value] * n)
     random.shuffle(deck)
-    return jsonify({'deck': deck})
+    return jsonify({'deck': deck, 'modo': 'rapido' if modo == 'rapido' else 'completo'})
 
 
 @app.route('/<bar_slug>/local')

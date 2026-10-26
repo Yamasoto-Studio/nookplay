@@ -7,22 +7,17 @@
 {% block game_content %}
 <style>
 /* Imagen de silueta */
+/* Silueta anónima: la persona a descubrir (sin reutilizar el icono del catálogo) */
 .perfil-img-wrap {
-  width: 100%; max-width: 280px;
-  margin: 0 auto 20px;
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  aspect-ratio: 4/3;
+  width: 96px; height: 96px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
   background: var(--bar-bg-subtle);
+  border: 1px solid var(--border);
   display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
 }
-.perfil-img-wrap img {
-  width: 100%; height: 100%;
-  object-fit: cover;
-}
-.perfil-img-placeholder {
-  font-size: 72px; opacity: 0.25;
-}
+.perfil-img-wrap svg { width: 64px; height: 64px; display: block; }
 
 /* Tarjeta del perfil */
 .perfil-card {
@@ -154,8 +149,8 @@
   <div class="game-tag" style="display:block; text-align:center; width:fit-content; margin:0 auto 12px;">El Perfil</div>
 
   <!-- Imagen silueta -->
-  <div class="perfil-img-wrap">
-    <img src="/static/games/perfil.webp" alt="Silueta" onerror="this.parentElement.innerHTML='<div class=\'perfil-img-placeholder\'>👤</div>'">
+  <div class="perfil-img-wrap" aria-hidden="true">
+    <svg viewBox="0 0 64 64" fill="var(--bar-accent-dark, #1A1A1A)"><circle cx="32" cy="22" r="13"/><path d="M8 58c0-13 10-21 24-21s24 8 24 21v2H8z"/></svg>
   </div>
 
   <!-- Tarjeta -->
@@ -343,8 +338,7 @@ function showResult(correct, stats) {
 
 function doShare() {
   const correct = myChoice === (gameData.correcta - 1);
-  const emoji = correct ? '✓' : '✗';
-  const txt = `🧠 El Perfil de hoy en ${BAR_NAME}\n\n${gameData.nombre}, ${gameData.edad} años\n"${gameData.pregunta}"\n\nMi respuesta: ${emoji} ${gameData.opciones[myChoice]}\n\n¿Y tú? → nookplay.app`;
+  const txt = nookShareText({ emoji: '🪪', titulo: 'El Perfil', resultado: `${gameData.nombre}, ${gameData.edad} años · ${correct ? '✅ Lo calé' : '❌ Me equivoqué'}`, gancho: 'Unas pistas y una pregunta. ¿Lo calas tú?' });
   nookShareWithImage(txt, 'perfil');
 }
 

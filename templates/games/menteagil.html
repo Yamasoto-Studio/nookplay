@@ -26,6 +26,15 @@
   text-align: center; margin-bottom: 10px;
 }
 
+/* Cronómetro por pregunta */
+.ma-timer { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.ma-timer-bar { flex: 1; height: 6px; border-radius: 3px; background: var(--border); overflow: hidden; }
+.ma-timer-fill { height: 100%; width: 100%; background: var(--bar-primary); border-radius: 3px; transition: width 0.25s linear, background 0.3s; }
+.ma-timer.urgente .ma-timer-fill { background: #C0392B; }
+.ma-timer-num { font-size: 15px; font-weight: 700; color: var(--text); min-width: 34px; text-align: right; font-variant-numeric: tabular-nums; }
+.ma-timer.urgente .ma-timer-num { color: #C0392B; }
+.ma-timer-label { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+
 /* Emoji contexto */
 .ma-tipo { font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--bar-primary); text-align: center; margin-bottom: 12px; }
 
@@ -37,7 +46,7 @@
   margin-bottom: 20px;
 }
 
-/* Opciones jugadores */
+/* Opciones de respuesta */
 .ma-pregunta-titulo {
   font-size: 16px; font-weight: 700; color: var(--text);
   text-align: center; margin-bottom: 14px;
@@ -106,7 +115,7 @@
 
 <!-- LOADING -->
 <div class="screen active" id="s-loading">
-  <div class="loading"><div class="loading-spinner"></div><p>Calentando en el menteagil...</p></div>
+  <div class="loading"><div class="loading-spinner"></div><p>Cronómetro en marcha… 10 segundos por pregunta.</p></div>
 </div>
 
 <!-- JUEGO -->
@@ -120,6 +129,11 @@
   </div>
 
   <div class="ma-num" id="ma-num">Pregunta 1 de 3</div>
+  <div class="ma-timer" id="ma-timer" aria-live="polite">
+    <span class="ma-timer-label">⏱</span>
+    <div class="ma-timer-bar"><div class="ma-timer-fill" id="ma-timer-fill"></div></div>
+    <span class="ma-timer-num" id="ma-timer-num">10 s</span>
+  </div>
   <div class="ma-tipo" id="ma-tipo"></div>
   <div class="ma-curiosidad" id="ma-curiosidad"></div>
   <div class="ma-jugadores" id="ma-jugadores"></div>
@@ -154,10 +168,46 @@ const BAR_NAME = "{{ bar.name }}";
 const CODE = new URLSearchParams(window.location.search).get('code') || '';
 let gameData = null;
 let preguntaActual = 0;
-let respuestas = []; // {correcta: bool, jugadorElegido: str, jugadorCorrecto: str}
+let respuestas = []; // {correcta: bool, elegida: str, correctaTexto: str}
 let seleccionActual = null;
 let startTime = null;
 let tiempoTotal = 0;
+const SEGUNDOS_POR_PREGUNTA = 10;
+let timerInterval = null;   // tick del cronómetro
+let timerFin = 0;           // timestamp de agotamiento
+let avanceTimeout = null;   // avance automático tras agotarse
+let tiempos = [];           // segundos usados por pregunta
+
+function pararTimer() {
+  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+  if (avanceTimeout) { clearTimeout(avanceTimeout); avanceTimeout = null; }
+}
+
+function pintarTimer(restante) {
+  const wrap = document.getElementById('ma-timer');
+  const fill = document.getElementById('ma-timer-fill');
+  const num = document.getElementById('ma-timer-num');
+  if (!wrap || !fill || !num) return;
+  const r = Math.max(0, restante);
+  fill.style.width = (r / SEGUNDOS_POR_PREGUNTA * 100) + '%';
+  num.textContent = Math.ceil(r) + ' s';
+  wrap.classList.toggle('urgente', r <= 3);
+}
+
+function arrancarTimer() {
+  pararTimer();
+  timerFin = Date.now() + SEGUNDOS_POR_PREGUNTA * 1000;
+  pintarTimer(SEGUNDOS_POR_PREGUNTA);
+  timerInterval = setInterval(() => {
+    const restante = (timerFin - Date.now()) / 1000;
+    pintarTimer(restante);
+    if (restante <= 0) { pararTimer(); tiempoAgotado(); }
+  }, 100);
+}
+
+function segundosUsados() {
+  return Math.min(SEGUNDOS_POR_PREGUNTA, Math.max(0, Math.round((SEGUNDOS_POR_PREGUNTA * 1000 - (timerFin - Date.now())) / 1000)));
+}
 
 async function init() {
   try {
@@ -210,7 +260,7 @@ function renderPregunta(idx) {
     }
   }
 
-  // Jugadores
+  // Opciones
   const LETRAS = ['A', 'B', 'C', 'D'];
   document.getElementById('ma-jugadores').innerHTML = p.opciones.map((j, i) => `
     <button class="ma-jugador" id="jug-${i}" onclick="seleccionar(${i})">
@@ -224,6 +274,7 @@ function renderPregunta(idx) {
   document.getElementById('btn-siguiente').style.display = 'none';
 
   showScreen('s-game');
+  arrancarTimer();
 }
 
 function seleccionar(idx) {
@@ -237,6 +288,9 @@ function seleccionar(idx) {
 
 function confirmar() {
   if (seleccionActual === null) return;
+  if (!timerInterval) return; // ya resuelta (p. ej. tiempo agotado)
+  tiempos.push(segundosUsados());
+  pararTimer();
   const p = gameData.preguntas[preguntaActual];
   const correcta = seleccionActual === p.correcta;
 
@@ -272,7 +326,35 @@ function confirmar() {
   }
 }
 
+function tiempoAgotado() {
+  const p = gameData.preguntas[preguntaActual];
+  if (!p || respuestas.length > preguntaActual) return;
+  tiempos.push(SEGUNDOS_POR_PREGUNTA);
+  respuestas.push({
+    correcta: false,
+    elegida: 'Sin respuesta (tiempo agotado)',
+    correctaTexto: p.opciones[p.correcta],
+    enunciado: p.enunciado, explicacion: p.explicacion
+  });
+  document.querySelectorAll('.ma-jugador').forEach((el, i) => {
+    el.classList.remove('selected');
+    el.classList.add('disabled');
+    if (i === p.correcta) el.classList.add('correcto');
+    else if (i === seleccionActual) el.classList.add('incorrecto');
+  });
+  const exp = document.getElementById('ma-explicacion');
+  exp.textContent = '⏱ Tiempo agotado. ' + p.explicacion;
+  exp.classList.add('visible');
+  document.getElementById('btn-confirmar').style.display = 'none';
+  const btnSig = document.getElementById('btn-siguiente');
+  btnSig.style.display = 'block';
+  btnSig.textContent = (preguntaActual < gameData.preguntas.length - 1) ? 'Siguiente pregunta →' : 'Ver resultado final →';
+  // Avance automático breve: se ve la correcta y seguimos
+  avanceTimeout = setTimeout(siguiente, 2500);
+}
+
 function siguiente() {
+  pararTimer();
   if (preguntaActual < gameData.preguntas.length - 1) {
     preguntaActual++;
     renderPregunta(preguntaActual);
@@ -282,6 +364,7 @@ function siguiente() {
 }
 
 async function finalizarQuiz() {
+  pararTimer();
   tiempoTotal = startTime ? Math.round((Date.now() - startTime) / 1000) : 0;
   const score = respuestas.filter(r => r.correcta).length;
 
@@ -353,9 +436,9 @@ function showResult(score, stats) {
 
 function doShare() {
   const score = respuestas.filter(r => r.correcta).length;
-  const emojis = respuestas.map(r => r.correcta ? '✅' : '❌').join(' ');
-  const msg = gameData.mensajes[String(score)] || '';
-  const txt = `⚽ Mente Ágil — ${BAR_NAME}\n\n${emojis}\n${score}/3 — ${msg.split('—')[1]?.trim() || ''}\n\n¿Puedes superarme? → nookplay.app`;
+  const grid = respuestas.map(r => r.correcta ? '🟩' : '🟥').join('');
+  const seg = tiempos.reduce((a, b) => a + b, 0);
+  const txt = nookShareText({ emoji: '⚡', titulo: 'Mente Ágil', resultado: `${grid} ${score}/${respuestas.length}` + (seg ? ` · ${seg}s` : ''), gancho: '3 preguntas psicotécnicas, 10 segundos cada una. ¿Me superas?' });
   nookShareWithImage(txt, 'menteagil');
 }
 
