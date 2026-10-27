@@ -1,0 +1,194 @@
+{% extends "game_base.html" %}
+{% block title %}La Sopa de Letras — {{ bar.name }}{% endblock %}
+{% block og_title %}La Sopa de Letras — {{ bar.name }}{% endblock %}
+{% block og_description %}Seis palabras escondidas, seis pistas. ¿En cuánto las encuentras? Juega en {{ bar.name }} con Nookplay.{% endblock %}
+{% block og_url %}/{{ bar.slug }}/sopa{% endblock %}
+
+{% block game_content %}
+<style>
+.sl-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.sl-tema { font-size: 12px; font-weight: 800; letter-spacing: 1.4px; text-transform: uppercase; color: var(--bar-primary); }
+.sl-timer { font-size: 15px; font-weight: 800; color: var(--bar-accent-dark); font-variant-numeric: tabular-nums; }
+.sl-hint { font-size: 14px; color: var(--text-sec); text-align: center; margin: 0 0 10px; }
+.sl-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; margin: 0 auto 14px; max-width: 420px; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+.sl-cell { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800; color: var(--bar-accent-dark); background: white; border: 1.5px solid var(--border); border-radius: 10px; cursor: pointer; transition: background .12s, border-color .12s, transform .08s; }
+.sl-cell:active { transform: scale(.94); }
+.sl-cell.sel { background: var(--bar-bg-subtle); border-color: var(--bar-primary); }
+.sl-cell.path { background: var(--bar-bg-subtle); border-color: var(--bar-primary); }
+.sl-cell.found { background: var(--bar-primary); border-color: var(--bar-primary); color: var(--bar-primary-text); }
+.sl-cell.bad { background: #FDECEA; border-color: #C0392B; }
+.sl-cell.sol { background: #FFF3C4; border-color: #F3D77A; }
+.sl-pistas { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.sl-pista { display: flex; align-items: center; gap: 10px; background: var(--bar-bg-subtle); border: 1px solid var(--border); border-radius: 12px; padding: 9px 12px; font-size: 14px; line-height: 1.35; color: var(--bar-accent-dark); }
+.sl-pista .n { flex-shrink: 0; min-width: 34px; text-align: center; font-size: 11px; font-weight: 800; letter-spacing: .6px; color: var(--text-muted); background: white; border-radius: 8px; padding: 3px 6px; }
+.sl-pista.ok { opacity: .62; }
+.sl-pista.ok .t { text-decoration: line-through; }
+.sl-pista .w { margin-left: auto; font-weight: 800; color: var(--bar-primary); letter-spacing: 1px; }
+.sl-rendir { text-align: center; margin: 4px 0 10px; }
+.sl-rendir button { font-family: inherit; font-size: 14px; font-weight: 600; color: var(--text-sec); background: none; border: 1.5px solid var(--border); border-radius: 20px; padding: 8px 14px; cursor: pointer; }
+.sl-confirm { display: none; text-align: center; font-size: 14px; color: var(--text-sec); margin: 6px 0 10px; }
+.sl-confirm.on { display: block; }
+.sl-confirm button { font-family: inherit; font-size: 14px; font-weight: 700; border-radius: 20px; padding: 8px 14px; margin: 6px 4px 0; cursor: pointer; border: 1.5px solid var(--border); background: white; color: var(--bar-accent-dark); }
+.sl-confirm button.go { background: var(--bar-accent-dark); color: white; border-color: var(--bar-accent-dark); }
+.sl-res { text-align: center; margin-bottom: 14px; }
+.sl-res .big { font-size: 26px; font-weight: 900; color: var(--bar-accent-dark); margin-bottom: 4px; }
+.sl-res .sub { font-size: 15px; color: var(--text-sec); line-height: 1.5; }
+.sl-stats { display: flex; gap: 8px; margin: 12px 0 14px; }
+.sl-stats div { flex: 1; background: var(--bar-bg-subtle); border-radius: 12px; padding: 10px 8px; text-align: center; }
+.sl-stats .l { font-size: 10px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 3px; }
+.sl-stats .v { font-size: 16px; font-weight: 800; color: var(--bar-accent-dark); }
+.sl-mini { display: grid; grid-template-columns: repeat(8, 1fr); gap: 3px; max-width: 260px; margin: 0 auto 14px; }
+.sl-mini span { aspect-ratio: 1; border-radius: 4px; background: var(--border); }
+.sl-mini span.f { background: var(--bar-primary); }
+</style>
+
+<div class="screen active" id="s-loading">
+  <div class="loading-spinner"></div>
+  <p style="text-align:center; color:var(--text-muted);">Escondiendo las palabras...</p>
+</div>
+
+<div class="screen" id="s-game">
+  <div class="sl-top">
+    <div class="sl-tema" id="sl-tema">Sopa de letras</div>
+    <div class="sl-timer" id="sl-timer">0:00</div>
+  </div>
+  <p class="sl-hint" id="sl-hint">Toca la primera letra y luego la última de cada palabra.</p>
+  <div class="sl-grid" id="sl-grid" role="grid" aria-label="Sopa de letras"></div>
+  <div class="sl-pistas" id="sl-pistas"></div>
+  <div class="sl-rendir"><button type="button" onclick="pedirRendirse()">🏳️ Me rindo</button></div>
+  <div class="sl-confirm" id="sl-confirm">¿Ver la solución? Contará como no resuelta.<br><button type="button" onclick="cancelarRendirse()">Sigo buscando</button><button type="button" class="go" onclick="rendirse()">Ver solución</button></div>
+  <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
+</div>
+
+<div class="screen" id="s-result">
+  <div class="sl-res">
+    <div class="big" id="r-big"></div>
+    <div class="sub" id="r-sub"></div>
+  </div>
+  <div class="sl-mini" id="r-mini"></div>
+  <div class="sl-stats">
+    <div><div class="l">Tu tiempo</div><div class="v" id="r-tiempo">—</div></div>
+    <div><div class="l">Mejor de hoy</div><div class="v" id="r-mejor">—</div></div>
+    <div><div class="l">La han resuelto</div><div class="v" id="r-n">—</div></div>
+  </div>
+  <div id="result-promo" style="display:none;"></div>
+  <button class="btn-share" onclick="doShare()">📤 Compartir</button>
+  <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
+  <div class="tomorrow">{{ bar.tomorrow_message or "Mañana, seis palabras nuevas." }}</div>
+</div>
+
+<script>
+const BAR_SLUG = {{ bar.slug|tojson }};
+const BAR_NAME = {{ bar.name|tojson }};
+const CODE = new URLSearchParams(window.location.search).get('code') || '';
+let gameData = null, TAM = 8, grid = [], palabras = [], encontradas = new Set(), found = [], sel = null, startTime = 0, timer = null, segundos = 0, terminado = false, rendido = false;
+const DIRS = [[0,1],[1,0],[1,1],[-1,1]];
+
+async function init() {
+  try {
+    const res = await fetch('/api/sopa', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG }) });
+    gameData = await res.json();
+    if (!Array.isArray(gameData.grid) || !Array.isArray(gameData.palabras) || !gameData.palabras.length) throw new Error('sin sopa');
+    TAM = gameData.tam || gameData.grid.length;
+    grid = gameData.grid; palabras = gameData.palabras;
+    found = Array.from({ length: TAM }, () => Array(TAM).fill(false));
+    if (gameData.tema) document.getElementById('sl-tema').textContent = gameData.tema;
+    renderGrid(); renderPistas();
+    showScreen('s-game');
+    startTime = Date.now();
+    timer = setInterval(tick, 500);
+  } catch(e) {
+    if (e && e.nookAmable) throw e;
+    document.getElementById('s-loading').innerHTML = `<div class="error-msg">No se pudo preparar la sopa.<br><button class="btn-secondary" onclick="location.reload()">Reintentar</button></div>`;
+  }
+}
+
+function tick() { segundos = Math.floor((Date.now() - startTime) / 1000); document.getElementById('sl-timer').textContent = fmt(segundos); }
+function fmt(s) { return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; }
+
+function renderGrid() {
+  const g = document.getElementById('sl-grid');
+  g.style.gridTemplateColumns = `repeat(${TAM}, 1fr)`;
+  g.innerHTML = grid.map((fila, f) => fila.map((ch, c) => `<button type="button" class="sl-cell" data-f="${f}" data-c="${c}" onclick="tocar(${f},${c})" aria-label="${ch}">${ch}</button>`).join('')).join('');
+}
+function renderPistas() {
+  document.getElementById('sl-pistas').innerHTML = palabras.map((p, i) => `<div class="sl-pista" id="pista-${i}"><span class="n">${p.palabra.length} letras</span><span class="t">${esc(p.pista)}</span><span class="w" id="pw-${i}"></span></div>`).join('');
+}
+function cell(f, c) { return document.querySelector(`.sl-cell[data-f="${f}"][data-c="${c}"]`); }
+function esc(s) { return String(s ?? '').replace(/[&<>"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch])); }
+
+function tocar(f, c) {
+  if (terminado) return;
+  if (!sel) { sel = [f, c]; cell(f, c).classList.add('sel'); return; }
+  const [f0, c0] = sel;
+  if (f0 === f && c0 === c) { cell(f, c).classList.remove('sel'); sel = null; return; }
+  const df = f - f0, dc = c - c0, n = Math.max(Math.abs(df), Math.abs(dc));
+  const uf = df / n, uc = dc / n;
+  const recta = Number.isInteger(uf) && Number.isInteger(uc) && (Math.abs(uf) + Math.abs(uc) > 0) && (uf === 0 || uc === 0 || Math.abs(uf) === Math.abs(uc));
+  cell(f0, c0).classList.remove('sel'); sel = null;
+  if (!recta) { parpadear([[f, c]], 'bad'); return; }
+  const celdas = []; for (let k = 0; k <= n; k++) celdas.push([f0 + uf * k, c0 + uc * k]);
+  const texto = celdas.map(([a, b]) => grid[a][b]).join('');
+  const rev = texto.split('').reverse().join('');
+  const idx = palabras.findIndex((p, i) => !encontradas.has(i) && (p.palabra === texto || p.palabra === rev));
+  if (idx < 0) { parpadear(celdas, 'bad'); return; }
+  encontradas.add(idx);
+  celdas.forEach(([a, b]) => { found[a][b] = true; cell(a, b).classList.add('found'); });
+  const pe = document.getElementById(`pista-${idx}`); pe.classList.add('ok'); document.getElementById(`pw-${idx}`).textContent = palabras[idx].palabra;
+  try { if (navigator.vibrate) navigator.vibrate(30); } catch(e) {}
+  if (encontradas.size === palabras.length) terminar(true);
+}
+function parpadear(celdas, cls) {
+  celdas.forEach(([a, b]) => cell(a, b).classList.add(cls));
+  setTimeout(() => celdas.forEach(([a, b]) => cell(a, b).classList.remove(cls)), 320);
+}
+
+function pedirRendirse() { if (!terminado) document.getElementById('sl-confirm').classList.add('on'); }
+function cancelarRendirse() { document.getElementById('sl-confirm').classList.remove('on'); }
+function rendirse() {
+  if (terminado) return;
+  rendido = true;
+  document.getElementById('sl-confirm').classList.remove('on');
+  palabras.forEach((p, i) => {
+    if (encontradas.has(i)) return;
+    for (let k = 0; k < p.palabra.length; k++) cell(p.fila + p.df * k, p.col + p.dc * k).classList.add('sol');
+    document.getElementById(`pw-${i}`).textContent = p.palabra;
+  });
+  document.getElementById('sl-hint').textContent = 'Esta era la solución.';
+  setTimeout(() => terminar(false), 2200);
+}
+
+async function terminar(acierto) {
+  if (terminado) return;
+  terminado = true; clearInterval(timer); tick();
+  document.getElementById('r-big').textContent = acierto ? '¡Todas encontradas!' : 'Esta vez no, pero ya la tienes';
+  document.getElementById('r-sub').textContent = acierto ? `Has encontrado las ${palabras.length} palabras en ${fmt(segundos)}.` : `Encontraste ${encontradas.size} de ${palabras.length}. Mañana hay sopa nueva.`;
+  document.getElementById('r-tiempo').textContent = fmt(segundos);
+  document.getElementById('r-mini').innerHTML = found.map(fila => fila.map(v => `<span class="${v ? 'f' : ''}"></span>`).join('')).join('');
+  showScreen('s-result');
+  try {
+    await fetch('/api/play', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG, correct: acierto, game_type: 'sopa', choice: encontradas.size, elapsed: segundos }) });
+  } catch(e) {}
+  try {
+    const r = await fetch(`/api/sopa-stats/${BAR_SLUG}`);
+    if (r.ok) {
+      const st = await r.json();
+      document.getElementById('r-mejor').textContent = st.mejor ? fmt(st.mejor) : '—';
+      document.getElementById('r-n').textContent = st.completadas ? `${st.completadas} ${st.completadas === 1 ? 'persona' : 'personas'}` : 'nadie aún';
+      if (acierto && st.mejor && segundos <= st.mejor) document.getElementById('r-sub').textContent += ' 🏆 Mejor tiempo de hoy.';
+    }
+  } catch(e) {}
+}
+
+function showScreen(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); document.getElementById(id).classList.add('active'); window.scrollTo(0, 0); }
+
+function doShare() {
+  const mini = found.map(fila => fila.map(v => v ? '🟩' : '⬜').join('')).join('\n');
+  const resultado = rendido ? `❌ Me rendí con ${encontradas.size}/${palabras.length}\n${mini}` : `✅ ${palabras.length}/${palabras.length} en ${fmt(segundos)}\n${mini}`;
+  const txt = nookShareText({ emoji: '🔤', titulo: 'La Sopa de Letras', resultado, gancho: 'Seis palabras escondidas, seis pistas. ¿En cuánto las encuentras tú?' });
+  nookShareWithImage(txt, 'sopa');
+}
+
+init();
+</script>
+{% endblock %}

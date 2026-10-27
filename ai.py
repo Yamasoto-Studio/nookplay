@@ -1754,6 +1754,125 @@ Exactamente 9 piezas, una por combo, con los combos indicados."""
     return {'preset': preset, 'producto': P['nombre'], 'ficha_labels': P['ficha'], 'ejes': ejes, 'piezas': piezas}
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# La Sopa de Letras: la IA aporta palabras + pistas (temáticas del espacio);
+# la cuadrícula la construye el código, así que nunca sale una sopa rota.
+# ─────────────────────────────────────────────────────────────────────────────
+SOPA_TAM = 8
+SOPA_N_PALABRAS = 6
+SOPA_DIRS = [(0, 1), (1, 0), (1, 1), (-1, 1)]  # →, ↓, ↘, ↗ (sin inversas)
+_SOPA_LETRAS = 'AAAAAEEEEEIIIOOOOUURRRSSSNNNLLDDTTCCMMPPBGHVJQZXYF'
+
+
+def _sopa_normalizar(palabra):
+    import unicodedata
+    p = str(palabra or '').strip().upper()
+    p = p.replace('Ñ', '\x00')
+    p = ''.join(c for c in unicodedata.normalize('NFD', p) if unicodedata.category(c) != 'Mn')
+    p = p.replace('\x00', 'Ñ')
+    return ''.join(c for c in p if c.isalpha())
+
+
+def _sopa_colocar(palabras, tam=SOPA_TAM, semilla=0, intentos=400):
+    """Coloca las palabras en una cuadrícula tam×tam (cruces permitidos si la
+    letra coincide). Devuelve (grid, colocadas) o (None, []) si no cabe."""
+    import random as _r
+    rng = _r.Random(semilla)
+    for _ in range(intentos):
+        grid = [[''] * tam for _ in range(tam)]
+        colocadas = []
+        orden = sorted(palabras, key=len, reverse=True)
+        ok = True
+        for w in orden:
+            huecos = []
+            for (df, dc) in SOPA_DIRS:
+                for f in range(tam):
+                    for c in range(tam):
+                        f2, c2 = f + df * (len(w) - 1), c + dc * (len(w) - 1)
+                        if not (0 <= f2 < tam and 0 <= c2 < tam):
+                            continue
+                        cabe = True
+                        for k, ch in enumerate(w):
+                            g = grid[f + df * k][c + dc * k]
+                            if g and g != ch:
+                                cabe = False
+                                break
+                        if cabe:
+                            huecos.append((f, c, df, dc))
+            if not huecos:
+                ok = False
+                break
+            f, c, df, dc = rng.choice(huecos)
+            for k, ch in enumerate(w):
+                grid[f + df * k][c + dc * k] = ch
+            colocadas.append({'palabra': w, 'fila': f, 'col': c, 'df': df, 'dc': dc})
+        if ok:
+            for f in range(tam):
+                for c in range(tam):
+                    if not grid[f][c]:
+                        grid[f][c] = rng.choice(_SOPA_LETRAS)
+            return grid, colocadas
+    return None, []
+
+
+def construir_sopa(candidatas, bar_slug, tam=SOPA_TAM, n=SOPA_N_PALABRAS):
+    """candidatas: lista de {palabra, pista}. Elige n que quepan y monta la sopa."""
+    limpias = []
+    vistas = set()
+    for c in candidatas:
+        if not isinstance(c, dict):
+            continue
+        w = _sopa_normalizar(c.get('palabra'))
+        pista = ' '.join(str(c.get('pista') or '').split())[:90]
+        if 4 <= len(w) <= tam and w not in vistas and pista:
+            vistas.add(w)
+            limpias.append({'palabra': w, 'pista': pista})
+    # Sin palabras contenidas en otras (confunden al marcar)
+    limpias = [a for a in limpias if not any(a['palabra'] != b['palabra'] and a['palabra'] in b['palabra'] for b in limpias)]
+    if len(limpias) < 4:
+        return None
+    semilla = get_day_seed(bar_slug) + _variant_hint_ctx.get() * 7919
+    for k in range(n, 3, -1):
+        for desplazamiento in range(0, max(1, len(limpias) - k + 1)):
+            subset = limpias[desplazamiento:desplazamiento + k]
+            if len(subset) < k:
+                break
+            grid, colocadas = _sopa_colocar([x['palabra'] for x in subset], tam, semilla + desplazamiento)
+            if grid:
+                pistas = {x['palabra']: x['pista'] for x in subset}
+                for p in colocadas:
+                    p['pista'] = pistas[p['palabra']]
+                return {'tam': tam, 'grid': grid, 'palabras': colocadas}
+    return None
+
+
+def generate_sopa(bar_slug, evitar=None):
+    api_key = os.environ.get('ANTHROPIC_API_KEY')
+    prompt = f"""Eres el redactor de LA SOPA DE LETRAS, un pasatiempo diario. Propón 10 PALABRAS para esconder en una sopa de letras de {SOPA_TAM}×{SOPA_TAM}, cada una con una PISTA tipo crucigrama (el jugador no ve la palabra: solo la pista y su número de letras).
+
+REGLAS:
+1. Palabras en español, de 4 a {SOPA_TAM} letras, UNA sola palabra (sin espacios ni guiones), sustantivos comunes o nombres conocidos, sin marcas ni personas reales. Evita palabras que estén contenidas en otras de la lista.
+2. Un TEMA común para las 10 (si hay temática de evento o espacio, úsala; si no, elige un tema cotidiano con gracia: la cocina, el verano, el cine, la oficina…). Indica el tema en 2-4 palabras.
+3. Cada pista: una definición ingeniosa o un pequeño acertijo de máximo 12 palabras, sin incluir la palabra ni su raíz. Que se pueda deducir sin ser experto.
+4. Mezcla longitudes (unas de 4-5 letras y otras de 7-8).
+
+Responde SOLO con este JSON:
+{{"tema": "...", "palabras": [{{"palabra": "MEEPLE", "pista": "Figurita de madera que te representa en el tablero"}}]}}""" + _bloque_evitar(evitar)
+    intentos = 3 if get_ia_mode() == 'batch' else 2
+    raw = None
+    for _ in range(intentos):
+        raw = _post_ia(prompt, 900, api_key)
+        try:
+            obj = _parse_ia_json(raw)
+            sopa = construir_sopa(obj.get('palabras') or [], bar_slug)
+            if sopa and len(sopa['palabras']) >= 5:
+                sopa['tema'] = ' '.join(str(obj.get('tema') or '').split())[:40]
+                return sopa
+        except Exception:
+            continue
+    raise Exception('La Sopa de Letras: no se pudo construir una sopa válida con las palabras propuestas')
+
+
 def generate_resena(bar_slug, evitar=None):
     api_key = os.environ.get('ANTHROPIC_API_KEY')
     prompt = """Eres el redactor de LA RESEÑA, un juego de humor: reseñas de 5 estrellas absurdamente serias sobre objetos o situaciones COTIDIANOS del universo indicado, y el jugador adivina qué se está reseñando.
