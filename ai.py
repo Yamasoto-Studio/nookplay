@@ -1873,6 +1873,88 @@ Responde SOLO con este JSON:
     raise Exception('La Sopa de Letras: no se pudo construir una sopa válida con las palabras propuestas')
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# El Anagrama: 3 palabras (6, 7 y 8 letras) del mundo del espacio, con pista.
+# La IA propone 8 candidatas; el código normaliza, elige las 3 que mejor
+# escalan y las baraja con semilla del día (todos ven el mismo desorden).
+# ─────────────────────────────────────────────────────────────────────────────
+ANAGRAMA_LONGITUDES = (6, 7, 8)
+
+
+def _anagrama_barajar(palabra, semilla):
+    import random as _r
+    rng = _r.Random(semilla)
+    letras = list(palabra)
+    for _ in range(20):
+        rng.shuffle(letras)
+        if ''.join(letras) != palabra:
+            break
+    return ''.join(letras)
+
+
+def construir_anagrama(candidatas, bar_slug):
+    limpias = []
+    vistas = set()
+    for c in candidatas:
+        if not isinstance(c, dict):
+            continue
+        w = _sopa_normalizar(c.get('palabra'))
+        pista = ' '.join(str(c.get('pista') or '').split())[:90]
+        if not (5 <= len(w) <= 9) or w in vistas or not pista:
+            continue
+        # Sin letras demasiado repetidas: un anagrama de "EEEEE" no tiene gracia
+        if max(w.count(ch) for ch in set(w)) > 3:
+            continue
+        vistas.add(w)
+        limpias.append({'palabra': w, 'pista': pista})
+    if len(limpias) < 3:
+        return None
+    rondas = []
+    usadas = set()
+    for objetivo in ANAGRAMA_LONGITUDES:
+        mejor = None
+        for x in limpias:
+            if x['palabra'] in usadas:
+                continue
+            d = abs(len(x['palabra']) - objetivo)
+            if mejor is None or d < mejor[0]:
+                mejor = (d, x)
+        if mejor:
+            usadas.add(mejor[1]['palabra'])
+            rondas.append(mejor[1])
+    rondas.sort(key=lambda x: len(x['palabra']))
+    if len(rondas) < 3:
+        return None
+    semilla = get_day_seed(bar_slug) + _variant_hint_ctx.get() * 104729
+    for i, r in enumerate(rondas):
+        r['letras'] = _anagrama_barajar(r['palabra'], semilla + i)
+    return {'rondas': rondas}
+
+
+def generate_anagrama(bar_slug, evitar=None):
+    api_key = os.environ.get('ANTHROPIC_API_KEY')
+    prompt = """Eres el redactor de EL ANAGRAMA, un pasatiempo diario: el jugador recibe las letras desordenadas de una palabra y una pista, y tiene que recomponerla.
+
+Propón 8 PALABRAS con pista:
+1. En español, UNA sola palabra (sin espacios ni guiones), de 5 a 9 letras, sustantivos comunes o términos conocidos del tema; sin marcas ni personas reales. Evita palabras con muchas letras repetidas.
+2. Un TEMA común (si hay temática de evento o espacio, úsala; si no, un tema cotidiano con gracia). Indícalo en 2-4 palabras. Mezcla longitudes: al menos dos de 5-6 letras, dos de 7 y dos de 8-9.
+3. Cada pista: una definición ingeniosa de máximo 12 palabras, que no contenga la palabra ni su raíz y que permita deducirla sin ser experto.
+
+Responde SOLO con este JSON:
+{"tema": "...", "palabras": [{"palabra": "MEEPLE", "pista": "Figurita de madera que te representa en el tablero"}]}""" + _bloque_evitar(evitar)
+    intentos = 3 if get_ia_mode() == 'batch' else 2
+    for _ in range(intentos):
+        try:
+            obj = _parse_ia_json(_post_ia(prompt, 700, api_key))
+            ana = construir_anagrama(obj.get('palabras') or [], bar_slug)
+            if ana:
+                ana['tema'] = ' '.join(str(obj.get('tema') or '').split())[:40]
+                return ana
+        except Exception:
+            continue
+    raise Exception('El Anagrama: no se pudieron construir tres rondas válidas')
+
+
 def generate_resena(bar_slug, evitar=None):
     api_key = os.environ.get('ANTHROPIC_API_KEY')
     prompt = """Eres el redactor de LA RESEÑA, un juego de humor: reseñas de 5 estrellas absurdamente serias sobre objetos o situaciones COTIDIANOS del universo indicado, y el jugador adivina qué se está reseñando.

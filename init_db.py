@@ -477,6 +477,15 @@ if not db.execute("SELECT id FROM games WHERE slug = 'sopa'").fetchone():
     db.commit()
     print('Juego La Sopa de Letras añadido.')
 
+# Añadir El Anagrama si no existe
+if not db.execute("SELECT id FROM games WHERE slug = 'anagrama'").fetchone():
+    db.execute(
+        "INSERT INTO games (slug, name, description, icon, plan_min, position) VALUES (?,?,?,?,?,?)",
+        ('anagrama', 'El Anagrama', 'Desenreda 3 palabras contrarreloj', '/static/games/anagrama.webp', 'starter_free', 34)
+    )
+    db.commit()
+    print('Juego El Anagrama añadido.')
+
 # Reordenar juegos por tipo de experiencia (orden lógico de UX)
 # Orden curado del catálogo y grupos (se reaplica en cada arranque: fuente única)
 CATALOGO_ORDEN = [
@@ -485,7 +494,7 @@ CATALOGO_ORDEN = [
     # Deducción y personas
     ('perfil', 'deduccion'), ('impostor', 'deduccion'), ('veredicto', 'deduccion'), ('dilema', 'deduccion'),
     # Palabras y cultura
-    ('sopa', 'palabras'), ('letra', 'palabras'), ('definicion', 'palabras'), ('titular', 'palabras'), ('sinopsis', 'palabras'), ('constitucion', 'palabras'),
+    ('sopa', 'palabras'), ('anagrama', 'palabras'), ('letra', 'palabras'), ('definicion', 'palabras'), ('titular', 'palabras'), ('sinopsis', 'palabras'), ('constitucion', 'palabras'),
     # Lógica y puzzle
     ('reinas', 'logica'), ('equilibrio', 'logica'), ('carta', 'logica'), ('orden', 'logica'), ('escalera', 'logica'), ('menteagil', 'logica'),
     # Curiosidades del mundo

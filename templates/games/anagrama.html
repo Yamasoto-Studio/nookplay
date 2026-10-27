@@ -1,0 +1,264 @@
+{% extends "game_base.html" %}
+{% block title %}El Anagrama — {{ bar.name }}{% endblock %}
+{% block og_title %}El Anagrama — {{ bar.name }}{% endblock %}
+{% block og_description %}Tres palabras desordenadas, treinta segundos cada una. ¿Las desenredas? Juega en {{ bar.name }} con Nookplay.{% endblock %}
+{% block og_url %}/{{ bar.slug }}/anagrama{% endblock %}
+
+{% block game_content %}
+<style>
+.an-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.an-tema { font-size: 12px; font-weight: 800; letter-spacing: 1.4px; text-transform: uppercase; color: var(--bar-primary); }
+.an-ronda { font-size: 12px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-muted); }
+.an-timer { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; margin: 0 0 4px; }
+.an-timer-fill { height: 100%; width: 100%; background: var(--bar-primary); border-radius: 3px; transition: width .25s linear; }
+.an-timer.urgente .an-timer-fill { background: #C0392B; }
+.an-seg { text-align: right; font-size: 13px; font-weight: 800; color: var(--text-muted); font-variant-numeric: tabular-nums; margin-bottom: 12px; }
+.an-timer.urgente + .an-seg { color: #C0392B; }
+.an-pista { text-align: center; font-size: 17px; font-weight: 700; line-height: 1.35; color: var(--bar-accent-dark); margin: 0 0 16px; min-height: 46px; }
+.an-fila { display: flex; justify-content: center; gap: 6px; margin-bottom: 18px; min-height: 52px; }
+.an-hueco { width: 38px; height: 46px; border-radius: 10px; border: 2px dashed var(--border); display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800; color: var(--bar-accent-dark); background: white; cursor: pointer; }
+.an-hueco.lleno { border-style: solid; border-color: var(--bar-accent-dark); }
+.an-hueco.fija { background: var(--bar-bg-subtle); border-color: var(--bar-primary); color: var(--bar-primary); cursor: default; }
+.an-fila.ok .an-hueco { background: #E8F5E9; border-color: #2E7D32; color: #2E7D32; }
+.an-fila.mal { animation: an-shake .35s; }
+@keyframes an-shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+.an-fichas { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-bottom: 16px; }
+.an-fichas.dos { display: grid; justify-content: center; }
+.an-ficha { width: 44px; height: 52px; border-radius: 12px; background: white; border: 1.5px solid var(--border); box-shadow: 0 3px 0 var(--border); font-size: 24px; font-weight: 800; color: var(--bar-accent-dark); display: flex; align-items: center; justify-content: center; cursor: pointer; font-family: inherit; transition: transform .08s, opacity .15s; }
+.an-ficha:active { transform: translateY(2px); box-shadow: none; }
+.an-ficha.usada { opacity: .25; pointer-events: none; }
+.an-acciones { display: flex; gap: 8px; margin-bottom: 14px; }
+.an-acciones button { flex: 1; font-family: inherit; font-size: 14px; font-weight: 600; padding: 10px; border-radius: 12px; border: 1.5px solid var(--border); background: white; color: var(--text-sec); cursor: pointer; }
+.an-acciones button:disabled { opacity: .4; cursor: default; }
+.an-aviso { text-align: center; font-size: 14px; color: var(--text-sec); min-height: 20px; margin-bottom: 10px; }
+.an-res { text-align: center; margin-bottom: 14px; }
+.an-res .big { font-size: 26px; font-weight: 900; color: var(--bar-accent-dark); margin-bottom: 4px; }
+.an-res .sub { font-size: 15px; color: var(--text-sec); line-height: 1.5; }
+.an-grid { display: flex; justify-content: center; gap: 8px; font-size: 28px; margin-bottom: 12px; }
+.an-lista { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.an-lista div { display: flex; justify-content: space-between; align-items: center; background: var(--bar-bg-subtle); border: 1px solid var(--border); border-radius: 12px; padding: 9px 12px; font-size: 14px; color: var(--text-sec); }
+.an-lista b { color: var(--bar-accent-dark); letter-spacing: 1px; }
+.an-stats { display: flex; gap: 8px; margin: 0 0 14px; }
+.an-stats div { flex: 1; background: var(--bar-bg-subtle); border-radius: 12px; padding: 10px 8px; text-align: center; }
+.an-stats .l { font-size: 10px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 3px; }
+.an-stats .v { font-size: 16px; font-weight: 800; color: var(--bar-accent-dark); }
+</style>
+
+<div class="screen active" id="s-loading">
+  <div class="loading-spinner"></div>
+  <p style="text-align:center; color:var(--text-muted);">Desordenando letras...</p>
+</div>
+
+<div class="screen" id="s-intro">
+  <div style="text-align:center; padding: 8px 0 18px;">
+    <h2 style="font-size:22px; font-weight:800; margin:0 0 8px; color:var(--bar-accent-dark);">Desenreda tres palabras</h2>
+    <p style="font-size:16px; color:var(--text-sec); margin:0; line-height:1.5;">Toca las letras en orden. Treinta segundos por palabra, una pista por si te atascas.</p>
+  </div>
+  <button class="btn-primary" style="width:100%;" onclick="empezar()">Empezar</button>
+  <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
+</div>
+
+<div class="screen" id="s-game">
+  <div class="an-top">
+    <div class="an-tema" id="an-tema">Anagrama</div>
+    <div class="an-ronda" id="an-ronda">1 de 3</div>
+  </div>
+  <div class="an-timer" id="an-timer"><div class="an-timer-fill" id="an-fill"></div></div>
+  <div class="an-seg" id="an-seg" aria-live="polite">30 s</div>
+  <div class="an-pista" id="an-pista"></div>
+  <div class="an-fila" id="an-fila"></div>
+  <div class="an-fichas" id="an-fichas"></div>
+  <div class="an-aviso" id="an-aviso"></div>
+  <div class="an-acciones">
+    <button type="button" id="btn-pista" onclick="primeraLetra()">💡 Primera letra (−5 s)</button>
+    <button type="button" onclick="limpiar()">↺ Borrar</button>
+    <button type="button" onclick="rendirRonda()">🏳️ Paso</button>
+  </div>
+  <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
+</div>
+
+<div class="screen" id="s-result">
+  <div class="an-res">
+    <div class="big" id="r-big"></div>
+    <div class="sub" id="r-sub"></div>
+  </div>
+  <div class="an-grid" id="r-grid"></div>
+  <div class="an-lista" id="r-lista"></div>
+  <div class="an-stats">
+    <div><div class="l">Tu tiempo</div><div class="v" id="r-tiempo">—</div></div>
+    <div><div class="l">Mejor de hoy</div><div class="v" id="r-mejor">—</div></div>
+    <div><div class="l">3 de 3 hoy</div><div class="v" id="r-n">—</div></div>
+  </div>
+  <div id="result-promo" style="display:none;"></div>
+  <button class="btn-share" onclick="doShare()">📤 Compartir</button>
+  <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
+  <div class="tomorrow">{{ bar.tomorrow_message or "Mañana, tres palabras nuevas." }}</div>
+</div>
+
+<script>
+const BAR_SLUG = {{ bar.slug|tojson }};
+const BAR_NAME = {{ bar.name|tojson }};
+const CODE = new URLSearchParams(window.location.search).get('code') || '';
+const SEGUNDOS = 30, PENALIZACION = 5;
+let gameData = null, rondas = [], ri = 0, fichas = [], colocadas = [], fija = false, resultados = [], tiempos = [], timer = null, fin = 0, bloqueado = false, startTotal = 0, totalSeg = 0;
+
+async function init() {
+  try {
+    const res = await fetch('/api/anagrama', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG }) });
+    gameData = await res.json();
+    rondas = (gameData.rondas || []).filter(r => r && r.palabra && r.letras && r.pista).slice(0, 3);
+    if (rondas.length < 1) throw new Error('sin rondas');
+    if (gameData.tema) document.getElementById('an-tema').textContent = gameData.tema;
+    showScreen('s-intro');
+  } catch(e) {
+    if (e && e.nookAmable) throw e;
+    document.getElementById('s-loading').innerHTML = `<div class="error-msg">No se pudo preparar el anagrama.<br><button class="btn-secondary" onclick="location.reload()">Reintentar</button></div>`;
+  }
+}
+
+function empezar() { ri = 0; resultados = []; tiempos = []; startTotal = Date.now(); showScreen('s-game'); renderRonda(); }
+
+function renderRonda() {
+  const r = rondas[ri];
+  bloqueado = false; fija = false; colocadas = [];
+  fichas = r.letras.split('').map((ch, i) => ({ id: i, ch, usada: false }));
+  document.getElementById('an-ronda').textContent = `${ri + 1} de ${rondas.length} · ${r.palabra.length} letras`;
+  document.getElementById('an-pista').textContent = r.pista;
+  document.getElementById('an-aviso').textContent = '';
+  document.getElementById('btn-pista').disabled = false;
+  const fila = document.getElementById('an-fila'); fila.className = 'an-fila';
+  pintar();
+  pararTimer();
+  fin = Date.now() + SEGUNDOS * 1000;
+  timer = setInterval(tick, 100); tick();
+}
+
+function pintar() {
+  const r = rondas[ri];
+  const fila = document.getElementById('an-fila');
+  fila.innerHTML = r.palabra.split('').map((_, i) => {
+    const c = colocadas[i];
+    const esFija = fija && i === 0;
+    return `<div class="an-hueco ${c ? 'lleno' : ''} ${esFija ? 'fija' : ''}" onclick="quitar(${i})">${c ? c.ch : ''}</div>`;
+  }).join('');
+  document.getElementById('an-fichas').innerHTML = fichas.map(f => `<button type="button" class="an-ficha ${f.usada ? 'usada' : ''}" onclick="poner(${f.id})">${f.ch}</button>`).join('');
+  // Más de 7 letras: dos filas equilibradas (4+4, 5+4) en vez de 7+1
+  const cont = document.getElementById('an-fichas');
+  if (fichas.length > 7) { cont.classList.add('dos'); cont.style.gridTemplateColumns = `repeat(${Math.ceil(fichas.length / 2)}, 44px)`; }
+  else { cont.classList.remove('dos'); cont.style.gridTemplateColumns = ''; }
+}
+
+function poner(id) {
+  if (bloqueado) return;
+  const f = fichas.find(x => x.id === id); if (!f || f.usada) return;
+  const r = rondas[ri];
+  let pos = colocadas.findIndex((c, i) => !c && !(fija && i === 0));
+  if (pos < 0) pos = colocadas.length;
+  if (pos >= r.palabra.length) return;
+  if (fija && pos === 0) pos = 1;
+  f.usada = true; colocadas[pos] = f;
+  pintar();
+  if (colocadas.filter(Boolean).length === r.palabra.length) comprobar();
+}
+function quitar(i) {
+  if (bloqueado || !colocadas[i] || (fija && i === 0)) return;
+  colocadas[i].usada = false; colocadas[i] = null; pintar();
+}
+function limpiar() {
+  if (bloqueado) return;
+  colocadas.forEach((c, i) => { if (c && !(fija && i === 0)) { c.usada = false; colocadas[i] = null; } });
+  pintar();
+}
+function primeraLetra() {
+  if (bloqueado || fija) return;
+  const r = rondas[ri];
+  limpiar();
+  const f = fichas.find(x => !x.usada && x.ch === r.palabra[0]);
+  if (!f) return;
+  fija = true; f.usada = true; colocadas[0] = f;
+  fin -= PENALIZACION * 1000;
+  document.getElementById('btn-pista').disabled = true;
+  document.getElementById('an-aviso').textContent = 'Primera letra fijada · −5 s';
+  pintar(); tick();
+}
+
+function comprobar() {
+  const r = rondas[ri];
+  const intento = colocadas.map(c => c ? c.ch : '').join('');
+  const fila = document.getElementById('an-fila');
+  if (intento === r.palabra) {
+    bloqueado = true; pararTimer();
+    fila.classList.add('ok');
+    try { if (navigator.vibrate) navigator.vibrate(30); } catch(e) {}
+    resultados.push(true); tiempos.push(SEGUNDOS - Math.max(0, Math.round((fin - Date.now()) / 1000)));
+    setTimeout(siguiente, 700);
+  } else {
+    fila.classList.add('mal');
+    setTimeout(() => { fila.classList.remove('mal'); limpiar(); }, 380);
+  }
+}
+
+function tick() {
+  const rest = Math.max(0, fin - Date.now());
+  document.getElementById('an-fill').style.width = `${(rest / (SEGUNDOS * 1000)) * 100}%`;
+  document.getElementById('an-seg').textContent = `${Math.ceil(rest / 1000)} s`;
+  document.getElementById('an-timer').classList.toggle('urgente', rest <= 5000);
+  if (rest <= 0) tiempoAgotado();
+}
+function pararTimer() { if (timer) { clearInterval(timer); timer = null; } }
+
+function tiempoAgotado() { if (bloqueado) return; fallarRonda('⏱ Tiempo. Era ' + rondas[ri].palabra); }
+function rendirRonda() { if (bloqueado) return; fallarRonda('Era ' + rondas[ri].palabra); }
+function fallarRonda(msg) {
+  bloqueado = true; pararTimer();
+  const r = rondas[ri];
+  colocadas = r.palabra.split('').map((ch, i) => ({ id: -1 - i, ch }));
+  fija = false; pintar();
+  document.getElementById('an-aviso').textContent = msg;
+  resultados.push(false); tiempos.push(SEGUNDOS);
+  setTimeout(siguiente, 1600);
+}
+
+function siguiente() {
+  ri++;
+  if (ri < rondas.length) { renderRonda(); return; }
+  terminar();
+}
+
+async function terminar() {
+  pararTimer();
+  totalSeg = tiempos.reduce((a, b) => a + b, 0);
+  const n = resultados.filter(Boolean).length;
+  document.getElementById('r-big').textContent = n === rondas.length ? '¡Las tres!' : (n === 0 ? 'Hoy no era el día' : `${n} de ${rondas.length}`);
+  document.getElementById('r-sub').textContent = n === rondas.length ? `Desenredadas en ${totalSeg} segundos.` : 'Mañana hay palabras nuevas.';
+  document.getElementById('r-grid').textContent = resultados.map(ok => ok ? '🟩' : '🟥').join(' ');
+  document.getElementById('r-lista').innerHTML = rondas.map((r, i) => `<div><span>${esc(r.pista)}</span><b>${resultados[i] ? '✅' : '❌'} ${r.palabra}</b></div>`).join('');
+  document.getElementById('r-tiempo').textContent = `${totalSeg} s`;
+  showScreen('s-result');
+  try {
+    await fetch('/api/play', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG, correct: n === rondas.length, game_type: 'anagrama', choice: n, elapsed: totalSeg }) });
+  } catch(e) {}
+  try {
+    const r = await fetch(`/api/anagrama-stats/${BAR_SLUG}`);
+    if (r.ok) {
+      const st = await r.json();
+      document.getElementById('r-mejor').textContent = st.mejor ? `${st.mejor} s` : '—';
+      document.getElementById('r-n').textContent = st.completadas ? `${st.completadas} ${st.completadas === 1 ? 'persona' : 'personas'}` : 'nadie aún';
+      if (n === rondas.length && st.mejor && totalSeg <= st.mejor) document.getElementById('r-sub').textContent += ' 🏆 Mejor tiempo de hoy.';
+    }
+  } catch(e) {}
+}
+
+function showScreen(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); document.getElementById(id).classList.add('active'); window.scrollTo(0, 0); }
+function esc(s) { return String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+function doShare() {
+  const n = resultados.filter(Boolean).length;
+  const grid = resultados.map(ok => ok ? '🟩' : '🟥').join('');
+  const txt = nookShareText({ emoji: '🔀', titulo: 'El Anagrama', resultado: `${grid} ${n}/${rondas.length} · ${totalSeg} s`, gancho: 'Tres palabras desordenadas, 30 segundos cada una. ¿Las desenredas tú más rápido?' });
+  nookShareWithImage(txt, 'anagrama');
+}
+
+init();
+</script>
+{% endblock %}
