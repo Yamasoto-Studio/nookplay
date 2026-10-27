@@ -1,0 +1,201 @@
+{% extends "game_base.html" %}
+{% block title %}El Emoji — {{ bar.name }}{% endblock %}
+{% block og_title %}El Emoji — {{ bar.name }}{% endblock %}
+{% block og_description %}Cinco títulos cifrados en emojis. ¿Los sacas todos? Juega en {{ bar.name }} con Nookplay.{% endblock %}
+{% block og_url %}/{{ bar.slug }}/emoji{% endblock %}
+
+{% block game_content %}
+<style>
+.em-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.em-cat { font-size: 12px; font-weight: 800; letter-spacing: 1.4px; text-transform: uppercase; color: var(--bar-primary); }
+.em-ronda { font-size: 12px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-muted); }
+.em-puntos { display: flex; justify-content: center; gap: 6px; margin-bottom: 14px; }
+.em-puntos span { width: 10px; height: 10px; border-radius: 50%; background: var(--border); }
+.em-puntos span.ok { background: #2E7D32; }
+.em-puntos span.mal { background: #C0392B; }
+.em-puntos span.act { background: var(--bar-primary); }
+.em-cifrado { text-align: center; font-size: 44px; line-height: 1.25; letter-spacing: 4px; background: white; border: 1.5px solid var(--border); border-radius: 18px; padding: 22px 12px; margin-bottom: 16px; animation: em-in .3s ease; }
+@keyframes em-in { from { opacity: 0; transform: scale(.94); } to { opacity: 1; transform: scale(1); } }
+.em-pregunta { text-align: center; font-size: 15px; color: var(--text-sec); margin-bottom: 12px; }
+.em-ops { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+.em-op { font-family: inherit; font-size: 16px; font-weight: 600; text-align: left; padding: 13px 14px; border-radius: 14px; border: 1.5px solid var(--border); background: white; color: var(--bar-accent-dark); cursor: pointer; transition: transform .08s; }
+.em-op:active { transform: scale(.985); }
+.em-op.ok { background: #E8F5E9; border-color: #2E7D32; color: #2E7D32; }
+.em-op.mal { background: #FDECEA; border-color: #C0392B; color: #C0392B; }
+.em-op.apagada { opacity: .45; }
+.em-ops.resuelto .em-op { pointer-events: none; }
+.em-logica { background: var(--bar-bg-subtle); border-radius: 14px; padding: 12px 14px; font-size: 15px; line-height: 1.5; color: var(--text-sec); margin-bottom: 14px; display: none; animation: em-in .25s ease; }
+.em-logica b { color: var(--bar-accent-dark); }
+.em-res { text-align: center; margin-bottom: 14px; }
+.em-res .big { font-size: 26px; font-weight: 900; color: var(--bar-accent-dark); margin-bottom: 4px; }
+.em-res .sub { font-size: 15px; color: var(--text-sec); line-height: 1.5; }
+.em-grid { display: flex; justify-content: center; gap: 6px; font-size: 26px; margin-bottom: 12px; }
+.em-lista { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.em-lista div { display: flex; justify-content: space-between; align-items: center; gap: 10px; background: var(--bar-bg-subtle); border: 1px solid var(--border); border-radius: 12px; padding: 9px 12px; font-size: 14px; color: var(--text-sec); }
+.em-lista .e { font-size: 20px; letter-spacing: 2px; white-space: nowrap; }
+.em-lista b { color: var(--bar-accent-dark); text-align: right; }
+.em-stats { display: flex; gap: 8px; margin: 0 0 14px; }
+.em-stats div { flex: 1; background: var(--bar-bg-subtle); border-radius: 12px; padding: 10px 8px; text-align: center; }
+.em-stats .l { font-size: 10px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 3px; }
+.em-stats .v { font-size: 16px; font-weight: 800; color: var(--bar-accent-dark); }
+</style>
+
+<div class="screen active" id="s-loading">
+  <div class="loading-spinner"></div>
+  <p style="text-align:center; color:var(--text-muted);">Cifrando títulos...</p>
+</div>
+
+<div class="screen" id="s-intro">
+  <div style="text-align:center; padding: 8px 0 18px;">
+    <div style="font-size:40px; letter-spacing:4px; margin-bottom:10px;">🦁👑🌅</div>
+    <h2 style="font-size:22px; font-weight:800; margin:0 0 8px; color:var(--bar-accent-dark);">Descifra el título</h2>
+    <p style="font-size:16px; color:var(--text-sec); margin:0; line-height:1.5;">Cinco títulos escondidos en emojis. Elige entre cuatro opciones; una sola oportunidad por ronda.</p>
+    <p id="em-intro-cat" style="font-size:14px; color:var(--bar-primary); font-weight:700; margin:10px 0 0;"></p>
+  </div>
+  <button class="btn-primary" style="width:100%;" onclick="empezar()">Empezar</button>
+  <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
+</div>
+
+<div class="screen" id="s-game">
+  <div class="em-top">
+    <div class="em-cat" id="em-cat">El Emoji</div>
+    <div class="em-ronda" id="em-ronda">1 de 5</div>
+  </div>
+  <div class="em-puntos" id="em-puntos"></div>
+  <div class="em-cifrado" id="em-cifrado"></div>
+  <div class="em-pregunta">¿Qué título es?</div>
+  <div class="em-ops" id="em-ops"></div>
+  <div class="em-logica" id="em-logica"></div>
+  <button class="btn-primary" id="btn-sig" style="width:100%; display:none;" onclick="siguiente()">Siguiente</button>
+  <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
+</div>
+
+<div class="screen" id="s-result">
+  <div class="em-res">
+    <div class="big" id="r-big"></div>
+    <div class="sub" id="r-sub"></div>
+  </div>
+  <div class="em-grid" id="r-grid"></div>
+  <div class="em-lista" id="r-lista"></div>
+  <div class="em-stats">
+    <div><div class="l">Tus aciertos</div><div class="v" id="r-n">—</div></div>
+    <div><div class="l">Media de hoy</div><div class="v" id="r-media">—</div></div>
+    <div><div class="l">5 de 5 hoy</div><div class="v" id="r-plenos">—</div></div>
+  </div>
+  <div id="result-promo" style="display:none;"></div>
+  <button class="btn-share" onclick="doShare()">📤 Compartir</button>
+  <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
+  <div class="tomorrow">{{ bar.tomorrow_message or "Mañana, cinco títulos nuevos." }}</div>
+</div>
+
+<script>
+const BAR_SLUG = {{ bar.slug|tojson }};
+const BAR_NAME = {{ bar.name|tojson }};
+const CODE = new URLSearchParams(window.location.search).get('code') || '';
+let gameData = null, rondas = [], ri = 0, resultados = [], bloqueado = false;
+
+async function init() {
+  try {
+    const res = await fetch('/api/emoji', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG }) });
+    gameData = await res.json();
+    rondas = (gameData.rondas || []).filter(r => r && r.emojis && r.respuesta && Array.isArray(r.opciones) && r.opciones.length >= 2).slice(0, 5);
+    if (rondas.length < 1) throw new Error('sin rondas');
+    if (gameData.categoria) {
+      document.getElementById('em-cat').textContent = gameData.categoria;
+      document.getElementById('em-intro-cat').textContent = 'Hoy: ' + gameData.categoria;
+    }
+    showScreen('s-intro');
+  } catch(e) {
+    if (e && e.nookAmable) throw e;
+    document.getElementById('s-loading').innerHTML = `<div class="error-msg">No se pudieron cifrar los títulos.<br><button class="btn-secondary" onclick="location.reload()">Reintentar</button></div>`;
+  }
+}
+
+function empezar() { ri = 0; resultados = []; showScreen('s-game'); renderRonda(); }
+
+function pintarPuntos() {
+  document.getElementById('em-puntos').innerHTML = rondas.map((_, i) =>
+    `<span class="${i < resultados.length ? (resultados[i] ? 'ok' : 'mal') : (i === ri ? 'act' : '')}"></span>`).join('');
+}
+
+function renderRonda() {
+  const r = rondas[ri];
+  bloqueado = false;
+  document.getElementById('em-ronda').textContent = `${ri + 1} de ${rondas.length}`;
+  pintarPuntos();
+  const cif = document.getElementById('em-cifrado');
+  cif.style.animation = 'none'; void cif.offsetWidth; cif.style.animation = '';
+  cif.textContent = r.emojis;
+  const ops = document.getElementById('em-ops');
+  ops.className = 'em-ops';
+  ops.innerHTML = r.opciones.map((o, i) => `<button type="button" class="em-op" onclick="elegir(${i})">${esc(o)}</button>`).join('');
+  const lg = document.getElementById('em-logica'); lg.style.display = 'none'; lg.innerHTML = '';
+  document.getElementById('btn-sig').style.display = 'none';
+}
+
+function elegir(i) {
+  if (bloqueado) return;
+  bloqueado = true;
+  const r = rondas[ri];
+  const ok = r.opciones[i] === r.respuesta;
+  resultados.push(ok);
+  const ops = document.getElementById('em-ops'); ops.classList.add('resuelto');
+  [...ops.children].forEach((b, j) => {
+    if (r.opciones[j] === r.respuesta) b.classList.add('ok');
+    else if (j === i) b.classList.add('mal');
+    else b.classList.add('apagada');
+  });
+  try { if (navigator.vibrate) navigator.vibrate(ok ? 30 : [40, 60, 40]); } catch(e) {}
+  pintarPuntos();
+  const lg = document.getElementById('em-logica');
+  lg.innerHTML = `<b>${ok ? '✅ ¡Eso es!' : '❌ Era ' + esc(r.respuesta) + '.'}</b>${r.logica ? ' ' + esc(r.logica) : ''}`;
+  lg.style.display = 'block';
+  const btn = document.getElementById('btn-sig');
+  btn.textContent = ri + 1 < rondas.length ? 'Siguiente' : 'Ver resultado';
+  btn.style.display = 'block';
+}
+
+function siguiente() {
+  ri++;
+  if (ri < rondas.length) { renderRonda(); window.scrollTo(0, 0); return; }
+  terminar();
+}
+
+async function terminar() {
+  const n = resultados.filter(Boolean).length;
+  const total = rondas.length;
+  const big = n === total ? '¡Pleno!' : n >= 3 ? `${n} de ${total}` : n === 0 ? 'Ni uno…' : `${n} de ${total}`;
+  const sub = n === total ? 'Los emojis no tienen secretos para ti.' : n >= 3 ? 'Nada mal. Mañana, cinco títulos nuevos.' : 'Hay días así. Mañana se cambia de categoría.';
+  document.getElementById('r-big').textContent = big;
+  document.getElementById('r-sub').textContent = sub;
+  document.getElementById('r-grid').textContent = resultados.map(ok => ok ? '🟩' : '🟥').join(' ');
+  document.getElementById('r-lista').innerHTML = rondas.map((r, i) => `<div><span class="e">${esc(r.emojis)}</span><b>${resultados[i] ? '✅' : '❌'} ${esc(r.respuesta)}</b></div>`).join('');
+  document.getElementById('r-n').textContent = `${n} / ${total}`;
+  showScreen('s-result');
+  try {
+    await fetch('/api/play', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG, correct: n === total, game_type: 'emoji', choice: n }) });
+  } catch(e) {}
+  try {
+    const r = await fetch(`/api/emoji-stats/${BAR_SLUG}`);
+    if (r.ok) {
+      const st = await r.json();
+      document.getElementById('r-media').textContent = st.jugadas ? `${String(st.media).replace('.', ',')} / ${total}` : '—';
+      document.getElementById('r-plenos').textContent = st.jugadas ? `${st.plenos} de ${st.jugadas}` : 'nadie aún';
+    }
+  } catch(e) {}
+}
+
+function showScreen(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); document.getElementById(id).classList.add('active'); window.scrollTo(0, 0); }
+function esc(s) { return String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+function doShare() {
+  const n = resultados.filter(Boolean).length;
+  const grid = resultados.map(ok => ok ? '🟩' : '🟥').join('');
+  const muestra = rondas[0] ? rondas[0].emojis : '';
+  const txt = nookShareText({ emoji: '🧩', titulo: 'El Emoji', resultado: `${grid} ${n}/${rondas.length}`, gancho: `${muestra} ← ¿lo sacas? Cinco títulos cifrados en emojis.` });
+  nookShareWithImage(txt, 'emoji');
+}
+
+init();
+</script>
+{% endblock %}

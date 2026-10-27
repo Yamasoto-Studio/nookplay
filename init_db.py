@@ -486,6 +486,15 @@ if not db.execute("SELECT id FROM games WHERE slug = 'anagrama'").fetchone():
     db.commit()
     print('Juego El Anagrama añadido.')
 
+# Añadir El Emoji si no existe
+if not db.execute("SELECT id FROM games WHERE slug = 'emoji'").fetchone():
+    db.execute(
+        "INSERT INTO games (slug, name, description, icon, plan_min, position) VALUES (?,?,?,?,?,?)",
+        ('emoji', 'El Emoji', 'Cinco títulos cifrados en emojis', '/static/games/emoji.webp', 'starter_free', 35)
+    )
+    db.commit()
+    print('Juego El Emoji añadido.')
+
 # Reordenar juegos por tipo de experiencia (orden lógico de UX)
 # Orden curado del catálogo y grupos (se reaplica en cada arranque: fuente única)
 CATALOGO_ORDEN = [
@@ -494,7 +503,7 @@ CATALOGO_ORDEN = [
     # Deducción y personas
     ('perfil', 'deduccion'), ('impostor', 'deduccion'), ('veredicto', 'deduccion'), ('dilema', 'deduccion'),
     # Palabras y cultura
-    ('sopa', 'palabras'), ('anagrama', 'palabras'), ('letra', 'palabras'), ('definicion', 'palabras'), ('titular', 'palabras'), ('sinopsis', 'palabras'), ('constitucion', 'palabras'),
+    ('sopa', 'palabras'), ('anagrama', 'palabras'), ('emoji', 'palabras'), ('letra', 'palabras'), ('definicion', 'palabras'), ('titular', 'palabras'), ('sinopsis', 'palabras'), ('constitucion', 'palabras'),
     # Lógica y puzzle
     ('reinas', 'logica'), ('equilibrio', 'logica'), ('carta', 'logica'), ('orden', 'logica'), ('escalera', 'logica'), ('menteagil', 'logica'),
     # Curiosidades del mundo

@@ -1956,6 +1956,92 @@ Responde SOLO con este JSON:
     raise Exception('El Anagrama: no se pudieron construir tres rondas válidas')
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# El Emoji — títulos cifrados en emojis, 5 rondas con 4 opciones
+# ─────────────────────────────────────────────────────────────────────────────
+EMOJI_CATEGORIAS = [
+    'películas', 'juegos de mesa', 'refranes y dichos', 'canciones', 'series de televisión',
+    'libros y cuentos', 'lugares del mundo', 'platos y comidas', 'personajes de ficción', 'deportes y juegos',
+]
+EMOJI_RONDAS = 5
+
+def _emoji_limpio(texto):
+    """Normaliza una cadena de emojis: quita espacios y devuelve la cadena, o ''
+    si contiene algo que se pinta distinto según el móvil (ZWJ, tonos de piel,
+    banderas, teclas) o no son emojis básicos (de 3 a 6)."""
+    t = ''.join(ch for ch in str(texto or '') if ch not in (' ', '\ufe0e', '\u200b', '\n', '\t', '\r'))
+    if not t:
+        return ''
+    n = 0
+    for ch in t:
+        cp = ord(ch)
+        if cp == 0xFE0F:
+            continue  # selector de variante: se conserva (hace que ☀ se pinte en color) pero no cuenta
+        if cp == 0x200D or 0x1F3FB <= cp <= 0x1F3FF or 0x1F1E6 <= cp <= 0x1F1FF or cp == 0x20E3:
+            return ''
+        if cp >= 0x1F000 or 0x2190 <= cp <= 0x2BFF or cp in (0x00A9, 0x00AE, 0x2122, 0x2139, 0x3030, 0x303D, 0x3297, 0x3299):
+            n += 1
+        else:
+            return ''
+    return t if 3 <= n <= 6 else ''
+
+def construir_emoji(rondas, bar_slug):
+    """Valida y recorta a EMOJI_RONDAS rondas; baraja las opciones con semilla del día."""
+    import random as _random
+    rng = _random.Random(get_day_seed(bar_slug) + 77)
+    salida, vistas = [], set()
+    for r in rondas or []:
+        if not isinstance(r, dict):
+            continue
+        emojis = _emoji_limpio(r.get('emojis'))
+        resp = ' '.join(str(r.get('respuesta') or '').split())[:60]
+        ops = [' '.join(str(o).split())[:60] for o in (r.get('opciones') or []) if str(o).strip()]
+        ops = list(dict.fromkeys(ops))
+        logica = ' '.join(str(r.get('logica') or '').split())[:160]
+        if not emojis or not resp or resp.lower() in vistas or emojis in vistas:
+            continue
+        if resp not in ops:
+            ops.insert(0, resp)
+        ops = [resp] + [o for o in ops if o != resp][:3]
+        if len(ops) < 4:
+            continue
+        rng.shuffle(ops)
+        vistas.add(resp.lower()); vistas.add(emojis)
+        salida.append({'emojis': emojis, 'respuesta': resp, 'opciones': ops, 'logica': logica})
+        if len(salida) == EMOJI_RONDAS:
+            break
+    return salida if len(salida) == EMOJI_RONDAS else None
+
+def generate_emoji(bar_slug, evitar=None):
+    api_key = os.environ.get('ANTHROPIC_API_KEY')
+    categoria = EMOJI_CATEGORIAS[get_day_seed(bar_slug) % len(EMOJI_CATEGORIAS)]
+    prompt = f"""Eres el redactor de EL EMOJI, un pasatiempo diario: un título conocido cifrado en emojis, y el jugador tiene que descubrir cuál es entre 4 opciones.
+
+CATEGORÍA BASE de hoy: {categoria}.
+
+Propón 7 TÍTULOS cifrados:
+1. Títulos MUY conocidos por el gran público en España (nada de nicho): que al ver la solución todo el mundo diga "¡claro!".
+2. Cada cifrado usa de 3 a 5 emojis que representan el título por su SIGNIFICADO, por partes o por su historia (ej.: 🦁👑🌅 → El Rey León; 🐷🐷🐷🐺💨 → Los tres cerditos). Cada emoji debe aportar una pista real; nada de relleno.
+3. Usa SOLO emojis básicos y universales (objetos, animales, caras, naturaleza, símbolos). PROHIBIDO: banderas, tonos de piel, emojis compuestos de personas (familias, profesiones), teclas numéricas y letras.
+4. 4 opciones: la correcta y 3 títulos reales de la misma categoría que compartan algún emoji o idea con el cifrado, para que haya que pensar; nunca absurdas.
+5. "logica": una línea (máx. 18 palabras) que explique el cifrado emoji a emoji, con gracia; se muestra al resolver.
+6. Los 7 títulos deben ser distintos entre sí y de distintas épocas o estilos.
+
+Responde SOLO con este JSON:
+{{"categoria": "{categoria}", "rondas": [{{"emojis": "🦁👑🌅", "respuesta": "El Rey León", "opciones": ["El Rey León", "Madagascar", "El libro de la selva", "Tarzán"], "logica": "Un león 🦁 con corona 👑 y el amanecer 🌅 de la sabana."}}]}}""" + _bloque_evitar(evitar)
+    intentos = 3 if get_ia_mode() == 'batch' else 2
+    for _ in range(intentos):
+        try:
+            obj = _parse_ia_json(_post_ia(prompt, 1400, api_key))
+            rondas = construir_emoji(obj.get('rondas') or [], bar_slug)
+            if rondas:
+                cat = ' '.join(str(obj.get('categoria') or categoria).split())[:40]
+                return {'categoria': cat, 'rondas': rondas}
+        except Exception:
+            continue
+    raise Exception('El Emoji: no se pudieron construir cinco rondas válidas')
+
+
 def generate_resena(bar_slug, evitar=None):
     api_key = os.environ.get('ANTHROPIC_API_KEY')
     prompt = """Eres el redactor de LA RESEÑA, un juego de humor: reseñas de 5 estrellas absurdamente serias sobre objetos o situaciones COTIDIANOS del universo indicado, y el jugador adivina qué se está reseñando.
