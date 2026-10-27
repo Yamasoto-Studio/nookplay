@@ -729,6 +729,9 @@
       <div style="display:flex; align-items:center; gap:10px;">
         <span id="pregen-status" style="font-size:12px; color:var(--text-muted);"></span>
         <button type="button" class="btn-secondary" id="btn-pregen" onclick="generarTodoHoy()" style="width:auto; padding:8px 14px; font-size:13px;">⚡ Generar todo hoy</button>
+        {% if (bar.space_kind or 'local') == 'evento' %}
+        <button type="button" id="btn-regen-todo" onclick="regenerarTodoHoy()" title="Descarta todo el contenido de hoy de este espacio y lo vuelve a generar (p. ej. tras cambiar la temática)" style="font-size:13px; font-weight:600; color:#A8410E; background:transparent; border:1.5px solid #E8C4AC; border-radius:8px; padding:8px 12px; cursor:pointer; font-family:inherit;">🔄 Regenerar todo hoy</button>
+        {% endif %}
       </div>
       {% endif %}
     </div>
@@ -1162,16 +1165,25 @@
   const KNOB_VALUES = {{ knob_values|tojson }};
   const KNOBS_SUPER = {{ 'true' if admin_role == 'superadmin' else 'false' }};
 
-  async function generarTodoHoy() {
+  async function generarTodoHoy(regenerar) {
     const btn = document.getElementById('btn-pregen'), st = document.getElementById('pregen-status');
+    const btnR = document.getElementById('btn-regen-todo');
     if (!btn) return;
-    btn.disabled = true; st.textContent = 'Arrancando…';
+    btn.disabled = true; if (btnR) btnR.disabled = true; st.textContent = 'Arrancando…';
+    const body = { bar_slug: '{{ bar.slug }}' };
+    if (regenerar) { body.regenerar = true; body.confirmar = true; }
     try {
-      const r = await fetch('/admin/api/pregen-hoy', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ bar_slug: '{{ bar.slug }}' }) });
+      const r = await fetch('/admin/api/pregen-hoy', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const d = await r.json().catch(() => null);
-      if (!d || !d.ok) { st.textContent = '❌ ' + ((d && d.error) || 'Error ' + r.status); btn.disabled = false; return; }
-    } catch(e) { st.textContent = '❌ Error de red'; btn.disabled = false; return; }
+      if (!d || !d.ok) { st.textContent = '❌ ' + ((d && d.error) || 'Error ' + r.status); btn.disabled = false; if (btnR) btnR.disabled = false; return; }
+    } catch(e) { st.textContent = '❌ Error de red'; btn.disabled = false; if (btnR) btnR.disabled = false; return; }
     seguirPregen();
+  }
+
+  function regenerarTodoHoy() {
+    const ok = window.prompt('Esto DESCARTA todo el contenido de hoy de este espacio (todas las versiones de todos los juegos) y lo vuelve a generar con la temática actual. Tarda unos minutos y consume IA.\n\nEscribe REGENERAR para continuar:');
+    if ((ok || '').trim().toUpperCase() !== 'REGENERAR') return;
+    generarTodoHoy(true);
   }
 
   // Seguimiento del progreso. Se usa al pulsar el botón y también al abrir el

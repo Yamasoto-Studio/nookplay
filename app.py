@@ -1971,13 +1971,35 @@ def admin_pregen_hoy():
         return jsonify({'ok': False, 'error': 'No autorizado'}), 403
     data = request.get_json() or {}
     bar_slug = (data.get('bar_slug') or '').strip()
+    # regenerar=True: descarta TODO el contenido de hoy del espacio (solo eventos)
+    # antes de generar, para aplicar una temática nueva de golpe sin pasar por
+    # el límite de 10 regeneraciones juego a juego.
+    regenerar = bool(data.get('regenerar')) and data.get('confirmar') is True
     db = get_db()
-    bar = db.execute("SELECT id FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
-    db.close()
+    bar = db.execute("SELECT id, space_kind FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
     if not bar:
+        db.close()
         return jsonify({'ok': False, 'error': 'No encontrado'}), 404
+    if regenerar and (bar['space_kind'] or 'local') != 'evento':
+        db.close()
+        return jsonify({'ok': False, 'error': 'Regenerar todo solo está disponible en eventos'}), 400
     if _PregenEstado.leer()['corriendo'] or not _intentar_claim_pregen():
+        db.close()
         return jsonify({'ok': False, 'error': 'Ya hay una generación en curso; espera a que termine'}), 409
+    descartadas = 0
+    if regenerar:
+        hoy = str(date.today())
+        ids = [r['id'] for r in db.execute(
+            "SELECT id FROM generated_games WHERE bar_id = ? AND game_date = ?", (bar['id'], hoy)).fetchall()]
+        if ids:
+            marcas = ','.join('?' * len(ids))
+            db.execute(f"DELETE FROM variant_views WHERE gg_id IN ({marcas})", ids)
+            db.execute(f"DELETE FROM generated_games WHERE id IN ({marcas})", ids)
+            db.commit()
+        descartadas = len(ids)
+        for k in [k for k in list(_game_cache.keys()) if k.startswith(f"{bar_slug}_") and k.endswith(f"_{hoy}")]:
+            _game_cache.pop(k, None)
+    db.close()
     import threading
     _pregen_estado.update({'corriendo': True, 'hechos': 0, 'total': 0, 'actual': '', 'ok': [], 'error': []})
     def _run():
@@ -1989,7 +2011,7 @@ def admin_pregen_hoy():
             _pregen_estado['corriendo'] = False
             _liberar_lock_pregen()
     threading.Thread(target=_run, daemon=True).start()
-    return jsonify({'ok': True})
+    return jsonify({'ok': True, 'descartadas': descartadas})
 
 
 @app.route('/admin/api/pregen-estado')
