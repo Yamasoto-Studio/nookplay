@@ -1632,6 +1632,54 @@ PROTOTIPO_PRESETS = {
 }
 
 
+# Bancos curados de ejes: la IA escribe las piezas, pero los ejes los elegimos
+# aquí (3 temas: uno cotidiano, uno fantástico, uno inesperado) para que el test
+# tenga siempre sentido y variedad, sin que la temática del evento lo contamine.
+PROTOTIPO_BANCOS = {
+    'juego': {
+        'tema': {
+            'cotidiano': ['Una boda', 'El metro a las 8', 'La cola del súper', 'Un piso de estudiantes', 'La reunión de vecinos', 'Las rebajas', 'Un domingo en el pueblo', 'La peluquería', 'El primer día de curso', 'Una mudanza', 'El Ikea un sábado', 'La cena de Navidad'],
+            'fantastico': ['Piratas', 'Dragones jubilados', 'Vampiros veganos', 'Brujas de barrio', 'Robots con sentimientos', 'Dinosaurios en la oficina', 'Fantasmas tímidos', 'Dioses en paro', 'Magos de pacotilla', 'Zombis con prisa', 'Sirenas de secano', 'Alienígenas de vacaciones'],
+            'inesperado': ['Abuelas', 'Gatos', 'Panaderos', 'Un circo venido a menos', 'Detectives de pueblo', 'Astronautas novatos', 'Funcionarios', 'Un crucero de la tercera edad', 'Cocineros rivales', 'Taxistas nocturnos', 'Influencers de jardinería', 'Monjes muy competitivos'],
+        },
+        'mecanica': ['Faroleo', 'Memoria', 'Subasta', 'Cooperativo', 'Dibujar', 'Apilar fichas', 'Deducción', 'Carreras', 'Negociación', 'Cartas en secreto', 'Dados a lo loco', 'Tiempo real', 'Traición', 'Construir', 'Mímica'],
+        'tono': ['Épico', 'Absurdo', 'Tierno', 'Cruel', 'Cursi', 'Noir', 'Hortera', 'Solemne', 'Caótico', 'Nostálgico'],
+    },
+    'carta': {
+        'tema': {
+            'cotidiano': ['Café', 'Bocadillo', 'Tostada', 'Zumo', 'Tapa', 'Bollo'],
+            'fantastico': ['Cóctel', 'Postre de autor', 'Sopa', 'Helado', 'Infusión', 'Vermut'],
+            'inesperado': ['Croqueta', 'Batido', 'Montadito', 'Caldo', 'Granizado', 'Empanada'],
+        },
+        'mecanica': ['Picante', 'Dulce', 'Ahumado', 'Cítrico', 'Crujiente', 'Con mucho queso', 'Vegetal', 'Con un toque de licor', 'Helado', 'Con especias'],
+        'tono': ['Elegante', 'Canalla', 'De abuela', 'Fitness', 'Hortera', 'Nostálgico', 'Exótico', 'Austero'],
+    },
+    'serie': {
+        'tema': {
+            'cotidiano': ['Comedia de oficina', 'Drama familiar', 'Culebrón', 'Reality', 'Serie de instituto', 'Sitcom de piso compartido'],
+            'fantastico': ['Ciencia ficción', 'Fantasía medieval', 'Terror', 'Superhéroes', 'Viajes en el tiempo', 'Distopía'],
+            'inesperado': ['Thriller policiaco', 'Época', 'Documental falso', 'Western', 'Musical', 'Espías'],
+        },
+        'mecanica': ['Una jubilada', 'Un becario', 'Un perro', 'Dos hermanas que no se hablan', 'Un alcalde de pueblo', 'Una monja', 'Un árbitro', 'Un cocinero arruinado', 'Una niña genio', 'Un taxista'],
+        'tono': ['Todos mienten', 'Viaje en el tiempo', 'Es un musical', 'El narrador está muerto', 'Nadie recuerda el martes', 'Hay un topo', 'Es todo un sueño', 'Se rompe la cuarta pared'],
+    },
+}
+
+
+def _ejes_prototipo(preset, bar_slug):
+    """Tres ejes elegidos de los bancos con semilla del día, el espacio y la
+    variante (pool): cada día y cada variante salen combinaciones distintas."""
+    import random as _r
+    B = PROTOTIPO_BANCOS.get(preset) or PROTOTIPO_BANCOS['juego']
+    P = PROTOTIPO_PRESETS.get(preset) or PROTOTIPO_PRESETS['juego']
+    rng = _r.Random(f"{get_day_seed(bar_slug)}|{preset}|{_variant_hint_ctx.get()}")
+    tema = [rng.choice(B['tema']['cotidiano']), rng.choice(B['tema']['fantastico']), rng.choice(B['tema']['inesperado'])]
+    rng.shuffle(tema)
+    mec = rng.sample(B['mecanica'], 3)
+    ton = rng.sample(B['tono'], 3)
+    return [{'nombre': P['ejes'][0], 'opciones': tema}, {'nombre': P['ejes'][1], 'opciones': mec}, {'nombre': P['ejes'][2], 'opciones': ton}]
+
+
 def _prototipo_valido(p, titulos_min=3):
     return (isinstance(p, dict) and isinstance(p.get('titulos'), list)
             and len([t for t in p['titulos'] if isinstance(t, str) and t.strip()]) >= titulos_min
@@ -1647,41 +1695,8 @@ def generate_prototipo(bar_slug, preset='juego', evitar=None):
     import json as _json
     intentos = 3 if get_ia_mode() == 'batch' else 2
 
-    # 1) Ejes: 3 ejes × 3 opciones, cortas y combinables
-    prompt_ejes = f"""Eres el diseñador de EL PROTOTIPO, un juego en el que cada persona inventa un {P['nombre']} en un minuto eligiendo UNA opción en cada uno de 3 ejes.
-
-Define hoy los 3 ejes: {P['ejemplo_ejes']}. Cada eje tiene EXACTAMENTE 3 opciones de 1-3 palabras (sustantivos o adjetivos, nunca verbos ni frases), concretas, evocadoras y muy distintas entre sí, de modo que las 27 combinaciones den piezas claramente diferentes y con gracia.
-
-IMPORTANTE: si hay una temática de evento o espacio, es SOLO contexto de dónde se juega; las opciones NO deben hablar de ese evento ni del acto de jugar. Para el eje "{P['ejes'][0]}" elige mundos muy distintos entre sí (uno cotidiano, uno fantástico, uno inesperado). Nada de marcas, productos ni personas reales.
-
-Responde SOLO con este JSON:
-{{"ejes": [{{"nombre": "{P['ejes'][0]}", "opciones": ["...", "...", "..."]}}, {{"nombre": "{P['ejes'][1]}", "opciones": ["...", "...", "..."]}}, {{"nombre": "{P['ejes'][2]}", "opciones": ["...", "...", "..."]}}]}}""" + _bloque_evitar(evitar)
-
-    ejes = None
-    for _ in range(intentos):
-        try:
-            obj = _parse_ia_json(_post_ia(prompt_ejes, 600, api_key))
-            ej = obj.get('ejes') or []
-            ok = (len(ej) == 3 and all(isinstance(e, dict) and isinstance(e.get('opciones'), list)
-                                       and len([o for o in e['opciones'] if isinstance(o, str) and o.strip()]) == 3 for e in ej))
-            # Opciones "meta" (sobre el propio acto de jugar) no valen como tema: se reintenta
-            prohibido = [w.lower() for w in P.get('prohibido', [])]
-            if ok and prohibido:
-                for o in ej[0]['opciones']:
-                    txt = f' {str(o).lower()} '
-                    if any(f' {w}' in txt or f'{w}s ' in txt for w in prohibido):
-                        ok = False
-                        break
-            if ok and len({str(o).strip().lower() for e in ej for o in e['opciones']}) < 9:
-                ok = False  # opciones repetidas entre ejes
-            if ok:
-                ejes = [{'nombre': str(e.get('nombre') or P['ejes'][i])[:30],
-                         'opciones': [str(o).strip()[:28] for o in e['opciones'][:3]]} for i, e in enumerate(ej)]
-                break
-        except Exception:
-            continue
-    if not ejes:
-        raise Exception('El Prototipo: no se pudieron generar los ejes')
+    # 1) Ejes: de los bancos curados (sin IA): sentido y variedad garantizados
+    ejes = _ejes_prototipo(preset, bar_slug)
 
     # 2) Piezas: 9 por cada opción del primer eje (3 llamadas)
     piezas = []
@@ -1700,13 +1715,13 @@ Cada pieza lleva:
 - "ficha": 3 valores cortos para [{', '.join(P['ficha'])}], p. ej. {P['ejemplo_ficha']}.
 - "resenas": 2 {P['resenas_de']}, cada una como UNA cadena «cita» — Fuente, de máximo 14 palabras.
 
-Nada ofensivo; sin marcas, productos ni personas reales. Responde SOLO con este JSON:
+La pieza es sobre SU tema, no sobre el lugar donde se juega: no menciones ferias, festivales, locales ni eventos. Nada ofensivo; sin marcas, productos ni personas reales. Responde SOLO con este JSON:
 {{"piezas": [{{"combo": "{i0}-0-0", "titulos": ["...", "...", "..."], "tagline": "...", "texto": "...", "ficha": ["...", "...", "..."], "resenas": ["«...» — ...", "«...» — ..."]}}]}}
 Exactamente 9 piezas, una por combo, con los combos indicados."""
         lote = None
         for _ in range(intentos):
             try:
-                obj = _parse_ia_json(_post_ia(prompt_piezas, 4200, api_key))
+                obj = _parse_ia_json(_post_ia(prompt_piezas, 4200, api_key, event_theme=''))
                 cand = {str(p.get('combo')).strip(): p for p in (obj.get('piezas') or []) if _prototipo_valido(p)}
                 esperados = [f'{a}-{b}-{c}' for (a, b, c) in combos]
                 if all(k in cand for k in esperados):
