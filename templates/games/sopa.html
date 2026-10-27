@@ -15,12 +15,14 @@
 .sl-cell:active { transform: scale(.94); }
 .sl-cell.sel { background: var(--bar-bg-subtle); border-color: var(--bar-primary); }
 .sl-cell.path { background: var(--bar-bg-subtle); border-color: var(--bar-primary); }
-.sl-cell.found { background: var(--bar-primary); border-color: var(--bar-primary); color: var(--bar-primary-text); }
+.sl-cell.found { background: var(--w, #EEE); border-color: var(--w, #EEE); color: #1A1A1A; }
+.sl-cell.found.cruce { box-shadow: inset 0 0 0 3px var(--w2, transparent); }
 .sl-cell.bad { background: #FDECEA; border-color: #C0392B; }
 .sl-cell.sol { background: #FFF3C4; border-color: #F3D77A; }
 .sl-pistas { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
 .sl-pista { display: flex; align-items: center; gap: 10px; background: var(--bar-bg-subtle); border: 1px solid var(--border); border-radius: 12px; padding: 9px 12px; font-size: 14px; line-height: 1.35; color: var(--bar-accent-dark); }
 .sl-pista .n { flex-shrink: 0; min-width: 34px; text-align: center; font-size: 11px; font-weight: 800; letter-spacing: .6px; color: var(--text-muted); background: white; border-radius: 8px; padding: 3px 6px; }
+.sl-pista.ok { background: var(--w); border-color: var(--w); }
 .sl-pista.ok { opacity: .62; }
 .sl-pista.ok .t { text-decoration: line-through; }
 .sl-pista .w { margin-left: auto; font-weight: 800; color: var(--bar-primary); letter-spacing: 1px; }
@@ -39,7 +41,7 @@
 .sl-stats .v { font-size: 16px; font-weight: 800; color: var(--bar-accent-dark); }
 .sl-mini { display: grid; grid-template-columns: repeat(8, 1fr); gap: 3px; max-width: 260px; margin: 0 auto 14px; }
 .sl-mini span { aspect-ratio: 1; border-radius: 4px; background: var(--border); }
-.sl-mini span.f { background: var(--bar-primary); }
+.sl-mini span.f { background: var(--w, var(--bar-primary)); }
 </style>
 
 <div class="screen active" id="s-loading">
@@ -83,6 +85,9 @@ const BAR_NAME = {{ bar.name|tojson }};
 const CODE = new URLSearchParams(window.location.search).get('code') || '';
 let gameData = null, TAM = 8, grid = [], palabras = [], encontradas = new Set(), found = [], sel = null, startTime = 0, timer = null, segundos = 0, terminado = false, rendido = false;
 const DIRS = [[0,1],[1,0],[1,1],[-1,1]];
+// Un color pastel por palabra: al cruzarse se distinguen (fondo de la primera, borde de la segunda)
+const COLORES = ['#FFD6A5', '#CDEAC0', '#BDE0FE', '#FFC8DD', '#E2D4F5', '#FFF3B0', '#C9F0E8', '#F5D5C0'];
+let colorCelda = [];
 
 async function init() {
   try {
@@ -92,6 +97,7 @@ async function init() {
     TAM = gameData.tam || gameData.grid.length;
     grid = gameData.grid; palabras = gameData.palabras;
     found = Array.from({ length: TAM }, () => Array(TAM).fill(false));
+    colorCelda = Array.from({ length: TAM }, () => Array(TAM).fill(''));
     if (gameData.tema) document.getElementById('sl-tema').textContent = gameData.tema;
     renderGrid(); renderPistas();
     showScreen('s-game');
@@ -133,8 +139,13 @@ function tocar(f, c) {
   const idx = palabras.findIndex((p, i) => !encontradas.has(i) && (p.palabra === texto || p.palabra === rev));
   if (idx < 0) { parpadear(celdas, 'bad'); return; }
   encontradas.add(idx);
-  celdas.forEach(([a, b]) => { found[a][b] = true; cell(a, b).classList.add('found'); });
-  const pe = document.getElementById(`pista-${idx}`); pe.classList.add('ok'); document.getElementById(`pw-${idx}`).textContent = palabras[idx].palabra;
+  const col = COLORES[idx % COLORES.length];
+  celdas.forEach(([a, b]) => {
+    const el = cell(a, b);
+    if (found[a][b]) { el.classList.add('cruce'); el.style.setProperty('--w2', col); }
+    else { found[a][b] = true; colorCelda[a][b] = col; el.style.setProperty('--w', col); el.classList.add('found'); }
+  });
+  const pe = document.getElementById(`pista-${idx}`); pe.classList.add('ok'); pe.style.setProperty('--w', col); document.getElementById(`pw-${idx}`).textContent = palabras[idx].palabra;
   try { if (navigator.vibrate) navigator.vibrate(30); } catch(e) {}
   if (encontradas.size === palabras.length) terminar(true);
 }
@@ -164,7 +175,7 @@ async function terminar(acierto) {
   document.getElementById('r-big').textContent = acierto ? '¡Todas encontradas!' : 'Esta vez no, pero ya la tienes';
   document.getElementById('r-sub').textContent = acierto ? `Has encontrado las ${palabras.length} palabras en ${fmt(segundos)}.` : `Encontraste ${encontradas.size} de ${palabras.length}. Mañana hay sopa nueva.`;
   document.getElementById('r-tiempo').textContent = fmt(segundos);
-  document.getElementById('r-mini').innerHTML = found.map(fila => fila.map(v => `<span class="${v ? 'f' : ''}"></span>`).join('')).join('');
+  document.getElementById('r-mini').innerHTML = found.map((fila, a) => fila.map((v, b) => `<span class="${v ? 'f' : ''}" style="${v ? '--w:' + colorCelda[a][b] : ''}"></span>`).join('')).join('');
   showScreen('s-result');
   try {
     await fetch('/api/play', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG, correct: acierto, game_type: 'sopa', choice: encontradas.size, elapsed: segundos }) });
