@@ -1604,7 +1604,8 @@ PROTOTIPO_PRESETS = {
     'juego': {
         'nombre': 'juego de mesa',
         'ejes': ['Tema', 'Mecánica', 'Tono'],
-        'ejemplo_ejes': '"Tema" (p. ej. piratas, abuelas, oficina), "Mecánica" (faroleo, memoria, subasta) y "Tono" (épico, absurdo, tierno)',
+        'ejemplo_ejes': '"Tema" = la AMBIENTACIÓN del juego: un mundo, lugar, época, oficio o criatura (p. ej. piratas, una boda, el metro a las 8, dinosaurios, abuelas, una oficina); "Mecánica" = cómo se juega (faroleo, memoria, subasta, cooperativo, dibujar, apilar); "Tono" = la actitud (épico, absurdo, tierno, cruel, cursi)',
+        'prohibido': ['juego', 'partida', 'mazo', 'carta', 'dado', 'ficha', 'tablero', 'mesa', 'jugar', 'jugador', 'diseñar', 'ganar', 'regla', 'turno', 'puntos'],
         'pieza': 'la CONTRAPORTADA de la caja de un juego de mesa',
         'ficha': ['Jugadores', 'Duración', 'Edad'],
         'ejemplo_ficha': '["2–5", "20 min", "10+"]',
@@ -1649,7 +1650,9 @@ def generate_prototipo(bar_slug, preset='juego', evitar=None):
     # 1) Ejes: 3 ejes × 3 opciones, cortas y combinables
     prompt_ejes = f"""Eres el diseñador de EL PROTOTIPO, un juego en el que cada persona inventa un {P['nombre']} en un minuto eligiendo UNA opción en cada uno de 3 ejes.
 
-Define hoy los 3 ejes: {P['ejemplo_ejes']}. Cada eje tiene EXACTAMENTE 3 opciones de 1-3 palabras, concretas, evocadoras y muy distintas entre sí, de modo que las 27 combinaciones den piezas claramente diferentes y con gracia. Inspírate en el universo del espacio si hay temática, sin nombrar marcas, productos ni personas reales.
+Define hoy los 3 ejes: {P['ejemplo_ejes']}. Cada eje tiene EXACTAMENTE 3 opciones de 1-3 palabras (sustantivos o adjetivos, nunca verbos ni frases), concretas, evocadoras y muy distintas entre sí, de modo que las 27 combinaciones den piezas claramente diferentes y con gracia.
+
+IMPORTANTE: si hay una temática de evento o espacio, es SOLO contexto de dónde se juega; las opciones NO deben hablar de ese evento ni del acto de jugar. Para el eje "{P['ejes'][0]}" elige mundos muy distintos entre sí (uno cotidiano, uno fantástico, uno inesperado). Nada de marcas, productos ni personas reales.
 
 Responde SOLO con este JSON:
 {{"ejes": [{{"nombre": "{P['ejes'][0]}", "opciones": ["...", "...", "..."]}}, {{"nombre": "{P['ejes'][1]}", "opciones": ["...", "...", "..."]}}, {{"nombre": "{P['ejes'][2]}", "opciones": ["...", "...", "..."]}}]}}""" + _bloque_evitar(evitar)
@@ -1661,6 +1664,16 @@ Responde SOLO con este JSON:
             ej = obj.get('ejes') or []
             ok = (len(ej) == 3 and all(isinstance(e, dict) and isinstance(e.get('opciones'), list)
                                        and len([o for o in e['opciones'] if isinstance(o, str) and o.strip()]) == 3 for e in ej))
+            # Opciones "meta" (sobre el propio acto de jugar) no valen como tema: se reintenta
+            prohibido = [w.lower() for w in P.get('prohibido', [])]
+            if ok and prohibido:
+                for o in ej[0]['opciones']:
+                    txt = f' {str(o).lower()} '
+                    if any(f' {w}' in txt or f'{w}s ' in txt for w in prohibido):
+                        ok = False
+                        break
+            if ok and len({str(o).strip().lower() for e in ej for o in e['opciones']}) < 9:
+                ok = False  # opciones repetidas entre ejes
             if ok:
                 ejes = [{'nombre': str(e.get('nombre') or P['ejes'][i])[:30],
                          'opciones': [str(o).strip()[:28] for o in e['opciones'][:3]]} for i, e in enumerate(ej)]
