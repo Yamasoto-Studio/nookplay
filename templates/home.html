@@ -1,846 +1,532 @@
 {% extends "base.html" %}
-{% block title %}Nookplay — Juegos nuevos cada día, sin instalar nada{% endblock %}
+{% block title %}Nookplay — Juegos con IA para tu evento, nuevos cada día{% endblock %}
+{% block og_title %}Nookplay — Tu evento, convertido en juego{% endblock %}
+{% block og_description %}Juegos ambientados en tu evento, generados cada día. Un QR, sin apps ni registros. También para locales.{% endblock %}
+{% block tw_title %}Nookplay — Tu evento, convertido en juego{% endblock %}
+{% block tw_description %}Juegos ambientados en tu evento, generados cada día. Un QR, sin apps ni registros.{% endblock %}
 {% block a11y %}{% endblock %}
 {% block content %}
 
 <style>
   body {
-    display: block !important;
-    align-items: unset !important;
-    justify-content: unset !important;
-    padding: 0 !important;
-    min-height: unset !important;
-    background: #F7F2EB !important;
+    display: block !important; align-items: unset !important; justify-content: unset !important;
+    padding: 0 !important; min-height: unset !important; background: #FBF7F1 !important;
   }
-
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   :root {
     --brand: #C4622D;
-    --brand-light: #F0E0D4;
-    --bg: #F7F2EB;
-    --dark: #1A1A1A;
-    --text-sec: #6B6059;
-    --text-muted: #A89B91;
-    --border: #E5DDD5;
+    --cta: #A8410E;
+    --ink: #1A1A1A;
+    --paper: #FBF7F1;
+    --sand: #F3EBE0;
+    --line: #E4DACE;
+    --sec: #6B6059;
+    --muted: #A89B91;
     --white: #FFFFFF;
+    /* temática activa (la cambia el transformador) */
+    --th-bg: #E3D8F0;
+    --th-accent: #6B4FA3;
+    --th-deep: #2E2148;
   }
 
-  body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; color: var(--dark); }
+  body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; color: var(--ink); -webkit-font-smoothing: antialiased; }
+  a { color: inherit; }
+  button { font-family: inherit; }
+  :focus-visible { outline: 3px solid var(--cta); outline-offset: 2px; }
 
-  /* ── NAV ── */
-  .nav {
-    position: sticky; top: 0; z-index: 100;
-    background: var(--brand);
-    padding: 0 40px;
-    height: 64px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
+  .wrap { max-width: 1160px; margin: 0 auto; padding: 0 24px; }
+  @media (min-width: 900px) { .wrap { padding: 0 40px; } }
 
-  .nav img { height: auto; width: 120px; filter: brightness(0) invert(1); }
+  /* ── Nav ── */
+  .nav { position: sticky; top: 0; z-index: 100; background: var(--paper); border-bottom: 1px solid var(--line); }
+  .nav .wrap { height: 64px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .nav img { width: 112px; height: auto; display: block; }
+  .nav-links { display: none; gap: 28px; font-size: 14px; font-weight: 500; }
+  .nav-links a { text-decoration: none; color: var(--sec); }
+  .nav-links a:hover { color: var(--ink); }
+  @media (min-width: 900px) { .nav-links { display: flex; } }
+  .btn { display: inline-flex; align-items: center; gap: 8px; border: none; cursor: pointer; text-decoration: none; font-weight: 600; border-radius: 8px; padding: 14px 22px; font-size: 15px; line-height: 1; transition: background .15s, color .15s; }
+  .btn-cta { background: var(--cta); color: #fff; }
+  .btn-cta:hover { background: #8F3509; }
+  .btn-ghost { background: transparent; color: var(--ink); border: 1.5px solid var(--ink); }
+  .btn-ghost:hover { background: var(--ink); color: #fff; }
+  .btn-sm { padding: 10px 16px; font-size: 14px; }
 
-  .nav-cta {
-    background: var(--bg);
-    color: var(--brand);
-    border: none;
-    padding: 8px 20px;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    text-decoration: none;
-    font-family: inherit;
-    white-space: nowrap;
-  }
+  /* ── Hero ── */
+  .hero { background: var(--th-bg); transition: background .6s ease; padding: 48px 0 56px; overflow: hidden; }
+  .hero .wrap { display: grid; grid-template-columns: 1fr; gap: 40px; align-items: center; }
+  @media (min-width: 960px) { .hero { padding: 56px 0 64px; } .hero .wrap { grid-template-columns: 1.05fr 1fr; gap: 56px; } }
+  .hero-kicker { font-size: 15px; font-weight: 500; color: var(--th-deep); opacity: .75; margin-bottom: 18px; transition: color .6s; }
+  .hero h1 { font-size: 46px; line-height: 1.02; letter-spacing: -.035em; font-weight: 700; color: var(--th-deep); transition: color .6s; max-width: 11ch; }
+  @media (min-width: 600px) { .hero h1 { font-size: 64px; } }
+  @media (min-width: 1100px) { .hero h1 { font-size: 76px; } }
+  .hero-lead { font-size: 18px; line-height: 1.55; color: var(--ink); max-width: 46ch; margin: 24px 0 32px; }
+  .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  .hero-note { font-size: 13px; color: var(--sec); margin-top: 14px; }
 
-  /* ── HERO ── */
-  /* ── Fondos vivos: sutiles, solo transform/gradiente (GPU), accesibles ── */
-  @keyframes nkGradient { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
-  @keyframes nkDrift  { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(30px,-24px) scale(1.05)} }
-  @keyframes nkDrift2 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(-26px,20px) scale(.96)} }
-  .nk-blob { position:absolute; border-radius:50%; pointer-events:none; z-index:0;
-    background: radial-gradient(circle at 38% 38%, rgba(196,98,45,.15), rgba(196,98,45,0) 66%); }
-  .nk-blob--b { background: radial-gradient(circle at 60% 42%, rgba(168,65,14,.10), rgba(168,65,14,0) 68%); }
-  .hero > :not(.nk-blob) { position:relative; z-index:1; }
-  @media (prefers-reduced-motion: reduce) {
-    .hero, .mw-band, .nk-blob { animation: none !important; }
-  }
+  /* Transformador */
+  .tf { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+  .tf-chips { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  .tf-chip { font-size: 13px; font-weight: 600; padding: 9px 14px; border-radius: 999px; border: 1.5px solid rgba(0,0,0,.14); background: rgba(255,255,255,.55); color: var(--ink); cursor: pointer; transition: background .15s, border-color .15s, color .15s; }
+  .tf-chip:hover { background: #fff; }
+  .tf-chip[aria-pressed="true"] { background: var(--th-deep); border-color: var(--th-deep); color: #fff; }
+  .tf-hint { font-size: 13px; color: var(--th-deep); opacity: .7; text-align: center; max-width: 36ch; }
 
-  /* ── Tarjetas de features: 2 col móvil, 3 desktop ── */
-  .nk-cards3 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 8px; }
-  .nk-cards2 { display: grid; grid-template-columns: 1fr; gap: 14px; margin-top: 8px; }
-  .nk-card { background: var(--bg); border: 1px solid var(--border); border-radius: 14px; padding: 18px 14px; min-width: 0; }
-  .nk-card-ico { font-size: 26px; margin-bottom: 10px; }
-  img.nk-card-ico { width: 60px; height: 60px; object-fit: contain; display: block; margin-bottom: 12px; }
-  .nk-card h3 { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
-  .nk-card p { font-size: 13px; color: var(--text-sec); line-height: 1.6; margin: 0; }
-  @media (min-width: 760px) {
-    .nk-cards3 { grid-template-columns: repeat(3, 1fr); gap: 20px; }
-    .nk-cards2 { grid-template-columns: 1fr 1fr; gap: 20px; }
-    .nk-card { padding: 24px 20px; }
-    .nk-card-ico { font-size: 28px; margin-bottom: 12px; }
-    img.nk-card-ico { width: 80px; height: 80px; margin-bottom: 14px; }
-    .nk-card h3 { font-size: 16px; }
-  }
+  /* Teléfono */
+  .phone { width: 300px; max-width: 100%; height: 600px; background: var(--ink); border-radius: 46px; padding: 12px; box-shadow: 0 30px 60px -20px rgba(30,15,5,.45), 0 0 0 1px rgba(0,0,0,.25); position: relative; }
+  .phone::before { content: ""; position: absolute; top: 20px; left: 50%; transform: translateX(-50%); width: 84px; height: 24px; background: var(--ink); border-radius: 999px; z-index: 3; }
+  .screen { background: #FBF7F1; border-radius: 36px; height: 100%; overflow: hidden; display: flex; flex-direction: column; position: relative; }
+  .scr-top { background: var(--th-accent); color: #fff; padding: 48px 16px 14px; transition: background .6s; }
+  .scr-ev { font-size: 11px; opacity: .8; letter-spacing: .02em; }
+  .scr-name { font-size: 17px; font-weight: 700; line-height: 1.2; margin-top: 4px; }
+  .scr-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; font-size: 11px; }
+  .scr-code { background: rgba(255,255,255,.18); padding: 4px 9px; border-radius: 6px; font-weight: 700; letter-spacing: .12em; }
+  .scr-body { flex: 1; padding: 14px; overflow: hidden; position: relative; }
+  .scr-menu { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .scr-tile { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 10px; text-align: left; cursor: pointer; display: flex; flex-direction: column; gap: 8px; transition: transform .12s, border-color .12s; }
+  .scr-tile:hover { border-color: var(--th-accent); transform: translateY(-1px); }
+  .scr-tile img { width: 100%; aspect-ratio: 1; border-radius: 10px; display: block; object-fit: cover; }
+  .scr-tile b { font-size: 12.5px; font-weight: 700; line-height: 1.2; }
+  .scr-tile small { font-size: 10.5px; color: var(--sec); line-height: 1.3; }
+  .scr-foot { padding: 10px 14px 14px; font-size: 10.5px; color: var(--muted); text-align: center; }
 
-  .hero {
-    background: linear-gradient(120deg, #F7F2EB 0%, #FBE8DC 42%, #F5EAD9 70%, #F7F2EB 100%);
-    background-size: 220% 220%;
-    animation: nkGradient 24s ease infinite;
-    padding: 60px 40px 80px;
-    text-align: center;
-    position: relative;
-    overflow: hidden;
-  }
+  /* Juego abierto dentro del móvil */
+  .scr-game { position: absolute; inset: 0; background: #FBF7F1; padding: 14px; display: none; flex-direction: column; gap: 10px; overflow: auto; }
+  .scr-game.open { display: flex; }
+  .sg-head { display: flex; align-items: center; gap: 10px; }
+  .sg-head img { width: 34px; height: 34px; border-radius: 9px; }
+  .sg-head b { font-size: 13px; }
+  .sg-back { margin-left: auto; font-size: 12px; font-weight: 600; background: none; border: 1px solid var(--line); border-radius: 6px; padding: 5px 9px; cursor: pointer; }
+  .sg-q { font-size: 14px; font-weight: 600; line-height: 1.4; }
+  .sg-p { font-size: 12.5px; line-height: 1.45; color: var(--sec); }
+  .sg-opts { display: flex; flex-direction: column; gap: 7px; }
+  .sg-opt { text-align: left; font-size: 12.5px; padding: 10px 11px; border-radius: 9px; border: 1.5px solid var(--line); background: #fff; cursor: pointer; line-height: 1.3; }
+  .sg-opt:hover { border-color: var(--th-accent); }
+  .sg-opt:disabled, .sg-word:disabled { color: var(--ink); opacity: 1; cursor: default; }
+  .sg-opt.ok { background: #E6F4EA; border-color: #4CAF50; font-weight: 700; }
+  .sg-opt.ko { background: #FBEAE7; border-color: #E57373; }
+  .sg-opt.sel { background: var(--th-bg); border-color: var(--th-accent); }
+  .sg-words { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .sg-word { font-size: 12px; font-weight: 600; padding: 9px 6px; border-radius: 8px; border: 1.5px solid var(--line); background: #fff; cursor: pointer; text-align: center; }
+  .sg-word.sel { background: var(--th-bg); border-color: var(--th-accent); }
+  .sg-word.a { background: #E6F4EA; border-color: #4CAF50; }
+  .sg-word.b { background: #FBE8DC; border-color: var(--brand); }
+  .sg-fb { font-size: 12px; line-height: 1.45; color: var(--ink); background: var(--th-bg); border-radius: 9px; padding: 9px 11px; min-height: 18px; transition: background .6s; }
+  .sg-fb:empty { display: none; }
+  .sg-dil { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .sg-dil .sg-opt { text-align: center; padding: 14px 8px; }
 
-  /* Carrusel hero */
-  .hero-carousel {
-    width: 500px;
-    max-width: 90%;
-    height: 320px;
-    border-radius: 40px;
-    margin: 0 auto 40px;
-    position: relative;
-    overflow: hidden;
-    animation: heroFloat 7s ease-in-out infinite;
-  }
-  @keyframes heroFloat {
-    0%, 100% { transform: translateY(0px); box-shadow: 0 12px 32px rgba(0,0,0,0.10); }
-    50%       { transform: translateY(-10px); box-shadow: 0 24px 48px rgba(0,0,0,0.14); }
-  }
-  .hero-carousel img {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    border-radius: 40px;
-    opacity: 0;
-    transition: opacity 1.2s ease-in-out;
-  }
-  .hero-carousel img.active { opacity: 1; }
+  /* ── Banda de iconos ── */
+  .strip { background: var(--paper); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 26px 0; overflow: hidden; }
+  .strip .wrap { display: flex; flex-direction: column; gap: 18px; }
+  .strip-line { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 24px; }
+  .strip-line b { font-size: 22px; letter-spacing: -.02em; }
+  .strip-line span { font-size: 14px; color: var(--sec); }
+  .strip-line a { font-size: 14px; font-weight: 600; color: var(--cta); text-decoration: none; }
+  .strip-line a:hover { text-decoration: underline; }
+  .marquee { display: flex; gap: 12px; width: max-content; animation: slide 70s linear infinite; }
+  .marquee img { width: 72px; height: 72px; border-radius: 16px; display: block; flex-shrink: 0; }
+  @keyframes slide { to { transform: translateX(-50%); } }
+  @media (prefers-reduced-motion: reduce) { .marquee { animation: none; flex-wrap: wrap; width: auto; } .marquee img:nth-child(n+19) { display: none; } }
 
-  /* Parallax decorative elements */
-  .deco {
-    position: absolute;
-    opacity: 0.25;
-    pointer-events: none;
-    transition: transform 0.1s ease-out;
-  }
+  /* ── Secciones ── */
+  .sec { padding: 88px 0; }
+  .sec h2 { font-size: 36px; letter-spacing: -.03em; line-height: 1.08; font-weight: 700; max-width: 20ch; }
+  @media (min-width: 900px) { .sec h2 { font-size: 48px; } }
+  .sec-lead { font-size: 17px; line-height: 1.55; color: var(--sec); max-width: 56ch; margin-top: 16px; }
 
-  .hero h1 {
-    font-size: 52px;
-    font-weight: 700;
-    line-height: 1.1;
-    letter-spacing: -1.5px;
-    margin-bottom: 16px;
-  }
+  /* Eventos en tres tiempos */
+  .tres { display: grid; grid-template-columns: 1fr; gap: 0; margin-top: 48px; border-top: 1px solid var(--line); }
+  @media (min-width: 900px) { .tres { grid-template-columns: repeat(3, 1fr); } }
+  .t { padding: 28px 0 32px; border-bottom: 1px solid var(--line); }
+  @media (min-width: 900px) { .t { padding: 32px 28px 36px 0; border-bottom: none; border-right: 1px solid var(--line); } .t:last-child { border-right: none; } .t + .t { padding-left: 28px; } }
+  .t-when { display: inline-block; font-size: 13px; font-weight: 700; color: var(--cta); background: #FBE8DC; padding: 5px 10px; border-radius: 6px; margin-bottom: 14px; }
+  .t h3 { font-size: 21px; letter-spacing: -.02em; line-height: 1.2; margin-bottom: 12px; }
+  .t p { font-size: 15px; line-height: 1.6; color: var(--sec); }
+  .t a { color: var(--cta); font-weight: 600; text-decoration: none; }
+  .t a:hover { text-decoration: underline; }
+  .sec-cta { margin-top: 40px; }
 
-  .hero h1 span { color: var(--brand); }
+  /* Para quién */
+  .quien { background: var(--sand); }
+  .quien-grid { display: grid; grid-template-columns: 1fr; gap: 0; margin-top: 40px; }
+  @media (min-width: 720px) { .quien-grid { grid-template-columns: 1fr 1fr; column-gap: 48px; } }
+  .q { display: grid; grid-template-columns: 40px 1fr; gap: 14px; padding: 20px 0; border-top: 1px solid var(--line); align-items: start; }
+  .q-ico { width: 40px; height: 40px; border-radius: 10px; background: #fff; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+  .q b { display: block; font-size: 17px; margin-bottom: 4px; letter-spacing: -.01em; }
+  .q p { font-size: 14.5px; line-height: 1.55; color: var(--sec); }
 
-  .hero p {
-    font-size: 18px;
-    color: var(--text-sec);
-    line-height: 1.65;
-    max-width: 500px;
-    margin: 0 auto 36px;
-  }
+  /* Cómo funciona */
+  .pasos { display: grid; grid-template-columns: 1fr; gap: 24px; margin-top: 44px; }
+  @media (min-width: 760px) { .pasos { grid-template-columns: repeat(3, 1fr); gap: 32px; } }
+  .paso img { width: 100%; aspect-ratio: 1; border-radius: 18px; object-fit: cover; display: block; margin-bottom: 18px; background: var(--sand); }
+  .paso-n { font-size: 13px; font-weight: 700; color: var(--brand); margin-bottom: 6px; }
+  .paso h3 { font-size: 20px; letter-spacing: -.02em; margin-bottom: 8px; }
+  .paso p { font-size: 15px; line-height: 1.6; color: var(--sec); }
 
-  .hero-btns {
-    display: flex;
-    gap: 12px;
-    justify-content: center;
-    flex-wrap: wrap;
-  }
+  /* Locales */
+  .locales { background: #FBE8DC; }
+  .locales .wrap { display: grid; grid-template-columns: 1fr; gap: 28px; align-items: center; }
+  @media (min-width: 900px) { .locales .wrap { grid-template-columns: 1.2fr .8fr; gap: 56px; } }
+  .locales h2 { max-width: 16ch; }
+  .loc-card { background: #fff; border-radius: 18px; padding: 24px; display: flex; gap: 16px; align-items: center; }
+  .loc-card img { width: 64px; height: 64px; border-radius: 14px; }
+  .loc-card b { display: block; font-size: 15px; }
+  .loc-card span { font-size: 13px; color: var(--sec); }
 
-  .btn-primary {
-    background: #A8410E;
-    color: #fff;
-    border: none;
-    padding: 15px 30px;
-    border-radius: 10px;
-    font-size: 15px;
-    font-weight: 600;
-    cursor: pointer;
-    text-decoration: none;
-    font-family: inherit;
-    display: inline-block;
-    width: auto;
-  }
+  /* Credibilidad */
+  .cred { background: var(--ink); color: #fff; }
+  .cred .wrap { display: grid; grid-template-columns: 1fr; gap: 36px; align-items: center; }
+  @media (min-width: 900px) { .cred .wrap { grid-template-columns: 1fr 1fr; gap: 64px; } }
+  .cred h2 { color: #fff; }
+  .cred p { font-size: 17px; line-height: 1.6; color: rgba(255,255,255,.72); margin-top: 18px; max-width: 52ch; }
+  .cred-last { color: #fff; font-weight: 600; }
+  .cred-visual { display: flex; align-items: flex-end; justify-content: center; gap: 24px; }
+  .cred-visual img { width: 220px; max-width: 48%; height: auto; display: block; filter: drop-shadow(0 24px 30px rgba(0,0,0,.5)); }
+  .cred-tiendas { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 26px; }
+  .cred-tiendas span { font-size: 13px; font-weight: 600; padding: 7px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,.22); color: rgba(255,255,255,.85); }
 
-  .btn-secondary {
-    background: var(--white);
-    color: var(--text-sec);
-    border: 1px solid var(--border);
-    padding: 15px 28px;
-    border-radius: 10px;
-    font-size: 15px;
-    font-weight: 500;
-    cursor: pointer;
-    text-decoration: none;
-    font-family: inherit;
-    display: inline-block;
-    width: auto;
-  }
+  /* Cierre */
+  .cierre { background: var(--brand); color: #fff; text-align: center; padding: 96px 0; }
+  .cierre h2 { color: #fff; margin: 0 auto; max-width: 18ch; font-size: 36px; letter-spacing: -.03em; line-height: 1.08; }
+  @media (min-width: 900px) { .cierre h2 { font-size: 48px; } }
+  .cierre p { font-size: 17px; line-height: 1.6; color: rgba(255,255,255,.85); max-width: 46ch; margin: 18px auto 32px; }
+  .cierre-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .cierre .btn-cta { background: #fff; color: var(--cta); }
+  .cierre .btn-cta:hover { background: #FBE8DC; }
+  .cierre .btn-ghost { color: #fff; border-color: rgba(255,255,255,.7); }
+  .cierre .btn-ghost:hover { background: #fff; color: var(--brand); }
 
-  /* ── SECTIONS ── */
-  .section-divider { height: 1px; background: var(--border); }
-
-  .section {
-    padding: 80px 40px;
-    max-width: 1200px;
-    margin: 0 auto;
-  }
-
-  .section-tag {
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: var(--brand);
-    margin-bottom: 10px;
-  }
-
-  .section h2 {
-    font-size: 40px;
-    font-weight: 700;
-    color: var(--dark);
-    margin-bottom: 12px;
-    letter-spacing: -0.5px;
-  }
-
-  .section-sub {
-    font-size: 16px;
-    color: var(--text-sec);
-    line-height: 1.65;
-    margin-bottom: 36px;
-    max-width: 560px;
-  }
-
-  /* ── STEPS ── */
-  .steps {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 24px;
-  }
-
-  .step {
-    background: var(--white);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 24px 20px;
-  }
-
-  .step-num {
-    width: 36px; height: 36px;
-    border-radius: 50%;
-    background: var(--brand);
-    color: white;
-    font-size: 15px;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 16px;
-  }
-
-  .step h3 { font-size: 18px; font-weight: 600; margin-bottom: 6px; }
-  .step p { font-size: 13px; color: var(--text-sec); line-height: 1.6; }
-  .step-img { width: 100%; aspect-ratio: 1; border-radius: 16px; object-fit: cover; margin-bottom: 16px; display: block; }
-  .step-img {
-    animation: stepFloat 6s ease-in-out infinite;
-  }
-  .step:nth-child(2) .step-img { animation-delay: -2s; }
-  .step:nth-child(3) .step-img { animation-delay: -4s; }
-  @keyframes stepFloat {
-    0%, 100% { transform: translateY(0px) rotate(0deg); box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
-    50% { transform: translateY(-10px) rotate(0.4deg); box-shadow: 0 18px 32px rgba(0,0,0,0.12); }
-  }
-
-  /* ── GAMES ── */
-  .games-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 16px;
-  }
-
-  .game-card {
-    background: var(--white);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 18px 20px;
-    display: flex;
-    align-items: flex-start;
-    gap: 16px;
-  }
-
-  .game-card.active { border-color: var(--brand); }
-  .game-card.coming { opacity: 0.55; }
-
-  .game-icon {
-    overflow: hidden;
-    font-size: 26px;
-    width: 52px; height: 52px;
-    background: var(--bg);
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-  }
-
-  .game-card.active .game-icon { background: var(--brand-light); }
-
-  .game-info h3 { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
-  .game-info p { font-size: 13px; color: var(--text-sec); line-height: 1.5; margin-bottom: 8px; }
-
-  .badge {
-    display: inline-block;
-    font-size: 10px; font-weight: 600;
-    padding: 3px 10px;
-    border-radius: 20px;
-    background: var(--brand-light);
-    color: var(--brand);
-  }
-
-  .badge-soon {
-    background: var(--bg);
-    color: var(--text-muted);
-    border: 1px solid var(--border);
-  }
-
-  /* ── CTA FINAL ── */
-  .cta-section {
-    background: linear-gradient(135deg, #171310 0%, #2B1A10 55%, #1A1A1A 100%);
-    padding: 80px 40px;
-    text-align: center;
-  }
-
-  .cta-section h2 {
-    font-size: 36px; font-weight: 700;
-    color: white; margin-bottom: 12px;
-    letter-spacing: -0.5px;
-  }
-
-  .cta-section p {
-    font-size: 16px;
-    color: rgba(255,255,255,0.6);
-    margin-bottom: 32px;
-    line-height: 1.65;
-  }
-
-  .btn-whatsapp {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    background: #25D366;
-    color: white;
-    border: none;
-    padding: 15px 30px;
-    border-radius: 10px;
-    font-size: 15px; font-weight: 600;
-    cursor: pointer;
-    text-decoration: none;
-    font-family: inherit;
-  }
-
-  /* ── FOOTER ── */
-  .footer {
-    background: var(--brand);
-    padding: 0 40px;
-    height: 72px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .footer img { height: auto; width: 120px; filter: brightness(0) invert(1); }
-
-  .footer-by {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    text-decoration: none;
-  }
-
-  .footer-by span {
-    font-size: 15px;
-    color: rgba(255,255,255,0.7);
-    font-weight: 400;
-  }
-
-  .footer-by img { height: auto; width: 50px; filter: brightness(0) invert(1); opacity: 0.7; }
-
-  .footer-admin {
-    font-size: 12px;
-    color: rgba(255,255,255,0.4);
-    text-decoration: none;
-  }
-  .footer-admin:hover { color: rgba(255,255,255,0.7); }
-
-  /* ── LEGAL ── */
-  .legal {
-    background: var(--bg);
-    padding: 12px 40px;
-    text-align: center;
-    font-size: 11px;
-    color: var(--text-muted);
-  }
-
-  /* ── RESPONSIVE ── */
-  @media (max-width: 768px) {
-    .hero h1 { font-size: 34px; }
-    .hero-carousel { height: 220px; border-radius: 24px; }
-    .steps { grid-template-columns: 1fr; }
-    .games-grid { grid-template-columns: 1fr; }
-    .nav { padding: 0 20px; }
-    .section { padding: 60px 20px; }
-  }
+  /* Footer */
+  .footer { background: var(--paper); border-top: 1px solid var(--line); padding: 28px 0; }
+  .footer .wrap { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; font-size: 13px; color: var(--sec); }
+  .footer img { width: 100px; height: auto; display: block; }
+  .footer a { text-decoration: none; color: var(--sec); }
+  .footer a:hover { color: var(--ink); }
+  .footer-right { display: flex; align-items: center; gap: 20px; }
+  .footer-by img { width: 46px; opacity: .8; }
 
   /* Contact modal */
-  .contact-modal-overlay {
-    display: none; position: fixed; inset: 0;
-    background: rgba(0,0,0,0.6); z-index: 1000;
-    align-items: center; justify-content: center;
-    padding: 20px;
-  }
+  .contact-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(26,26,26,.6); z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
   .contact-modal-overlay.open { display: flex; }
-  .contact-modal {
-    background: #fff; border-radius: 16px;
-    padding: 28px 24px 32px; width: 100%; max-width: 480px;
-    max-height: 90vh; overflow-y: auto;
-  }
-  .contact-modal h3 {
-    font-size: 20px; font-weight: 700; margin-bottom: 6px;
-  }
-  .contact-modal p {
-    font-size: 14px; color: #6B6059; margin-bottom: 20px; line-height: 1.5;
-  }
+  .contact-modal { background: #fff; border-radius: 16px; padding: 28px 24px 32px; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; }
   .contact-field { margin-bottom: 14px; }
-  .contact-field label {
-    display: block; font-size: 12px; font-weight: 600;
-    color: #6B6059; margin-bottom: 4px; letter-spacing: 0.3px;
-  }
-  .contact-field input,
-  .contact-field textarea {
-    width: 100%; padding: 12px 14px;
-    border: 1.5px solid #E5DDD5; border-radius: 8px;
-    font-size: 15px; font-family: inherit; color: #1A1A1A;
-    background: #fff; box-sizing: border-box;
-    transition: border-color 0.15s;
-  }
-  .contact-field input:focus,
-  .contact-field textarea:focus {
-    outline: none; border-color: #C4622D;
-  }
+  .contact-field label { display: block; font-size: 13px; font-weight: 600; color: var(--sec); margin-bottom: 5px; }
+  .contact-field input, .contact-field textarea { width: 100%; padding: 12px 14px; border: 1.5px solid var(--line); border-radius: 8px; font-size: 15px; font-family: inherit; color: var(--ink); background: #fff; transition: border-color .15s; }
+  .contact-field input:focus, .contact-field textarea:focus { outline: none; border-color: var(--brand); }
   .contact-field textarea { height: 90px; resize: none; }
-  .contact-submit {
-    width: 100%; padding: 14px;
-    background: #A8410E; color: #fff;
-    border: none; border-radius: 10px;
-    font-size: 15px; font-weight: 600; cursor: pointer;
-    font-family: inherit; margin-top: 4px;
-    transition: opacity 0.15s;
-  }
-  .contact-submit:hover { opacity: 0.88; }
-  .contact-submit:disabled { opacity: 0.5; cursor: not-allowed; }
-  .contact-or {
-    display: flex; align-items: center; gap: 12px;
-    margin: 18px 0 14px; color: #A89B91; font-size: 13px;
-  }
-  .contact-or::before, .contact-or::after {
-    content: ""; flex: 1; height: 1px; background: #EBE3DB;
-  }
-  .contact-whatsapp {
-    display: flex; align-items: center; justify-content: center; gap: 9px;
-    width: 100%; padding: 13px;
-    background: #fff; color: #1A1A1A;
-    border: 1.5px solid #25D366; border-radius: 10px;
-    font-size: 15px; font-weight: 600; cursor: pointer;
-    font-family: inherit; text-decoration: none;
-    transition: background 0.15s;
-  }
+  .cf-tipos { display: flex; gap: 8px; }
+  .cf-tipos label { flex: 1; text-align: center; border: 1.5px solid var(--line); border-radius: 8px; padding: 10px 6px; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--ink); margin: 0; }
+  .cf-tipos label:has(input:checked) { border-color: var(--brand); background: #FBE8DC; }
+  .cf-tipos input { margin-right: 5px; accent-color: var(--brand); }
+  .contact-submit { width: 100%; padding: 14px; background: var(--cta); color: #fff; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 4px; }
+  .contact-submit:disabled { opacity: .5; cursor: not-allowed; }
+  .contact-or { display: flex; align-items: center; gap: 12px; margin: 18px 0 14px; color: var(--muted); font-size: 13px; }
+  .contact-or::before, .contact-or::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+  .contact-whatsapp { display: flex; align-items: center; justify-content: center; gap: 9px; width: 100%; padding: 13px; background: #fff; color: var(--ink); border: 1.5px solid #25D366; border-radius: 8px; font-size: 15px; font-weight: 600; text-decoration: none; }
   .contact-whatsapp:hover { background: #F0FBF3; }
   .contact-whatsapp svg { width: 20px; height: 20px; flex-shrink: 0; }
-  .contact-success {
-    text-align: center; padding: 20px 0;
-    font-size: 16px; color: #1A1A1A; line-height: 1.6;
-  }
-  .contact-success .big-emoji { font-size: 48px; display: block; margin-bottom: 12px; }
 </style>
 
 <!-- NAV -->
 <nav class="nav">
-  <a href="/"><img src="/static/logo.svg" alt="Nookplay"></a>
-  <button class="nav-cta" onclick="openContactModal()">¡Quiero Nookplay!</button>
+  <div class="wrap">
+    <a href="/"><img src="/static/logo.svg" alt="Nookplay"></a>
+    <div class="nav-links">
+      <a href="#eventos">Eventos</a>
+      <a href="#como">Cómo funciona</a>
+      <a href="#locales">Locales</a>
+      <a href="/juegos">Los 35 juegos</a>
+      <a href="/demo">Demo</a>
+    </div>
+    <button class="btn btn-cta btn-sm" onclick="openContactModal()">Cuéntanos tu evento</button>
+  </div>
 </nav>
 
-<!-- HERO -->
-<section class="hero" id="hero">
-  <div class="nk-blob" style="width:460px;height:460px;left:-140px;top:-120px;animation:nkDrift 26s ease-in-out infinite;"></div>
-  <div class="nk-blob nk-blob--b" style="width:380px;height:380px;right:-120px;bottom:-100px;animation:nkDrift2 32s ease-in-out infinite;"></div>
-  <div class="hero-carousel" id="hero-carousel">
-    <img src="/static/landing/home_img_01.webp" alt="Clientes en un café disfrutando de Nookplay" class="active">
-    <img src="/static/landing/home_img_02.webp" alt="Pareja compartiendo juego en un local">
-    <img src="/static/landing/home_img_03.webp" alt="Amigos jugando juntos">
-    <img src="/static/landing/home_img_04.webp" alt="Clienta disfrutando con su móvil">
-    <img src="/static/landing/home_img_05.webp" alt="Amigas en una cafetería">
-  </div>
-  <h1>Juegos nuevos cada día,<br><span>sin instalar nada</span></h1>
-  <p>Nookplay es una plataforma de minijuegos online: rápidos, originales y personalizables. Tu público escanea un QR y en segundos está jugando — sin apps, sin registros, sin datos.</p>
-  <div class="hero-btns">
-    <button class="btn-primary" onclick="openContactModal()">Nookplay para tu evento</button>
-    <a href="/demo" class="btn-secondary">Pruébalo ahora · demo</a>
+<!-- HERO + TRANSFORMADOR -->
+<section class="hero">
+  <div class="wrap">
+    <div>
+      <div class="hero-kicker">Juegos con IA para eventos y locales</div>
+      <h1>Tu evento, convertido en juego.</h1>
+      <p class="hero-lead">Festivales, ferias, congresos. Mientras tu público hace cola o espera entre actividades, juega con contenido escrito para tu evento: su temática, sus referencias, sus guiños. Nuevo cada día. Sin apps, sin registros, sin datos.</p>
+      <div class="hero-actions">
+        <button class="btn btn-cta" onclick="openContactModal()">Cuéntanos tu evento</button>
+        <a href="/demo" class="btn btn-ghost">Juega la demo</a>
+      </div>
+      <p class="hero-note">Listo en 24 horas. Sin permanencia.</p>
+    </div>
+
+    <div class="tf" id="tf">
+      <div class="tf-chips" role="group" aria-label="Elige una temática">
+        <button class="tf-chip" data-th="manga" aria-pressed="true" onclick="tfTheme('manga')">Salón del manga</button>
+        <button class="tf-chip" data-th="mesa" aria-pressed="false" onclick="tfTheme('mesa')">Feria de juegos de mesa</button>
+        <button class="tf-chip" data-th="congreso" aria-pressed="false" onclick="tfTheme('congreso')">Congreso de empresa</button>
+        <button class="tf-chip" data-th="musica" aria-pressed="false" onclick="tfTheme('musica')">Festival de música</button>
+      </div>
+
+      <div class="phone" aria-live="polite">
+        <div class="screen">
+          <div class="scr-top">
+            <div class="scr-ev" id="scr-ev"></div>
+            <div class="scr-name" id="scr-name"></div>
+            <div class="scr-meta"><span id="scr-day"></span><span class="scr-code" id="scr-code"></span></div>
+          </div>
+          <div class="scr-body">
+            <div class="scr-menu" id="scr-menu"></div>
+            <div class="scr-game" id="scr-game"></div>
+          </div>
+          <div class="scr-foot">Toca un juego. Esto es lo que ve tu público.</div>
+        </div>
+      </div>
+      <p class="tf-hint">Mismo juego, cuatro universos. Esto lo escribe la IA cada mañana con la temática que tú defines.</p>
+    </div>
   </div>
 </section>
 
-<div class="section-divider"></div>
-
-<!-- MÍRALO EN ACCIÓN: demo interactiva de personalización -->
-<div class="mw-band">
-  <div class="nk-blob nk-blob--b" style="width:440px;height:440px;right:-150px;top:-130px;animation:nkDrift 28s ease-in-out infinite;"></div>
-  <div class="section" style="position:relative; z-index:1;">
-    <div class="mw-grid">
-      <div>
-        <div class="section-tag">Míralo en acción</div>
-        <h2>Un juego, tres universos.</h2>
-        <p class="section-sub" style="margin-bottom:20px;">Esto es Nookplay: el mismo juego, ambientado para cada espacio. La IA escribe el contenido cada mañana con la temática que tú eliges — aquí tienes tres ejemplos congelados para que lo pruebes tú.</p>
-        <a href="/demo" class="mw-demo-link">▶️ Juega la demo completa</a>
-      </div>
-      <div>
-        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;">
-          <button class="mw-pill active" data-mw="friki" onclick="mwTheme('friki')">🎪 Festival friki</button>
-          <button class="mw-pill" data-mw="mesa" onclick="mwTheme('mesa')">🎲 Feria de juegos de mesa</button>
-          <button class="mw-pill" data-mw="cafe" onclick="mwTheme('cafe')">☕ Cafetería</button>
-        </div>
-        <div style="background: var(--white); border: 1px solid var(--border); border-radius: 16px; padding: 24px; box-shadow: 0 6px 24px rgba(120,70,30,0.08);">
-          <div style="font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #A8410E; margin-bottom: 10px;">La Trivia · <span id="mw-ctx"></span></div>
-          <div id="mw-q" style="font-size: 16px; font-weight: 600; line-height: 1.5; margin-bottom: 14px;"></div>
-          <div id="mw-opts" style="display:flex; flex-direction:column; gap:8px;"></div>
-          <div id="mw-fb" style="font-size: 13px; line-height: 1.5; color: var(--text-sec); margin-top: 12px; min-height: 20px;"></div>
-        </div>
-      </div>
+<!-- BANDA DE ICONOS -->
+<section class="strip" aria-label="Catálogo de juegos">
+  <div class="wrap">
+    <div class="strip-line">
+      <div><b>{{ game_count or 35 }} juegos distintos.</b> <span>Contenido nuevo cada día. Cero apps, cero datos personales.</span></div>
+      <a href="/juegos">Ver el catálogo completo</a>
     </div>
   </div>
-</div>
+  <div class="marquee" aria-hidden="true">
+    {% set slugs = ['trivia','crimen','resena','conexiones','perfil','impostor','veredicto','dilema','sopa','anagrama','emoji','letra','definicion','titular','sinopsis','constitucion','reinas','equilibrio','carta','orden','escalera','menteagil','oraculo','muertes','donde','local','vestuario','prototipo','poema','papel','freep','dosverdades','masomenos','quienmas','pensamiento'] %}
+    {% for s in slugs %}<img src="/static/games/{{ s }}.webp" alt="" loading="lazy">{% endfor %}
+    {% for s in slugs %}<img src="/static/games/{{ s }}.webp" alt="" loading="lazy">{% endfor %}
+  </div>
+</section>
 
-<style>
-  .mw-band { position: relative; overflow: hidden;
-    background: linear-gradient(135deg, #F2E2CF 0%, #FBEFDF 48%, #EFE8DC 100%);
-    background-size: 200% 200%; animation: nkGradient 30s ease infinite; }
-  .mw-grid { display: grid; grid-template-columns: 1fr; gap: 28px; }
-  @media (min-width: 900px) {
-    .mw-grid { grid-template-columns: 0.85fr 1.15fr; gap: 56px; align-items: center; }
-  }
-  .mw-demo-link { display: inline-block; font-size: 14px; font-weight: 700; color: #A8410E; text-decoration: none;
-    border: 1.5px solid #E8C4AC; border-radius: 10px; padding: 11px 18px; background: rgba(255,255,255,0.55); transition: all 0.15s; }
-  .mw-demo-link:hover { background: #fff; border-color: #C4622D; }
-  .mw-pill { font-family: inherit; font-size: 13px; font-weight: 600; padding: 9px 14px; border-radius: 20px; border: 1.5px solid var(--border); background: var(--white); cursor: pointer; transition: all 0.15s; }
-  .mw-pill.active { background: #FBE8DC; border-color: #C4622D; color: #A8410E; }
-  .mw-opt { font-family: inherit; text-align: left; font-size: 14px; padding: 11px 14px; border-radius: 10px; border: 1.5px solid var(--border); background: var(--bg); cursor: pointer; transition: all 0.15s; }
-  .mw-opt:hover { border-color: #C4622D; }
-  .mw-opt.ok { background: #E8F5E9; border-color: #66BB6A; font-weight: 700; }
-  .mw-opt.ko { background: #FDECEA; border-color: #EF9A9A; }
-</style>
-<script>
-  const MW = {
-    friki: { ctx: 'en un festival friki',
-      q: '¿Cómo se llama la técnica con la que Goku se teletransporta en Dragon Ball?',
-      opts: ['Kaio-ken', 'Teletransportación instantánea', 'Genkidama', 'Kamehameha'], ok: 1,
-      fb: 'La aprendió de los habitantes del planeta Yardrat. ✅ Y así con vuestros invitados, salas y guiños.' },
-    mesa: { ctx: 'en una feria de juegos de mesa',
-      q: 'En el ajedrez, ¿qué pieza solo puede moverse en diagonal?',
-      opts: ['La torre', 'El caballo', 'El alfil', 'La dama'], ok: 2,
-      fb: 'El alfil vive y muere en su color. ✅ Contenido jugón para público jugón.' },
-    cafe: { ctx: 'en tu cafetería',
-      q: '¿Cuál es el único país del mundo cuya bandera no es rectangular ni cuadrada?',
-      opts: ['Suiza', 'Nepal', 'Vaticano', 'Bután'], ok: 1,
-      fb: 'La de Nepal son dos triángulos apilados. ✅ Cultura general para acompañar el café.' }
-  };
-  let mwCur = 'friki';
-  function mwTheme(k) {
-    mwCur = k;
-    document.querySelectorAll('.mw-pill').forEach(p => p.classList.toggle('active', p.dataset.mw === k));
-    const d = MW[k];
-    document.getElementById('mw-ctx').textContent = d.ctx;
-    document.getElementById('mw-q').textContent = d.q;
-    document.getElementById('mw-fb').textContent = '';
-    document.getElementById('mw-opts').innerHTML = d.opts.map((o, i) =>
-      '<button class="mw-opt" onclick="mwPick(' + i + ', this)">' + o + '</button>').join('');
-  }
-  function mwPick(i, el) {
-    const d = MW[mwCur];
-    document.querySelectorAll('.mw-opt').forEach((b, j) => {
-      b.disabled = true;
-      if (j === d.ok) b.classList.add('ok');
-    });
-    if (i !== d.ok) el.classList.add('ko');
-    document.getElementById('mw-fb').textContent = d.fb;
-  }
-  mwTheme('friki');
-</script>
-
-<div class="section-divider"></div>
-
-<!-- EVENTOS -->
-<div style="background: var(--white);">
-  <div class="section">
-    <div class="section-tag">Para eventos</div>
-    <h2>Tu evento, con su propio universo de juegos.</h2>
-    <p class="section-sub">Festivales, ferias, jornadas. Mientras tu público hace cola o espera entre actividades, juega con contenido creado expresamente para tu evento — nuevo cada día.</p>
-    <div class="nk-cards3">
-      <div class="nk-card">
-        <img class="nk-card-ico" src="/static/landing/ico-tematica.svg" alt="" loading="lazy">
-        <h3>Temática total</h3>
-        <p>Los juegos se ambientan en el universo del evento: sus referencias, su público, su tono. Nada genérico.</p>
+<!-- EVENTOS EN TRES TIEMPOS -->
+<section class="sec" id="eventos">
+  <div class="wrap">
+    <h2>Tu evento, de principio a fin.</h2>
+    <p class="sec-lead">Tú defines el universo. Nookplay escribe los juegos cada mañana, los sirve desde un QR y te entrega el informe al acabar.</p>
+    <div class="tres">
+      <div class="t">
+        <span class="t-when">Antes</span>
+        <h3>Lo preparas en una tarde</h3>
+        <p>Describes la temática, el público y el tono, y añades los datos internos: salas, invitados, anécdotas. Fijas un código por día para entradas y cartelería. Eliges los juegos, tus colores y tu logo. El QR y los carteles salen del panel en calidad de imprenta.</p>
       </div>
-      <div class="nk-card">
-        <img class="nk-card-ico" src="/static/landing/ico-datos.svg" alt="" loading="lazy">
-        <h3>Datos internos</h3>
-        <p>Invitados, salas, anécdotas: los juegos mencionan tu evento por dentro. Lo que hace decir «esto está hecho para nosotros».</p>
+      <div class="t">
+        <span class="t-when">Durante</span>
+        <h3>La cola se convierte en el mejor momento</h3>
+        <p>Cada día, contenido nuevo ambientado en tu evento. Varias piezas por juego, para que quien repite encuentre otra cosa. La agenda del día dentro de la app, con horario y lugar. Tu público escanea, juega y comparte sin instalar nada.</p>
       </div>
-      <div class="nk-card">
-        <img class="nk-card-ico" src="/static/landing/ico-agenda.svg" alt="" loading="lazy">
-        <h3>Tu agenda, dentro</h3>
-        <p>Anuncia las citas del evento — torneos, charlas, actuaciones — con su horario y su lugar, integradas en la app.</p>
-      </div>
-      <div class="nk-card">
-        <img class="nk-card-ico" src="/static/landing/ico-admin.svg" alt="" loading="lazy">
-        <h3>Admin completo</h3>
-        <p>Colores, logo, juegos activos y códigos por día para entradas y cartelería. Todo desde tu panel, sin depender de nadie.</p>
-      </div>
-      <div class="nk-card">
-        <img class="nk-card-ico" src="/static/landing/ico-materiales.svg" alt="" loading="lazy">
-        <h3>Materiales listos</h3>
-        <p>El QR y los carteles se generan solos desde el panel, en calidad de imprenta. Imprimir y colgar.</p>
-      </div>
-      <div class="nk-card">
-        <img class="nk-card-ico" src="/static/landing/ico-informe.svg" alt="" loading="lazy">
-        <h3>Informe final</h3>
-        <p>Al acabar: asistentes que jugaron, partidas, juegos estrella, mejor día y franja. En PDF, listo para tu equipo o tus patrocinadores.</p>
+      <div class="t">
+        <span class="t-when">Después</span>
+        <h3>Un informe para tu equipo y tus patrocinadores</h3>
+        <p>Asistentes que jugaron, partidas, juegos estrella, mejor día y mejor franja. En PDF, listo para enviar. <a href="/informe-ejemplo">Mira un informe de ejemplo</a></p>
       </div>
     </div>
-    <div style="margin-top: 24px; padding: 20px 24px; background: var(--brand-light); border: 1.5px solid var(--brand); border-radius: 14px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
-      <div>
-        <div style="font-size: 15px; font-weight: 700; color: var(--dark);">¿Tienes un evento en mente?</div>
-        <div style="font-size: 13px; color: var(--text-sec); margin-top: 4px;">Cuéntanos y lo preparamos contigo.</div>
-      </div>
-      <button onclick="openContactModal()" style="background: #A8410E; color: white; border: none; padding: 12px 24px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; white-space: nowrap;">Cuéntanos tu evento</button>
+    <div class="sec-cta"><button class="btn btn-cta" onclick="openContactModal()">Cuéntanos tu evento</button></div>
+  </div>
+</section>
+
+<!-- PARA QUIÉN -->
+<section class="sec quien">
+  <div class="wrap">
+    <h2>Donde hay espera, hay partida.</h2>
+    <div class="quien-grid">
+      <div class="q"><div class="q-ico">🎭</div><div><b>Festivales y salones</b><p>Manga, cómic, videojuegos: un universo que tu público ya conoce y quiere jugar.</p></div></div>
+      <div class="q"><div class="q-ico">🎲</div><div><b>Ferias de juegos de mesa</b><p>Mientras esperan mesa, juegan en el móvil con guiños a lo que hay en la sala.</p></div></div>
+      <div class="q"><div class="q-ico">🎤</div><div><b>Congresos y jornadas</b><p>Pausas de café con algo de qué hablar. Y datos de participación para el informe.</p></div></div>
+      <div class="q"><div class="q-ico">🏢</div><div><b>Eventos de empresa</b><p>Convenciones, kick-offs, team building: la cultura de la empresa convertida en juego.</p></div></div>
+      <div class="q"><div class="q-ico">🎸</div><div><b>Festivales de música</b><p>Entre concierto y concierto, un reto diario con el cartel como protagonista.</p></div></div>
+      <div class="q"><div class="q-ico">🎪</div><div><b>Ferias y mercados</b><p>Cualquier cola es un público cautivo. Dale algo mejor que mirar el reloj.</p></div></div>
     </div>
   </div>
-</div>
-
-<div class="section-divider"></div>
+</section>
 
 <!-- CÓMO FUNCIONA -->
-<div style="background: var(--bg);">
-  <div class="section">
-    <div class="section-tag">Cómo funciona</div>
+<section class="sec" id="como">
+  <div class="wrap">
     <h2>Así de simple.</h2>
-    <p class="section-sub">Sin apps. Sin registros. Sin permisos. Solo el móvil que ya tienes en el bolsillo.</p>
-    <div class="steps">
-      <div class="step">
-        <img src="/static/landing/step1.png" alt="Tu público descubre Nookplay" class="step-img" style="animation-delay:0s;">
-        <div class="step-num">1</div>
-        <h3>Tu público descubre Nookplay</h3>
-        <p>Un QR en la entrada, en la cartelería o en la mesa. Lo escanea por curiosidad. Sin instalar nada, sin registrarse.</p>
+    <p class="sec-lead">Sin apps. Sin registros. Sin permisos. Solo el móvil que ya llevan en el bolsillo.</p>
+    <div class="pasos">
+      <div class="paso">
+        <img src="/static/landing/step1.png" alt="" loading="lazy">
+        <div class="paso-n">Paso 1</div>
+        <h3>Escanea</h3>
+        <p>Un QR en la entrada, en la cartelería o en la mesa. Sin instalar nada, sin registrarse.</p>
       </div>
-      <div class="step">
-        <img src="/static/landing/step2.png" alt="Introduce el código" class="step-img" style="animation-delay:-2s;">
-        <div class="step-num">2</div>
-        <h3>Introduce el código de acceso</h3>
-        <p>Un código visible en el evento o en el local — en la entrada, el ticket o la pizarra de la barra. Acceso instantáneo al juego del día.</p>
+      <div class="paso">
+        <img src="/static/landing/step2.png" alt="" loading="lazy">
+        <div class="paso-n">Paso 2</div>
+        <h3>Introduce el código del día</h3>
+        <p>Está en la entrada o en los carteles. Acceso instantáneo a los juegos de hoy.</p>
       </div>
-      <div class="step">
-        <img src="/static/landing/step3.png" alt="Juega y repite" class="step-img" style="animation-delay:-4s;">
-        <div class="step-num">3</div>
-        <h3>Juega, debate y repite</h3>
-        <p>Cada día hay algo nuevo. Quien juega hoy, mañana quiere más — en la cola del evento o en su café de siempre.</p>
+      <div class="paso">
+        <img src="/static/landing/step3.png" alt="" loading="lazy">
+        <div class="paso-n">Paso 3</div>
+        <h3>Juega, debate y vuelve mañana</h3>
+        <p>Cada día hay algo nuevo. Quien juega hoy, mañana quiere más.</p>
       </div>
     </div>
   </div>
-</div>
-
-<div class="section-divider"></div>
-
-<!-- JUEGOS -->
-<div style="background: var(--bg);">
-  <div class="section">
-    <div class="section-tag">Actividades</div>
-    <h2>Un pasatiempo diferente cada día</h2>
-    <p class="section-sub">Decenas de juegos y creciendo. Cada mañana hay contenido nuevo esperando a tus asistentes o clientes.</p>
-    <div class="games-grid">
-      <div class="game-card active">
-        <div class="game-icon"><img src="/static/games/crimen.webp" alt="El Crimen del Día" style="width:100%;height:100%;object-fit:cover;border-radius:8px;"></div>
-        <div class="game-info">
-          <h3>El Crimen del Día</h3>
-          <p>Un caso policial nuevo cada día. Pistas, sospechosos y una resolución sorprendente.</p>
-          <span class="badge">Disponible</span>
-        </div>
-      </div>
-      <div class="game-card active">
-        <div class="game-icon"><img src="/static/games/conexiones.webp" alt="Las Conexiones" style="width:100%;height:100%;object-fit:cover;border-radius:8px;"></div>
-        <div class="game-info">
-          <h3>Las Conexiones</h3>
-          <p>8 palabras, 2 grupos ocultos. ¿Ves el patrón que las une?</p>
-          <span class="badge">Disponible</span>
-        </div>
-      </div>
-      <div class="game-card active">
-        <div class="game-icon"><img src="/static/games/reinas.webp" alt="Las Reinas" style="width:100%;height:100%;object-fit:cover;border-radius:8px;"></div>
-        <div class="game-info">
-          <h3>Las Reinas</h3>
-          <p>Coloca una corona en cada región sin que se toquen. Puro rompecabezas.</p>
-          <span class="badge">Disponible</span>
-        </div>
-      </div>
-      <div class="game-card active">
-        <div class="game-icon"><img src="/static/games/dilema.webp" alt="El Dilema" style="width:100%;height:100%;object-fit:cover;border-radius:8px;"></div>
-        <div class="game-info">
-          <h3>El Dilema</h3>
-          <p>Una situación cotidiana, dos opciones. ¿De qué lado está el grupo?</p>
-          <span class="badge">Disponible</span>
-        </div>
-      </div>
-      <div class="game-card active">
-        <div class="game-icon"><img src="/static/games/veredicto.webp" alt="El Veredicto" style="width:100%;height:100%;object-fit:cover;border-radius:8px;"></div>
-        <div class="game-info">
-          <h3>El Veredicto</h3>
-          <p>Un caso real. ¿Culpable o inocente? El grupo decide.</p>
-          <span class="badge">Disponible</span>
-        </div>
-      </div>
-      <div class="game-card active">
-        <div class="game-icon"><img src="/static/games/perfil.webp" alt="El Perfil" style="width:100%;height:100%;object-fit:cover;border-radius:8px;"></div>
-        <div class="game-info">
-          <h3>El Perfil</h3>
-          <p>Una persona, cuatro datos. ¿Puedes leer entre líneas?</p>
-          <span class="badge">Disponible</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- CTA catálogo completo -->
-    <a href="/juegos" style="
-      display: flex; align-items: center; justify-content: space-between;
-      margin-top: 20px; padding: 16px 20px;
-      background: var(--brand-light, #F0E0D4);
-      border: 1.5px solid var(--brand, #C4622D);
-      border-radius: 14px; text-decoration: none;
-      transition: background 0.15s;
-    " onmouseover="this.style.background='#E8D0C0'" onmouseout="this.style.background='#F0E0D4'">
-      <div>
-        <div style="font-size:15px; font-weight:700; color:#7A3A18;">{{ game_count or 20 }} juegos y creciendo</div>
-        <div style="font-size:13px; color:#A8410E; margin-top:2px;">Cada espacio elige los suyos · Ver catálogo completo →</div>
-      </div>
-      <span style="font-size:28px;">🎲</span>
-    </a>
-  </div>
-</div>
+</section>
 
 <!-- LOCALES -->
-<div class="section-divider"></div>
-<div style="background: var(--white);">
-  <div class="section">
-    <div class="section-tag">Para locales</div>
-    <h2>Y en tu bar, cada día.</h2>
-    <p class="section-sub">La versión para cafeterías y locales: un juego nuevo cada día para tus clientes de siempre, con tu código en la pizarra. Desde 6,95€/mes, sin permanencia.</p>
-    <div class="nk-cards2">
-      <div class="nk-card">
-        <div class="nk-card-ico">🎪</div>
-        <h3>En un evento</h3>
-        <p>Juegos ambientados en tu temática y tus datos internos, agenda de actividades con horario y lugar, códigos por día, panel completo e informe final con datos. Precio por evento, según días y aforo.</p>
-      </div>
-      <div class="nk-card">
-        <div class="nk-card-ico">☕</div>
-        <h3>En un local</h3>
-        <p>Los mismos juegos, nuevos cada día, en versión para todos los públicos. Código semanal automático — o el tuyo propio, si prefieres elegirlo. Panel sencillo con tus estadísticas. Desde 6,95€/mes.</p>
-      </div>
+<section class="sec locales" id="locales">
+  <div class="wrap">
+    <div>
+      <h2>Y en tu cafetería, cada día.</h2>
+      <p class="sec-lead" style="color:#5A3A28;">La misma plataforma, en versión para todos los públicos: un juego nuevo cada mañana para tus clientes de siempre, con tu código en la pizarra, tus colores y tu logo. Mensualidad sin permanencia.</p>
+      <div class="sec-cta" style="margin-top:28px;"><a href="/juegos" class="btn btn-ghost">Ver planes y catálogo</a></div>
+    </div>
+    <div class="loc-card">
+      <img src="/static/games/crimen.webp" alt="">
+      <div><b>El Crimen del Día</b><span>Hoy, en tu local: un caso nuevo con pistas y tres sospechosos. Mañana, otro.</span></div>
     </div>
   </div>
-</div>
+</section>
 
-<div class="section-divider"></div>
-
-<!-- STARTUP -->
-<div style="background: var(--bg);">
-  <div class="section">
-    <div class="section-tag">Quiénes somos</div>
-    <h2>Una startup en marcha.</h2>
-    <p class="section-sub">Nookplay es un proyecto de Yamasoto, el estudio creador de los juegos de mesa Oferta y Freep. Más de 25 juegos online y subiendo, mejoras cada semana, y los primeros espacios ya jugando. Ser de los primeros tiene ventaja: nos volcamos contigo, y el producto crece contigo.</p>
+<!-- CREDIBILIDAD -->
+<section class="sec cred">
+  <div class="wrap">
+    <div>
+      <h2>Hecho por gente que diseña juegos.</h2>
+      <p>Nookplay es de Yamasoto, el estudio de Viladecans que ha publicado los juegos de mesa Oferta y Freep. Llevamos esa manera de pensar al móvil: reglas que se entienden en diez segundos, partidas que caben en una cola y contenido que se renueva solo. {{ game_count or 35 }} juegos, dos verticales y un panel completo, y cada semana hay algo nuevo.</p>
+      <p class="cred-last">Si eres de los primeros, el producto crece contigo.</p>
+      <div class="cred-tiendas"><span>Fnac</span><span>Zacatrus</span><span>Amazon</span></div>
+    </div>
+    <div class="cred-visual">
+      <img src="/static/CajaFreep_400.webp" alt="Caja del juego de cartas Freep" loading="lazy">
+    </div>
   </div>
-</div>
+</section>
 
-<!-- CTA -->
-<section class="cta-section">
-  <h2>Dale a tu público algo que recordar.</h2>
-  <p>Cuéntanos tu evento o tu local y lo montamos contigo.<br>Sin permanencia. Sin datos de tus visitantes. Solo un momento de diversión que se comparte.</p>
-  <button class="btn-whatsapp" onclick="openContactModal()">✉️ Contacta con nosotros</button>
+<!-- CIERRE -->
+<section class="cierre">
+  <div class="wrap">
+    <h2>Dale a tu público algo que recordar.</h2>
+    <p>Cuéntanos tu evento o tu local y lo montamos contigo. Sin permanencia. Sin datos de tus visitantes. Listo en 24 horas.</p>
+    <div class="cierre-actions">
+      <button class="btn btn-cta" onclick="openContactModal()">Cuéntanos tu evento</button>
+      <a class="btn btn-ghost" href="https://wa.me/34623795080?text=Hola%2C%20me%20interesa%20Nookplay.%20%C2%BFMe%20pod%C3%A9is%20dar%20m%C3%A1s%20informaci%C3%B3n%3F" target="_blank" rel="noopener">Escríbenos por WhatsApp</a>
+    </div>
+  </div>
 </section>
 
 <!-- FOOTER -->
 <footer class="footer">
-  <a href="/"><img src="/static/logo.svg" alt="Nookplay"></a>
-  <a href="/admin/login" class="footer-admin">Panel de gestión</a>
-  <a href="https://www.yamasoto.com/" target="_blank" class="footer-by">
-    <span>by</span>
-    <img src="/static/Logo_yamasoto.svg" alt="Yamasoto" onerror="this.style.display='none'">
-  </a>
+  <div class="wrap">
+    <a href="/"><img src="/static/logo.svg" alt="Nookplay"></a>
+    <div class="footer-right">
+      <a href="/juegos">Juegos y planes</a>
+      <a href="/demo">Demo</a>
+      <a href="/admin/login">Panel de gestión</a>
+      <a href="https://www.yamasoto.com/" target="_blank" rel="noopener" class="footer-by"><img src="/static/Logo_yamasoto.svg" alt="Yamasoto"></a>
+    </div>
+    <div>© 2026 Nookplay by Yamasoto</div>
+  </div>
 </footer>
 
-<!-- LEGAL -->
-<div class="legal">
-  Nookplay by Yamasoto · Powered by Reliops · © 2026 · Todos los derechos reservados
-</div>
-
+<!-- TRANSFORMADOR: datos congelados -->
 <script>
-document.body.classList.add('landing');
-
-// Parallax on decorative elements
-window.addEventListener('scroll', () => {
-  const scrollY = window.scrollY;
-  document.querySelectorAll('.deco').forEach((el, i) => {
-    const speed = 0.1 + (i * 0.05);
-    el.style.transform = `translateY(${scrollY * speed}px)`;
-  });
-});
-
-// Carrusel hero con fade
-(function() {
-  const imgs = document.querySelectorAll('#hero-carousel img');
-  if (!imgs.length) return;
-  let current = 0;
-  setInterval(() => {
-    imgs[current].classList.remove('active');
-    current = (current + 1) % imgs.length;
-    imgs[current].classList.add('active');
-  }, 4000); // cambia cada 4 segundos
-})();
-
-
+const TF = {
+  manga: { bg:'#E3D8F0', accent:'#6B4FA3', deep:'#2E2148', ev:'Salón del manga', name:'Manga Fest Barcelona', day:'Día 2 de 3', code:'KAWAII',
+    trivia:{ q:'¿Qué estudio produjo las tres primeras temporadas de Attack on Titan?', opts:['MAPPA','Wit Studio','Bones','Ufotable'], ok:1, fb:'Wit Studio hizo las tres primeras; MAPPA tomó el relevo en la última. Y así con los invitados y las salas de tu salón.' },
+    crimen:{ t:'El cosplay desaparecido', p:'A dos horas del concurso, la armadura de Guts de un cosplayer se ha esfumado del camerino. Solo tres personas entraron.', sus:['El rival que quedó segundo el año pasado','La organizadora del concurso','El chico del puesto de merchandising'], ok:2, fb:'La guardó «por error» con el stock de figuras. El culpable cambia cada día, y las pistas también.' },
+    dilema:{ q:'Te quedan 20 € y una hora de salón.', a:'La firma del autor invitado (cola de 50 minutos)', b:'El tomo que te falta de tu colección' },
+    conex:{ w:['Naruto','Pikachu','Zoro','Totoro','Tanjiro','Jiji','Ichigo','Chopper'], a:[0,2,4,6], la:'Protagonistas de shōnen', lb:'Mascotas y criaturas' } },
+  mesa: { bg:'#F7E7B4', accent:'#9A6B10', deep:'#3F2B04', ev:'Feria de juegos de mesa', name:'Feria Lúdica del Vallès', day:'Día 1 de 2', code:'MEEPLE',
+    trivia:{ q:'¿Qué juego consagró la colocación de trabajadores en 2007?', opts:['Catan','Carcassonne','Agricola','Dominion'], ok:2, fb:'Agricola, de Uwe Rosenberg. Contenido jugón para público jugón.' },
+    crimen:{ t:'La partida que nadie ganó', p:'La ficha de madera que decidía la final del torneo ha aparecido en el bolsillo de la persona equivocada.', sus:['El ganador oficial','El árbitro','La ludoteca que prestó el juego'], ok:1, fb:'El árbitro la retiró para «evitar polémicas» y olvidó devolverla. Mañana, otro caso.' },
+    dilema:{ q:'Última hora de feria.', a:'El prototipo del autor desconocido que te ha enganchado', b:'La novedad de la editorial grande que todos recomiendan' },
+    conex:{ w:['Meeple','Catan','Dado','Dixit','Ficha','Pandemic','Carta','Azul'], a:[0,2,4,6], la:'Componentes', lb:'Juegos' } },
+  congreso: { bg:'#D6E6F5', accent:'#2F5F8F', deep:'#132A42', ev:'Congreso de empresa', name:'Impulsa 2027', day:'Día 1 de 1', code:'IMPULSA',
+    trivia:{ q:'¿En qué sala se celebra la mesa redonda de las 12:30?', opts:['Sala Miró','Auditorio','Sala Gaudí','Sala Dalí'], ok:2, fb:'Sala Gaudí. Esta pregunta sale de tu programa: la IA usa los datos internos que tú le das.' },
+    crimen:{ t:'El pendrive de la keynote', p:'El USB con la presentación de apertura no está donde lo dejó la ponente. Quedan doce minutos.', sus:['El técnico de sala','El responsable de patrocinios','La persona del guardarropa'], ok:0, fb:'Lo había conectado al portátil de pruebas. Un crimen amable, hecho a medida de tu congreso.' },
+    dilema:{ q:'Pausa café de 15 minutos.', a:'Hablar con la ponente que acaba de bajar del escenario', b:'Asegurarte un buen sitio en la siguiente charla' },
+    conex:{ w:['Badge','Croissant','Lanyard','Café','Agenda','Zumo','Keynote','Networking'], a:[0,2,4,6], la:'Lo que te cuelgas o apuntas', lb:'La pausa café' } },
+  musica: { bg:'#F9D9D2', accent:'#B5423A', deep:'#4A1612', ev:'Festival de música', name:'Festival Sonora', day:'Día 3 de 3', code:'ENCORE',
+    trivia:{ q:'¿Qué festival se celebra en la granja de Worthy, en Somerset?', opts:['Reading','Glastonbury','Download','Isle of Wight'], ok:1, fb:'Glastonbury, desde 1970. En tu festival, las preguntas van sobre tu cartel.' },
+    crimen:{ t:'La pulsera VIP', p:'Una pulsera de backstage ha cambiado de muñeca entre el segundo escenario y la zona de food trucks.', sus:['El roadie del cabeza de cartel','La fotógrafa acreditada','El vendedor de camisetas'], ok:1, fb:'La cambió por una foto exclusiva. Pistas nuevas cada día del festival.' },
+    dilema:{ q:'Dos conciertos a la vez.', a:'El grupo que llevas años queriendo ver, con mucha gente', b:'El desconocido que te recomendó alguien en la cola' },
+    conex:{ w:['Mosh','Camping','Riff','Pulsera','Pogo','Cashless','Bis','Lluvia'], a:[0,2,4,6], la:'Delante del escenario', lb:'Fuera del escenario' } }
+};
+const TF_GAMES = [
+  { k:'trivia', n:'La Trivia', d:'5 preguntas, dificultad creciente', img:'/static/games/trivia.webp' },
+  { k:'crimen', n:'El Crimen del Día', d:'Pistas y tres sospechosos', img:'/static/games/crimen.webp' },
+  { k:'dilema', n:'El Dilema', d:'¿Tú qué harías?', img:'/static/games/dilema.webp' },
+  { k:'conex', n:'Las Conexiones', d:'8 palabras, 2 grupos', img:'/static/games/conexiones.webp' }
+];
+let tfCur = 'manga', tfSel = [];
+function tfTheme(k) {
+  tfCur = k; const d = TF[k]; const r = document.documentElement.style;
+  r.setProperty('--th-bg', d.bg); r.setProperty('--th-accent', d.accent); r.setProperty('--th-deep', d.deep);
+  document.querySelectorAll('.tf-chip').forEach(c => c.setAttribute('aria-pressed', c.dataset.th === k ? 'true' : 'false'));
+  document.getElementById('scr-ev').textContent = d.ev;
+  document.getElementById('scr-name').textContent = d.name;
+  document.getElementById('scr-day').textContent = d.day;
+  document.getElementById('scr-code').textContent = d.code;
+  document.getElementById('scr-menu').innerHTML = TF_GAMES.map(g =>
+    '<button class="scr-tile" onclick="tfOpen(\'' + g.k + '\')"><img src="' + g.img + '" alt=""><b>' + g.n + '</b><small>' + g.d + '</small></button>').join('');
+  tfClose();
+}
+function tfClose() { const g = document.getElementById('scr-game'); g.classList.remove('open'); g.innerHTML = ''; tfSel = []; }
+function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+function tfOpen(k) {
+  const d = TF[tfCur], g = TF_GAMES.find(x => x.k === k), box = document.getElementById('scr-game');
+  let h = '<div class="sg-head"><img src="' + g.img + '" alt=""><b>' + g.n + '</b><button class="sg-back" onclick="tfClose()">Menú</button></div>';
+  if (k === 'trivia') {
+    h += '<div class="sg-q">' + esc(d.trivia.q) + '</div><div class="sg-opts">' + d.trivia.opts.map((o, i) => '<button class="sg-opt" onclick="tfPick(this,' + i + ',' + d.trivia.ok + ',\'trivia\')">' + esc(o) + '</button>').join('') + '</div><div class="sg-fb" id="sg-fb"></div>';
+  } else if (k === 'crimen') {
+    h += '<div class="sg-q">' + esc(d.crimen.t) + '</div><div class="sg-p">' + esc(d.crimen.p) + ' ¿Quién ha sido?</div><div class="sg-opts">' + d.crimen.sus.map((o, i) => '<button class="sg-opt" onclick="tfPick(this,' + i + ',' + d.crimen.ok + ',\'crimen\')">' + esc(o) + '</button>').join('') + '</div><div class="sg-fb" id="sg-fb"></div>';
+  } else if (k === 'dilema') {
+    h += '<div class="sg-q">' + esc(d.dilema.q) + ' ¿Qué eliges?</div><div class="sg-dil"><button class="sg-opt" onclick="tfDil(this)">' + esc(d.dilema.a) + '</button><button class="sg-opt" onclick="tfDil(this)">' + esc(d.dilema.b) + '</button></div><div class="sg-fb" id="sg-fb"></div>';
+  } else {
+    h += '<div class="sg-q">Ocho palabras, dos grupos. Marca cuatro que vayan juntas.</div><div class="sg-words">' + d.conex.w.map((w, i) => '<button class="sg-word" onclick="tfWord(this,' + i + ')">' + esc(w) + '</button>').join('') + '</div><div class="sg-fb" id="sg-fb"></div>';
+  }
+  box.innerHTML = h; box.classList.add('open');
+}
+function tfPick(el, i, ok, k) {
+  document.querySelectorAll('#scr-game .sg-opt').forEach((b, j) => { b.disabled = true; if (j === ok) b.classList.add('ok'); });
+  if (i !== ok) el.classList.add('ko');
+  document.getElementById('sg-fb').textContent = TF[tfCur][k].fb;
+}
+function tfDil(el) {
+  document.querySelectorAll('#scr-game .sg-opt').forEach(b => b.disabled = true); el.classList.add('sel');
+  document.getElementById('sg-fb').textContent = 'Anotado. En tu evento verías en qué lado está la mayoría, y el dilema de mañana será otro.';
+}
+function tfWord(el, i) {
+  if (tfSel.includes(i)) { tfSel = tfSel.filter(x => x !== i); el.classList.remove('sel'); return; }
+  if (tfSel.length >= 4) return;
+  tfSel.push(i); el.classList.add('sel');
+  if (tfSel.length === 4) {
+    const d = TF[tfCur].conex, A = d.a, B = [0,1,2,3,4,5,6,7].filter(x => !A.includes(x));
+    const hit = tfSel.every(x => A.includes(x)) || tfSel.every(x => B.includes(x));
+    document.querySelectorAll('#scr-game .sg-word').forEach((b, j) => { b.disabled = true; b.classList.remove('sel'); b.classList.add(A.includes(j) ? 'a' : 'b'); });
+    document.getElementById('sg-fb').textContent = (hit ? 'Correcto. ' : 'Casi. ') + d.la + ' en verde, ' + d.lb + ' en naranja.';
+  }
+}
+tfTheme('manga');
 </script>
 
 <!-- Contact modal -->
 <div class="contact-modal-overlay" id="contact-modal" onclick="closeContactModal(event)">
   <div class="contact-modal">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-      <div style="font-size:18px;font-weight:700;">¿Quieres Nookplay?</div>
-      <button onclick="closeContactModal()" style="background:transparent;border:none;font-size:22px;cursor:pointer;color:#A89B91;padding:0;">✕</button>
+      <div style="font-size:18px;font-weight:700;">Cuéntanos tu evento</div>
+      <button onclick="closeContactModal()" aria-label="Cerrar" style="background:transparent;border:none;font-size:22px;cursor:pointer;color:#A89B91;padding:0;">✕</button>
     </div>
     <div id="contact-form-wrap">
-      <p style="font-size:14px;color:#6B6059;margin-bottom:20px;line-height:1.5;">Cuéntanos sobre tu evento o tu local y nos ponemos en contacto contigo.</p>
+      <p style="font-size:14px;color:#6B6059;margin-bottom:20px;line-height:1.5;">Te escribimos en menos de 24 horas y lo montamos contigo.</p>
       <div class="contact-field">
         <label>¿Para qué lo quieres?</label>
-        <div style="display:flex; gap:8px;">
-          <label style="flex:1; text-align:center; border:1.5px solid #E5DDD5; border-radius:8px; padding:10px 6px; cursor:pointer; font-size:13px; font-weight:600;"><input type="radio" name="cf-tipo" value="Evento" style="margin-right:5px; accent-color:#C4622D;">🎪 Un evento</label>
-          <label style="flex:1; text-align:center; border:1.5px solid #E5DDD5; border-radius:8px; padding:10px 6px; cursor:pointer; font-size:13px; font-weight:600;"><input type="radio" name="cf-tipo" value="Local" style="margin-right:5px; accent-color:#C4622D;">☕ Un local</label>
-          <label style="flex:1; text-align:center; border:1.5px solid #E5DDD5; border-radius:8px; padding:10px 6px; cursor:pointer; font-size:13px; font-weight:600;"><input type="radio" name="cf-tipo" value="Otro" style="margin-right:5px; accent-color:#C4622D;">✨ Otra cosa</label>
+        <div class="cf-tipos">
+          <label><input type="radio" name="cf-tipo" value="Evento" checked onchange="cfTipo()">Un evento</label>
+          <label><input type="radio" name="cf-tipo" value="Local" onchange="cfTipo()">Un local</label>
+          <label><input type="radio" name="cf-tipo" value="Otro" onchange="cfTipo()">Otra cosa</label>
         </div>
       </div>
       <div class="contact-field"><label>Tu nombre *</label><input type="text" id="cf-nombre" placeholder="Nombre y apellido"></div>
-      <div class="contact-field"><label>Nombre del evento o del local *</label><input type="text" id="cf-negocio" placeholder="Festival, feria, cafetería..."></div>
+      <div class="contact-field"><label>Nombre del evento o del local *</label><input type="text" id="cf-negocio" placeholder="Festival, feria, congreso, cafetería..."></div>
+      <div class="contact-field" id="cf-fechas-wrap"><label>Fechas del evento</label><input type="text" id="cf-fechas" placeholder="Por ejemplo: 12 al 15 de marzo de 2027"></div>
       <div class="contact-field"><label>Ubicación *</label><input type="text" id="cf-ubicacion" placeholder="Ciudad o municipio"></div>
       <div class="contact-field"><label>Teléfono</label><input type="tel" id="cf-telefono" placeholder="+34 600 000 000"></div>
       <div class="contact-field"><label>Email de contacto *</label><input type="email" id="cf-email" placeholder="tu@email.com"></div>
@@ -853,17 +539,22 @@ window.addEventListener('scroll', () => {
       </a>
     </div>
     <div id="contact-success" style="display:none;text-align:center;padding:20px 0;">
-      <span style="font-size:48px;display:block;margin-bottom:12px;">🎲</span>
-      <strong style="font-size:16px;">¡Recibido!</strong><br>
-      <span style="font-size:14px;color:#6B6059;line-height:1.6;">Nos pondremos en contacto contigo en breve.<br>nookplay@yamasoto.com</span>
+      <strong style="font-size:18px;display:block;margin-bottom:8px;">¡Recibido!</strong>
+      <span style="font-size:14px;color:#6B6059;line-height:1.6;">Te escribimos en menos de 24 horas.<br>nookplay@yamasoto.com</span>
     </div>
   </div>
 </div>
 
 <script>
+document.body.classList.add('landing');
+function cfTipo() {
+  const t = document.querySelector('input[name="cf-tipo"]:checked');
+  document.getElementById('cf-fechas-wrap').style.display = (t && t.value === 'Evento') ? '' : 'none';
+}
 function openContactModal() {
   document.getElementById('contact-modal').classList.add('open');
   document.body.style.overflow = 'hidden';
+  cfTipo();
 }
 function closeContactModal(e) {
   if (!e || e.target === document.getElementById('contact-modal')) {
@@ -876,10 +567,12 @@ async function submitContact() {
   const tipo = _tipoEl ? _tipoEl.value : '';
   const nombre = document.getElementById('cf-nombre').value.trim();
   const negocio = document.getElementById('cf-negocio').value.trim();
+  const fechas = document.getElementById('cf-fechas').value.trim();
   const ubicacion = document.getElementById('cf-ubicacion').value.trim();
   const telefono = document.getElementById('cf-telefono').value.trim();
   const email = document.getElementById('cf-email').value.trim();
-  const mensaje = document.getElementById('cf-mensaje').value.trim();
+  let mensaje = document.getElementById('cf-mensaje').value.trim();
+  if (tipo === 'Evento' && fechas) mensaje = 'Fechas: ' + fechas + (mensaje ? '\n\n' + mensaje : '');
   if (!nombre || !email) { alert('Por favor, rellena al menos tu nombre y email.'); return; }
   const btn = document.getElementById('btn-contact-submit');
   btn.disabled = true; btn.textContent = 'Enviando...';
