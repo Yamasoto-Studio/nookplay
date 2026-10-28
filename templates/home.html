@@ -175,14 +175,15 @@
   .loc-card span { font-size: 13px; color: var(--sec); }
 
   /* Credibilidad */
-  .cred { background: var(--ink); color: #fff; }
+  .cred { background: #2E2622; color: #fff; }
   .cred .wrap { display: grid; grid-template-columns: 1fr; gap: 36px; align-items: center; }
   @media (min-width: 900px) { .cred .wrap { grid-template-columns: 1fr 1fr; gap: 64px; } }
   .cred h2 { color: #fff; }
   .cred p { font-size: 17px; line-height: 1.6; color: rgba(255,255,255,.72); margin-top: 18px; max-width: 52ch; }
   .cred-last { color: #fff; font-weight: 600; }
+  .cred p a { color: #fff; text-decoration: underline; text-underline-offset: 3px; }
   .cred-visual { display: flex; align-items: flex-end; justify-content: center; gap: 24px; }
-  .cred-visual img { width: 100%; max-width: 460px; height: auto; display: block; filter: drop-shadow(0 24px 30px rgba(0,0,0,.5)); }
+  .cred-visual img { width: 100%; max-width: 460px; height: auto; display: block; filter: drop-shadow(0 18px 28px rgba(0,0,0,.35)); }
   .cred-tiendas { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 26px; }
   .cred-tiendas span { font-size: 13px; font-weight: 600; padding: 7px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,.22); color: rgba(255,255,255,.85); }
 
@@ -377,8 +378,8 @@
 <section class="sec cred">
   <div class="wrap">
     <div>
-      <h2>Hecho por gente que diseña juegos.</h2>
-      <p>Nookplay es de Yamasoto, el estudio de Viladecans que ha publicado los juegos de mesa Oferta y Freep. Llevamos esa manera de pensar al móvil: reglas que se entienden en diez segundos, partidas que caben en una cola y contenido que se renueva solo. {{ game_count or 35 }} juegos, dos verticales y un panel completo, y cada semana hay algo nuevo.</p>
+      <h2>Detrás de Nookplay hay un estudio que ya publica juegos.</h2>
+      <p>Nookplay es de <a href="https://www.yamasoto.com/" target="_blank" rel="noopener">Yamasoto</a>, un estudio de diseño con más de veinte años de oficio que además crea y publica sus propios juegos de mesa: Oferta y Freep, a la venta en Fnac, Zacatrus y Amazon. Sabemos lo que cuesta que un juego se entienda en diez segundos y se juegue en una cola: con esa experiencia están hechos los {{ game_count or 35 }} juegos de Nookplay.</p>
       <p class="cred-last">Si eres de los primeros, el producto crece contigo.</p>
       <div class="cred-tiendas"><span>Fnac</span><span>Zacatrus</span><span>Amazon</span></div>
     </div>
