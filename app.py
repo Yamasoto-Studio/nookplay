@@ -2319,6 +2319,22 @@ if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
 
 
+# La demo pública vive en un espacio de tipo evento (plan 'demo'). Cambia el
+# slug aquí si algún día la demo pasa a otro espacio; los enlaces de la web
+# (/demo) no hay que tocarlos.
+DEMO_SLUG = 'festival-nook'
+
+@app.route('/demo')
+def demo_redirect():
+    db = get_db()
+    existe = db.execute("SELECT 1 FROM bars WHERE slug = ? AND active = 1", (DEMO_SLUG,)).fetchone()
+    db.close()
+    if existe:
+        return redirect('/' + DEMO_SLUG, code=302)
+    # Mientras el espacio nuevo no exista o esté pausado, sigue sirviendo el
+    # espacio antiguo, cuyo slug es 'demo'.
+    return bar('demo')
+
 @app.route('/<bar_slug>')
 def bar(bar_slug):
     db = get_db()
