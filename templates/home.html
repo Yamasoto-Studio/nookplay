@@ -182,7 +182,7 @@
   .cred p { font-size: 17px; line-height: 1.6; color: rgba(255,255,255,.72); margin-top: 18px; max-width: 52ch; }
   .cred-last { color: #fff; font-weight: 600; }
   .cred-visual { display: flex; align-items: flex-end; justify-content: center; gap: 24px; }
-  .cred-visual img { width: 220px; max-width: 48%; height: auto; display: block; filter: drop-shadow(0 24px 30px rgba(0,0,0,.5)); }
+  .cred-visual img { width: 100%; max-width: 460px; height: auto; display: block; filter: drop-shadow(0 24px 30px rgba(0,0,0,.5)); }
   .cred-tiendas { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 26px; }
   .cred-tiendas span { font-size: 13px; font-weight: 600; padding: 7px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,.22); color: rgba(255,255,255,.85); }
 
@@ -337,19 +337,19 @@
     <p class="sec-lead">Sin apps. Sin registros. Sin permisos. Solo el móvil que ya llevan en el bolsillo.</p>
     <div class="pasos">
       <div class="paso">
-        <img src="/static/landing/step1.png" alt="" loading="lazy">
+        <img src="/static/landing/step1.webp" alt="" loading="lazy">
         <div class="paso-n">Paso 1</div>
         <h3>Escanea</h3>
         <p>Un QR en la entrada, en la cartelería o en la mesa. Sin instalar nada, sin registrarse.</p>
       </div>
       <div class="paso">
-        <img src="/static/landing/step2.png" alt="" loading="lazy">
+        <img src="/static/landing/step2.webp" alt="" loading="lazy">
         <div class="paso-n">Paso 2</div>
         <h3>Introduce el código del día</h3>
         <p>Está en la entrada o en los carteles. Acceso instantáneo a los juegos de hoy.</p>
       </div>
       <div class="paso">
-        <img src="/static/landing/step3.png" alt="" loading="lazy">
+        <img src="/static/landing/step3.webp" alt="" loading="lazy">
         <div class="paso-n">Paso 3</div>
         <h3>Juega, debate y vuelve mañana</h3>
         <p>Cada día hay algo nuevo. Quien juega hoy, mañana quiere más.</p>
@@ -383,8 +383,7 @@
       <div class="cred-tiendas"><span>Fnac</span><span>Zacatrus</span><span>Amazon</span></div>
     </div>
     <div class="cred-visual">
-      {# Cuando exista la imagen de los dos juegos juntos, súbela a static/landing/juegos_yamasoto.webp y cambia el src #}
-      <img src="/static/CajaFreep_400.webp" alt="Juegos de mesa de Yamasoto: Oferta y Freep" loading="lazy">
+      <img src="/static/landing/juegos_yamasoto.webp" alt="Juegos de mesa de Yamasoto: Oferta y Freep" loading="lazy">
     </div>
   </div>
 </section>
@@ -411,7 +410,7 @@
       <a href="/admin/login">Panel de gestión</a>
       <a href="https://www.yamasoto.com/" target="_blank" rel="noopener" class="footer-by"><img src="/static/Logo_yamasoto.svg" alt="Yamasoto"></a>
     </div>
-    <div>© 2026 Nookplay by Yamasoto</div>
+    <div>© 2026 Nookplay by <a href="https://www.yamasoto.com/" target="_blank" rel="noopener">Yamasoto</a></div>
   </div>
 </footer>
 
