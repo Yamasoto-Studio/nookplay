@@ -38,14 +38,6 @@
   .wrap { max-width: 1160px; margin: 0 auto; padding: 0 24px; }
   @media (min-width: 900px) { .wrap { padding: 0 40px; } }
 
-  /* ── Nav ── */
-  .nav { position: sticky; top: 0; z-index: 100; background: var(--paper); border-bottom: 1px solid var(--line); }
-  .nav .wrap { height: 64px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-  .nav img { width: 112px; height: auto; display: block; }
-  .nav-links { display: none; gap: 28px; font-size: 14px; font-weight: 500; }
-  .nav-links a { text-decoration: none; color: var(--sec); }
-  .nav-links a:hover { color: var(--ink); }
-  @media (min-width: 900px) { .nav-links { display: flex; } }
   .btn { display: inline-flex; align-items: center; gap: 8px; border: none; cursor: pointer; text-decoration: none; font-weight: 600; border-radius: 8px; padding: 14px 22px; font-size: 15px; line-height: 1; transition: background .15s, color .15s; }
   .btn-cta { background: var(--cta); color: #fff; }
   .btn-cta:hover { background: #8F3509; }
@@ -64,12 +56,18 @@
   .hero-lead { font-size: 18px; line-height: 1.55; color: var(--ink); max-width: 46ch; margin: 24px 0 32px; }
   .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
   .hero-note { font-size: 13px; color: var(--sec); margin-top: 14px; }
+  @media (max-width: 959px) {
+    .hero-copy { text-align: center; }
+    .hero-copy h1, .hero-copy .hero-lead { margin-left: auto; margin-right: auto; }
+    .hero-actions { justify-content: center; }
+  }
 
   /* Transformador */
-  .tf { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+  .tf { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+  .tf .phone { margin-bottom: 6px; }
   .tf-chips { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
-  .tf-chip { font-size: 13px; font-weight: 600; padding: 9px 14px; border-radius: 999px; border: 1.5px solid rgba(0,0,0,.14); background: rgba(255,255,255,.55); color: var(--ink); cursor: pointer; transition: background .15s, border-color .15s, color .15s; }
-  .tf-chip:hover { background: #fff; }
+  .tf-chip { font-size: 12.5px; font-weight: 500; padding: 7px 12px; border-radius: 999px; border: 1px solid rgba(0,0,0,.12); background: transparent; color: var(--th-deep); cursor: pointer; transition: background .15s, border-color .15s, color .15s; }
+  .tf-chip:hover { background: rgba(255,255,255,.6); }
   .tf-chip[aria-pressed="true"] { background: var(--th-deep); border-color: var(--th-deep); color: #fff; }
   .tf-hint { font-size: 13px; color: var(--th-deep); opacity: .7; text-align: center; max-width: 36ch; }
 
@@ -118,8 +116,8 @@
   .sg-dil .sg-opt { text-align: center; padding: 14px 8px; }
 
   /* ── Banda de iconos ── */
-  .strip { background: var(--paper); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 26px 0; overflow: hidden; }
-  .strip .wrap { display: flex; flex-direction: column; gap: 18px; }
+  .strip { background: var(--paper); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 32px 0 36px; overflow: hidden; }
+  .strip .wrap { margin-bottom: 30px; }
   .strip-line { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 24px; }
   .strip-line b { font-size: 22px; letter-spacing: -.02em; }
   .strip-line span { font-size: 14px; color: var(--sec); }
@@ -141,6 +139,7 @@
   @media (min-width: 900px) { .tres { grid-template-columns: repeat(3, 1fr); } }
   .t { padding: 28px 0 32px; border-bottom: 1px solid var(--line); }
   @media (min-width: 900px) { .t { padding: 32px 28px 36px 0; border-bottom: none; border-right: 1px solid var(--line); } .t:last-child { border-right: none; } .t + .t { padding-left: 28px; } }
+  .t img { width: 64px; height: 64px; display: block; margin-bottom: 18px; }
   .t-when { display: inline-block; font-size: 13px; font-weight: 700; color: var(--cta); background: #FBE8DC; padding: 5px 10px; border-radius: 6px; margin-bottom: 14px; }
   .t h3 { font-size: 21px; letter-spacing: -.02em; line-height: 1.2; margin-bottom: 12px; }
   .t p { font-size: 15px; line-height: 1.6; color: var(--sec); }
@@ -229,25 +228,13 @@
   .contact-whatsapp svg { width: 20px; height: 20px; flex-shrink: 0; }
 </style>
 
-<!-- NAV -->
-<nav class="nav">
-  <div class="wrap">
-    <a href="/"><img src="/static/logo.svg" alt="Nookplay"></a>
-    <div class="nav-links">
-      <a href="#eventos">Eventos</a>
-      <a href="#como">Cómo funciona</a>
-      <a href="#locales">Locales</a>
-      <a href="/juegos">Los 35 juegos</a>
-      <a href="/demo">Demo</a>
-    </div>
-    <button class="btn btn-cta btn-sm" onclick="openContactModal()">Cuéntanos tu evento</button>
-  </div>
-</nav>
+{% set nav_count = game_count or 35 %}
+{% include 'components/site_nav.html' %}
 
 <!-- HERO + TRANSFORMADOR -->
 <section class="hero">
   <div class="wrap">
-    <div>
+    <div class="hero-copy">
       <div class="hero-kicker">Juegos con IA para eventos y locales</div>
       <h1>Tu evento, convertido en juego.</h1>
       <p class="hero-lead">Festivales, ferias, congresos. Mientras tu público hace cola o espera entre actividades, juega con contenido escrito para tu evento: su temática, sus referencias, sus guiños. Nuevo cada día. Sin apps, sin registros, sin datos.</p>
@@ -259,13 +246,6 @@
     </div>
 
     <div class="tf" id="tf">
-      <div class="tf-chips" role="group" aria-label="Elige una temática">
-        <button class="tf-chip" data-th="manga" aria-pressed="true" onclick="tfTheme('manga')">Salón del manga</button>
-        <button class="tf-chip" data-th="mesa" aria-pressed="false" onclick="tfTheme('mesa')">Feria de juegos de mesa</button>
-        <button class="tf-chip" data-th="congreso" aria-pressed="false" onclick="tfTheme('congreso')">Congreso de empresa</button>
-        <button class="tf-chip" data-th="musica" aria-pressed="false" onclick="tfTheme('musica')">Festival de música</button>
-      </div>
-
       <div class="phone" aria-live="polite">
         <div class="screen">
           <div class="scr-top">
@@ -279,6 +259,12 @@
           </div>
           <div class="scr-foot">Toca un juego. Esto es lo que ve tu público.</div>
         </div>
+      </div>
+      <div class="tf-chips" role="group" aria-label="Elige una temática">
+        <button class="tf-chip" data-th="manga" aria-pressed="true" onclick="tfTheme('manga')">Salón del manga</button>
+        <button class="tf-chip" data-th="mesa" aria-pressed="false" onclick="tfTheme('mesa')">Feria de juegos de mesa</button>
+        <button class="tf-chip" data-th="congreso" aria-pressed="false" onclick="tfTheme('congreso')">Congreso de empresa</button>
+        <button class="tf-chip" data-th="musica" aria-pressed="false" onclick="tfTheme('musica')">Festival de música</button>
       </div>
       <p class="tf-hint">Mismo juego, cuatro universos. Esto lo escribe la IA cada mañana con la temática que tú defines.</p>
     </div>
@@ -307,16 +293,19 @@
     <p class="sec-lead">Tú defines el universo. Nookplay escribe los juegos cada mañana, los sirve desde un QR y te entrega el informe al acabar.</p>
     <div class="tres">
       <div class="t">
+        <img src="/static/landing/ico-tematica.svg" alt="" loading="lazy">
         <span class="t-when">Antes</span>
         <h3>Lo preparas en una tarde</h3>
         <p>Describes la temática, el público y el tono, y añades los datos internos: salas, invitados, anécdotas. Fijas un código por día para entradas y cartelería. Eliges los juegos, tus colores y tu logo. El QR y los carteles salen del panel en calidad de imprenta.</p>
       </div>
       <div class="t">
+        <img src="/static/landing/ico-agenda.svg" alt="" loading="lazy">
         <span class="t-when">Durante</span>
         <h3>La cola se convierte en el mejor momento</h3>
         <p>Cada día, contenido nuevo ambientado en tu evento. Varias piezas por juego, para que quien repite encuentre otra cosa. La agenda del día dentro de la app, con horario y lugar. Tu público escanea, juega y comparte sin instalar nada.</p>
       </div>
       <div class="t">
+        <img src="/static/landing/ico-informe.svg" alt="" loading="lazy">
         <span class="t-when">Después</span>
         <h3>Un informe para tu equipo y tus patrocinadores</h3>
         <p>Asistentes que jugaron, partidas, juegos estrella, mejor día y mejor franja. En PDF, listo para enviar. <a href="/informe-ejemplo">Mira un informe de ejemplo</a></p>
@@ -394,7 +383,8 @@
       <div class="cred-tiendas"><span>Fnac</span><span>Zacatrus</span><span>Amazon</span></div>
     </div>
     <div class="cred-visual">
-      <img src="/static/CajaFreep_400.webp" alt="Caja del juego de cartas Freep" loading="lazy">
+      {# Cuando exista la imagen de los dos juegos juntos, súbela a static/landing/juegos_yamasoto.webp y cambia el src #}
+      <img src="/static/CajaFreep_400.webp" alt="Juegos de mesa de Yamasoto: Oferta y Freep" loading="lazy">
     </div>
   </div>
 </section>

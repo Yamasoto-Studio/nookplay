@@ -10,7 +10,7 @@
     justify-content: unset !important;
     padding: 0 !important;
     min-height: unset !important;
-    background: #F7F2EB !important;
+    background: #FBF7F1 !important;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   :root {
@@ -18,7 +18,7 @@
     --brand-dark: #A8410E;
     --brand-light: #F0E0D4;
     --brand-cream: #FDF0E8;
-    --bg: #F7F2EB;
+    --bg: #FBF7F1;
     --dark: #1A1A1A;
     --text-sec: #6B6059;
     --text-muted: #A89B91;
@@ -27,25 +27,6 @@
   }
   body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; color: var(--dark); }
 
-  /* NAV */
-  .nav {
-    position: sticky; top: 0; z-index: 100;
-    background: var(--brand);
-    padding: 0 40px; height: 64px;
-    display: flex; align-items: center; justify-content: space-between;
-  }
-  .nav img { height: auto; width: 120px; filter: brightness(0) invert(1); }
-  .nav-back {
-    color: rgba(255,255,255,0.85); font-size: 13px; font-weight: 500;
-    text-decoration: none; display: flex; align-items: center; gap: 6px;
-  }
-  .nav-back:hover { color: white; }
-  .nav-cta {
-    background: var(--bg); color: var(--brand);
-    border: none; padding: 8px 20px; border-radius: 8px;
-    font-size: 13px; font-weight: 600; cursor: pointer;
-    text-decoration: none; font-family: inherit; white-space: nowrap;
-  }
 
   /* HERO */
   .hero {
@@ -236,19 +217,15 @@
   }
 </style>
 
-<!-- NAV -->
-<nav class="nav">
-  <a href="/"><img src="/static/logo.svg" alt="Nookplay"></a>
-  <a href="/" class="nav-back">← Volver</a>
-  <button class="nav-cta" onclick="openContactModal()">¡Lo quiero para mí!</button>
-</nav>
+{% set nav_count = games|length %}{% set nav_current = 'juegos' %}
+{% include 'components/site_nav.html' %}
 
 <!-- HERO -->
 <section class="hero">
   <div class="hero-eyebrow">Catálogo de juegos</div>
-  <h1>{{ games|length }} juegos.<br>Cada día, contenido nuevo.</h1>
-  <p>Sin instalar nada. Sin registros. Sin datos. Juegos únicos cada mañana, adaptados a tu evento, tu local o tu ciudad.</p>
-  <button class="hero-cta" onclick="openContactModal()">¡Quiero Nookplay!</button>
+  <h1>Los juegos de Nookplay.<br>Cada día, contenido nuevo.</h1>
+  <p>Hoy son {{ games|length }}, y cada semana hay alguno más. Sin instalar nada, sin registros, sin datos: contenido nuevo cada mañana, adaptado a tu evento o tu local.</p>
+  <button class="hero-cta" onclick="openContactModal()">Cuéntanos tu evento</button>
 </section>
 
 <!-- GAMES GRID -->
@@ -381,7 +358,7 @@
 <section class="cta-section">
   <h2>¿Lo quieres para tu espacio?</h2>
   <p>Escríbenos y en menos de 24 horas lo tienes funcionando.<br>Sin instalaciones, sin complicaciones.</p>
-  <button class="cta-btn" onclick="openContactModal()">¡Quiero Nookplay!</button>
+  <button class="cta-btn" onclick="openContactModal()">Cuéntanos tu evento o tu local</button>
 </section>
 
 <!-- FOOTER -->
