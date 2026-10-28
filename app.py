@@ -1154,6 +1154,29 @@ def admin_pregen_now():
         return jsonify({'ok': False, 'error': str(e)})
 
 
+@app.route('/admin/api/backup/download')
+@admin_required
+def admin_backup_download():
+    """Superadmin: descarga la copia de seguridad más reciente de la BD.
+
+    Hace una copia consistente en el momento (sqlite .backup) para que lo
+    descargado sea el estado actual, no el de las 4:00."""
+    if session.get('admin_role') != 'superadmin':
+        return jsonify({'ok': False, 'error': 'No autorizado'}), 403
+    from flask import send_file
+    import os as _os
+    backup_dir = '/data/backups'
+    _os.makedirs(backup_dir, exist_ok=True)
+    nombre = 'nookplay-' + datetime.now().strftime('%Y-%m-%d_%H%M') + '.db'
+    destino = _os.path.join(backup_dir, nombre)
+    origen = sqlite3.connect('/data/nookplay.db', timeout=30)
+    dest = sqlite3.connect(destino)
+    with dest:
+        origen.backup(dest)
+    dest.close(); origen.close()
+    return send_file(destino, as_attachment=True, download_name=nombre)
+
+
 @app.route('/admin/api/scheduler-status')
 @admin_required
 def admin_scheduler_status():
