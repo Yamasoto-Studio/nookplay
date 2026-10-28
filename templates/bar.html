@@ -183,7 +183,7 @@
       <div class="screen" id="s-menu">
         {% if is_demo %}
         <div class="demo-ribbon">
-          <strong>👋 Bienvenido a la demo de Nookplay</strong> — juegos nuevos cada día, generados con IA, sin instalar nada. Prueba los que están abiertos y vuelve mañana: habrá contenido nuevo. En un evento o un local reales, los juegos se personalizan con su temática y su identidad.
+          <strong>👋 Esto es una demo de Nookplay.</strong> Festival Nook es un evento inventado: todos los juegos están ambientados en él y se renuevan cada mañana. Así vería tu público tu evento, con tu temática, tus colores y tu agenda.
         </div>
         {% endif %}
         <p class="menu-welcome" id="menu-welcome"></p>
@@ -713,9 +713,8 @@ async function showMenu() {
 
 function renderGrid() {
   const list = document.getElementById('activities-list');
-  // En demo mostramos TODO el catálogo: los activos (elegidos en el admin) son jugables,
-  // el resto se ven bloqueados con candado. En un bar normal, solo los activos.
-  const activeGames = IS_DEMO ? ACTIVITIES.slice() : ACTIVITIES.filter(a => a.active);
+  // La demo se comporta como un evento real: solo se ven los juegos activos.
+  const activeGames = ACTIVITIES.filter(a => a.active);
   const hasHidden = !IS_DEMO && ACTIVITIES.length > activeGames.length;
 
   // Juegos ya jugados HOY en este dispositivo (registrado por game_base al terminar).
@@ -789,7 +788,7 @@ function colocarBanner() {
 }
 
 function postRenderMenu() {
-  const activeGames = IS_DEMO ? ACTIVITIES.slice() : ACTIVITIES.filter(a => a.active);
+  const activeGames = ACTIVITIES.filter(a => a.active);
   const hasHidden = !IS_DEMO && ACTIVITIES.length > activeGames.length;
   // Botón de descubrimiento si hay juegos no activos en este bar
   const discoverBtn = document.getElementById('discover-more-btn');
@@ -837,8 +836,8 @@ function showScreen(id) {
   <div class="demo-wall-card" onclick="event.stopPropagation()">
     <div class="demo-wall-emoji">🔒</div>
     <h3>Este juego está cerrado en la demo</h3>
-    <p>Nookplay es una plataforma de <strong>juegos personalizables</strong> generados con IA: más de 25 juegos que <strong>se renuevan cada mañana</strong>. En la demo dejamos abiertos unos cuantos — y mañana serán nuevos.</p>
-    <p>En un <strong>evento o un local reales</strong>, todos los juegos están abiertos y ambientados con su temática, sus colores y su identidad.</p>
+    <p>Nookplay es una plataforma de <strong>juegos personalizables</strong> generados con IA que <strong>se renuevan cada mañana</strong>. En la demo hay unos cuantos abiertos; mañana serán nuevos.</p>
+    <p>En tu <strong>evento o tu local</strong>, todos los juegos que elijas están abiertos y ambientados con tu temática, tus colores y tu identidad.</p>
     <button class="btn-primary" onclick="hideDemoWall()">Seguir probando la demo</button>
     <a class="demo-wall-link" href="/" target="_blank" rel="noopener">Descubre Nookplay para tu evento o local →</a>
   </div>
