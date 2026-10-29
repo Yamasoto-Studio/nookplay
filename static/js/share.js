@@ -47,11 +47,11 @@ function shareGame({ correct, gameTitle, pct, gameSlug, gancho, emoji }) {
    solo texto; si share() no existe, se copia al portapapeles. */
 var _nookImg = { slug: '', file: null };
 
-function nookPrecargarImagen(slug) {
+function nookPrecargarImagen(slug, url) {
   if (!slug || !window.File || !window.fetch) return;
-  if (_nookImg.slug === slug && _nookImg.file) return;
-  _nookImg.slug = slug;
-  fetch('/static/games/' + slug + '.webp')
+  if (!url && _nookImg.slug === slug && _nookImg.file) return;
+  _nookImg.slug = slug; _nookImg.file = null;
+  fetch(url || ('/static/games/' + slug + '.webp'))
     .then(function (r) { return r.ok ? r.blob() : null; })
     .then(function (b) { if (b && _nookImg.slug === slug) _nookImg.file = new File([b], 'nookplay.webp', { type: b.type || 'image/webp' }); })
     .catch(function () {});

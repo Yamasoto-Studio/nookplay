@@ -504,6 +504,15 @@ if not db.execute("SELECT id FROM games WHERE slug = 'efemeride'").fetchone():
     db.commit()
     print('Juego Tal día como hoy añadido.')
 
+# Añadir El Titular de Mañana si no existe
+if not db.execute("SELECT id FROM games WHERE slug = 'titularmanana'").fetchone():
+    db.execute(
+        "INSERT INTO games (slug, name, description, icon, plan_min, position) VALUES (?,?,?,?,?,?)",
+        ('titularmanana', 'El Titular de Mañana', 'Tu día, en portada', '/static/games/titularmanana.webp', 'starter_free', 37)
+    )
+    db.commit()
+    print('Juego El Titular de Mañana añadido.')
+
 # Reordenar juegos por tipo de experiencia (orden lógico de UX)
 # Orden curado del catálogo y grupos (se reaplica en cada arranque: fuente única)
 CATALOGO_ORDEN = [
@@ -518,7 +527,7 @@ CATALOGO_ORDEN = [
     # Curiosidades del mundo
     ('efemeride', 'curiosidades'), ('oraculo', 'curiosidades'), ('muertes', 'curiosidades'), ('donde', 'curiosidades'), ('local', 'curiosidades'), ('vestuario', 'curiosidades'),
     # Crear
-    ('prototipo', 'crear'), ('poema', 'crear'), ('papel', 'crear'),
+    ('titularmanana', 'crear'), ('prototipo', 'crear'), ('poema', 'crear'), ('papel', 'crear'),
     # A dobles
     ('freep', 'dobles'), ('dosverdades', 'dobles'), ('masomenos', 'dobles'), ('quienmas', 'dobles'), ('pensamiento', 'dobles'),
 ]

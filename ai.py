@@ -1541,6 +1541,91 @@ IMPORTANTE: "correcta" es la posición 1-indexada (1 = primera opción). "respue
 # Tu Papel de Hoy generator (identidad del día + misión social)
 # ─────────────────────────────────────────────────────────────────────────────
 
+# Iconos del catálogo utilizables como "foto" de portada en El Titular de Mañana,
+# con una descripción para que la IA elija el que mejor ilustra el titular.
+PORTADA_FOTOS = {
+    'trivia': 'signo de interrogación, duda, examen, pregunta',
+    'crimen': 'lupa y huella, misterio, investigación, desaparición',
+    'conexiones': 'red de nodos, conexiones, relaciones, grupo de amigos',
+    'dilema': 'señal con dos flechas, decisión, encrucijada, elegir',
+    'perfil': 'ficha de persona, identidad, retrato, currículum',
+    'impostor': 'figuras entre las que una es distinta, engaño, sospecha',
+    'veredicto': 'mazo de juez, juicio, sentencia, justicia',
+    'sopa': 'cuadrícula de letras, búsqueda, palabras escondidas',
+    'anagrama': 'letras revueltas, desorden, palabras',
+    'emoji': 'bocadillo con emojis, mensajes, chat, móvil',
+    'letra': 'nota musical y papel, canción, música, concierto',
+    'definicion': 'libro abierto, diccionario, lectura, estudio',
+    'titular': 'periódico, noticia, prensa',
+    'sinopsis': 'claqueta de cine, película, estreno, serie',
+    'constitucion': 'libro con sello, ley, documento oficial, norma',
+    'reinas': 'tablero de ajedrez con corona, estrategia, reina, victoria',
+    'equilibrio': 'sol y luna, equilibrio, día y noche, balance',
+    'carta': 'cuadrícula con figuras, puzzle, rompecabezas, lógica',
+    'orden': 'escalera de bloques, orden, ranking, clasificación',
+    'escalera': 'escalera que sube, ascenso, progreso, subir niveles',
+    'menteagil': 'cronómetro, rapidez, reflejos, velocidad, prisa',
+    'oraculo': 'bola de cristal, destino, predicción, horóscopo, futuro',
+    'muertes': 'lápida con flores, historia, pasado, final absurdo',
+    'donde': 'mapa con chincheta, lugar, viaje, geografía, perderse',
+    'local': 'edificio con bandera, ciudad, barrio, local, bar',
+    'vestuario': 'balón y camiseta, fútbol, deporte, equipo',
+    'prototipo': 'caja de juego de mesa, invento, prototipo, crear',
+    'poema': 'pluma y pergamino, poesía, escribir, declaración',
+    'papel': 'máscara de teatro, rol, disfraz, actuar',
+    'freep': 'cartas de juego, baraja, partida, apuesta',
+    'dosverdades': 'dos caras, verdad y mentira, secreto, confesión',
+    'masomenos': 'balanza con cifras, comparar, números, más o menos',
+    'quienmas': 'dos personas señalándose, reto, amigos, quién fue',
+    'pensamiento': 'dos cabezas con la misma idea, coincidencia, telepatía, pensar igual',
+    'efemeride': 'calendario, fecha, aniversario, día señalado',
+}
+
+
+def generate_titular_manana(bar_slug, nombre, hecho, nombre_espacio, es_evento=False):
+    """EL TITULAR DE MAÑANA: convierte algo que el jugador ha hecho hoy en la
+    portada sensacionalista del periódico del local o del evento."""
+    api_key = os.environ.get('ANTHROPIC_API_KEY')
+    nombre = ' '.join(str(nombre or '').split())[:30] or 'Alguien'
+    hecho = ' '.join(str(hecho or '').split())[:160]
+    fotos = '\n'.join(f'- {k}: {v}' for k, v in PORTADA_FOTOS.items())
+    donde = 'del evento' if es_evento else 'del local'
+    prompt = f"""Eres el redactor jefe de EL TITULAR DE MAÑANA, el periódico {donde} «{nombre_espacio}». Un cliente te cuenta algo que ha hecho hoy y tú lo conviertes en la PORTADA de mañana: sensacionalista, exagerada y cariñosa, como si fuera la noticia del año.
+
+PROTAGONISTA: {nombre}
+LO QUE HA PASADO (en sus palabras): «{hecho}»
+
+MODERACIÓN (prioridad absoluta): si lo que cuenta contiene insultos, contenido sexual, violencia, drogas, odio, datos personales de terceros (teléfonos, direcciones), o menciona a personas reales de forma hiriente, IGNÓRALO por completo y escribe en su lugar una portada inocua sobre que {nombre} «ha llegado al periódico sin noticia», con humor. Nunca repitas el contenido problemático. Nunca inventes nada humillante sobre {nombre}: la exageración es épica, no burla.
+
+REGLAS:
+1. "titular": máximo 9 palabras, en mayúscula inicial, estilo portada de prensa amarilla pero elegante. Debe incluir el nombre {nombre} o referirse claramente a esa persona. Sin comillas ni emojis.
+2. "subtitulo": 1 frase (máx. 22 palabras) que amplía con un detalle inventado y creíble, en tono de crónica.
+3. "cita": una declaración de un testigo o experto ficticio, 1 frase (máx. 20 palabras), con su atribución corta en "testigo" (ej.: "un camarero que prefiere no dar su nombre", "una experta en la materia"). En un evento, el testigo puede ser alguien del propio evento si los datos internos lo permiten.
+4. "seccion": la sección del periódico donde iría (Sucesos, Sociedad, Deportes, Cultura, Ciencia, Economía, Internacional, Gastronomía...). Una palabra.
+5. "foto": el identificador de UNA imagen de esta lista que mejor ilustre la noticia (devuelve solo el identificador, exacto):
+{fotos}
+6. "pie": pie de foto de máx. 12 palabras, con gracia, en presente ("Momento exacto en que...").
+7. Todo en español, neutro, apto para todos los públicos.
+
+Responde SOLO con este JSON, sin markdown:
+{{"titular": "...", "subtitulo": "...", "cita": "...", "testigo": "...", "seccion": "...", "foto": "trivia", "pie": "..."}}"""
+    obj = _parse_ia_json(_post_ia(prompt, 500, api_key))
+    out = {
+        'titular': ' '.join(str(obj.get('titular') or '').split())[:90],
+        'subtitulo': ' '.join(str(obj.get('subtitulo') or '').split())[:180],
+        'cita': ' '.join(str(obj.get('cita') or '').split())[:160],
+        'testigo': ' '.join(str(obj.get('testigo') or '').split())[:60],
+        'seccion': ' '.join(str(obj.get('seccion') or 'Sociedad').split())[:20],
+        'foto': str(obj.get('foto') or 'trivia').strip(),
+        'pie': ' '.join(str(obj.get('pie') or '').split())[:90],
+    }
+    if out['foto'] not in PORTADA_FOTOS:
+        out['foto'] = 'trivia'
+    if not out['titular']:
+        raise Exception('El Titular de Mañana: respuesta sin titular')
+    return out
+
+
 def generate_papel(bar_slug, evitar=None):
     api_key = os.environ.get('ANTHROPIC_API_KEY')
     prompt = """Eres el guionista de TU PAPEL DE HOY: un test relámpago de 3 preguntas "esto o aquello" que asigna a cada persona un PERSONAJE del día dentro del universo del espacio, con una pequeña misión social real. Género: test de personalidad de revista, con humor.

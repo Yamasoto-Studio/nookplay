@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 from datetime import date, datetime, timedelta
 import sqlite3
-from ai import set_ia_mode, reset_ia_mode, generate_game, generate_impostor, generate_dilema, generate_conexiones, generate_oraculo, generate_donde, generate_carta, generate_reinas, generate_conexion_local, generate_equilibrio, generate_veredicto, generate_perfil, generate_vestuario, generate_trivia, generate_sinopsis, generate_muertes, generate_letra, generate_pensamiento, generate_poema, generate_menteagil, generate_constitucion, generate_orden, generate_titular, generate_definicion, generate_masomenos, generate_escalera, generate_quienmas, generate_resena, generate_papel, generate_prototipo, generate_sopa, generate_anagrama, generate_emoji, generate_efemeride, build_bar_context, set_game_knobs, reset_game_knobs, get_day_seed, set_event_theme, reset_event_theme, set_variant_hint
+from ai import set_ia_mode, reset_ia_mode, generate_game, generate_impostor, generate_dilema, generate_conexiones, generate_oraculo, generate_donde, generate_carta, generate_reinas, generate_conexion_local, generate_equilibrio, generate_veredicto, generate_perfil, generate_vestuario, generate_trivia, generate_sinopsis, generate_muertes, generate_letra, generate_pensamiento, generate_poema, generate_menteagil, generate_constitucion, generate_orden, generate_titular, generate_definicion, generate_masomenos, generate_escalera, generate_quienmas, generate_resena, generate_papel, generate_prototipo, generate_sopa, generate_anagrama, generate_emoji, generate_efemeride, generate_titular_manana, build_bar_context, set_game_knobs, reset_game_knobs, get_day_seed, set_event_theme, reset_event_theme, set_variant_hint
 import os
 import smtplib
 from email.mime.text import MIMEText
@@ -1491,6 +1491,11 @@ EVENT_GAME_TYPES = {'crimen', 'impostor', 'dilema', 'conexiones', 'veredicto', '
 # Fuente única: el panel pinta los controles desde aquí y los generadores los
 # reciben vía set_game_knobs. Añadir un mando = añadir un campo a este dict.
 GAME_KNOBS = {
+    'titularmanana': [
+        {'key': 'cuota', 'label': 'Titulares por persona y día', 'type': 'select',
+         'options': ['', '1', '2', '3', '5', '10'],
+         'hint': 'Cada titular es una llamada a la IA en vivo. Vacío = 3. Sube el tope en eventos grandes.'},
+    ],
     'efemeride': [
         {'key': 'foco', 'label': 'Ámbito de las efemérides', 'type': 'text', 'max': 160,
          'placeholder': 'Ej: cine y música · ciencia y exploración · historia de los videojuegos',
@@ -1542,7 +1547,7 @@ GAME_NOMBRES = {
     'crimen': 'El Crimen del Día', 'impostor': 'El Impostor', 'dilema': 'El Dilema',
     'conexiones': 'Conexiones', 'oraculo': 'El Oráculo', 'donde': '¿Dónde está?',
     'local': 'Conexión Local', 'veredicto': 'El Veredicto', 'perfil': 'El Perfil',
-    'resena': 'La Reseña', 'papel': 'Tu Papel de Hoy', 'prototipo': 'El Prototipo', 'sopa': 'La Sopa de Letras', 'anagrama': 'El Anagrama', 'emoji': 'El Emoji', 'efemeride': 'Tal día como hoy',
+    'resena': 'La Reseña', 'papel': 'Tu Papel de Hoy', 'prototipo': 'El Prototipo', 'sopa': 'La Sopa de Letras', 'anagrama': 'El Anagrama', 'emoji': 'El Emoji', 'efemeride': 'Tal día como hoy', 'titularmanana': 'El Titular de Mañana',
     'vestuario': 'El Vestuario', 'trivia': 'La Trivia', 'sinopsis': 'La Sinopsis', 'muertes': 'Muertes Célebres',
     'letra': 'Adivina la Letra', 'pensamiento': 'El Mismo Pensamiento',
     'menteagil': 'Mente Ágil', 'constitucion': '¿Tú la has leído?', 'poema': 'El Poema',
@@ -3611,6 +3616,113 @@ def efemeride_stats(bar_slug):
     db.close()
     n = int(row['n'] or 0); ok = int(row['ok'] or 0)
     return jsonify({'total': n, 'pct_acierto': round(100 * ok / n) if n else 0, 'avg_elapsed': round(float(row['t'] or 0))})
+
+
+# ── El Titular de Mañana: generado en vivo por visitante (como El Poema) ──
+TITULAR_MANANA_CUOTA_DEFECTO = 3
+_PALABRAS_BLOQUEADAS = {
+    'puta', 'puto', 'polla', 'coño', 'follar', 'folla', 'mierda', 'cabrón', 'cabron', 'gilipollas',
+    'maricón', 'maricon', 'zorra', 'nazi', 'violar', 'violación', 'violacion', 'matar', 'suicid',
+    'cocaína', 'cocaina', 'porro', 'heroína', 'heroina', 'pedof', 'sexo', 'desnud', 'teta', 'culo',
+}
+
+def _texto_sospechoso(txt):
+    t = ' ' + ''.join(c if c.isalnum() or c.isspace() else ' ' for c in str(txt).lower()) + ' '
+    if any((' ' + w) in t for w in _PALABRAS_BLOQUEADAS):
+        return True
+    import re as _re
+    # teléfonos y direcciones de correo: datos de terceros
+    if _re.search(r'\b\d{9}\b', t) or '@' in str(txt):
+        return True
+    return False
+
+def _cuota_titular(db, bar_id):
+    try:
+        row = db.execute("SELECT settings FROM bar_games WHERE bar_id = ? AND game_slug = 'titularmanana'", (bar_id,)).fetchone()
+        if row and row['settings']:
+            v = json.loads(row['settings']).get('cuota')
+            if v and str(v).isdigit():
+                return max(1, min(50, int(v)))
+    except Exception:
+        pass
+    return TITULAR_MANANA_CUOTA_DEFECTO
+
+
+@app.route('/<bar_slug>/titularmanana')
+def titularmanana_page(bar_slug):
+    db = get_db()
+    bar = db.execute("SELECT * FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
+    if not bar:
+        db.close()
+        return render_template('404.html'), 404
+    products = db.execute("SELECT * FROM bar_products WHERE bar_id = ? AND active = 1 ORDER BY position", (bar['id'],)).fetchall()
+    products_json = json.dumps([dict(p) for p in products])
+    cuota = _cuota_titular(db, bar['id'])
+    db.close()
+    return render_template('games/titularmanana.html', bar=bar, products=products, products_json=products_json, cuota=cuota)
+
+
+@app.route('/api/titularmanana', methods=['POST'])
+def titularmanana_api():
+    data = request.get_json() or {}
+    code = (data.get('code') or '').strip().upper()
+    bar_slug = (data.get('bar_slug') or '').strip()
+    today = str(date.today())
+    db = get_db()
+    bar = db.execute("SELECT * FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
+    if not bar:
+        db.close()
+        return jsonify({'error': 'Invalid code'}), 403
+    valid_code = db.execute(
+        "SELECT code FROM access_codes WHERE bar_id = ? AND code = ? AND valid_from <= ? AND valid_until >= ?",
+        (bar['id'], code, today, today)).fetchone()
+    if not valid_code:
+        db.close()
+        return jsonify({'error': 'Invalid code'}), 403
+    cuota = _cuota_titular(db, bar['id'])
+    db.close()
+
+    nombre = ' '.join(str(data.get('nombre') or '').split())[:30]
+    hecho = ' '.join(str(data.get('hecho') or '').split())[:160]
+    if len(hecho) < 4 or not nombre:
+        return jsonify({'error': 'Cuéntanos algo un poco más largo, y dinos tu nombre.'}), 400
+    # Moderación en servidor: lo bloqueado ni llega a la IA (el prompt tiene una segunda capa)
+    if _texto_sospechoso(hecho) or _texto_sospechoso(nombre):
+        hecho = 'ha llegado a la redacción sin ninguna noticia que contar'
+
+    device_id = str(data.get('device_id') or '')[:80]
+    if device_id and not _consumir_cuota(f"titularmanana_{bar_slug}_{device_id}_{today}", cuota):
+        return jsonify({'error': f'Hoy ya has salido {cuota} veces en portada. Mañana, más.', 'cuota': True}), 429
+
+    es_evento = (bar['space_kind'] or 'local') == 'evento'
+    try:
+        _tok = set_event_theme(_theme_de(bar))
+        try:
+            datos = generate_titular_manana(bar_slug, nombre, hecho, bar['name'], es_evento=es_evento)
+        finally:
+            reset_event_theme(_tok)
+        # Componer la portada y guardarla en el volumen de medios
+        import portada as _portada
+        import os as _os, time as _time, secrets as _secrets
+        carpeta = f'{MEDIA_ROOT}/{bar_slug}/portadas'
+        _os.makedirs(carpeta, exist_ok=True)
+        fname = f"{today}-{_secrets.token_hex(4)}.webp"
+        img = _portada.componer_portada(datos, bar['name'], bar['color_primary'] or '#C4622D', es_evento=es_evento)
+        img.save(_os.path.join(carpeta, fname), 'WEBP', quality=86, method=4)
+        # Limpieza perezosa: portadas de más de 14 días
+        try:
+            limite = _time.time() - 14 * 86400
+            for f in _os.listdir(carpeta):
+                fp = _os.path.join(carpeta, f)
+                if _os.path.getmtime(fp) < limite:
+                    _os.remove(fp)
+        except Exception:
+            pass
+        datos['imagen'] = f'/media/{bar_slug}/portadas/{fname}'
+        datos['nombre'] = nombre
+        return jsonify(datos)
+    except Exception as e:
+        return _error_juego(e)
 
 
 @app.route('/api/emoji-stats/<bar_slug>')

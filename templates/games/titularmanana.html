@@ -1,0 +1,128 @@
+{% extends "game_base.html" %}
+{% block title %}El Titular de Mañana — {{ bar.name }}{% endblock %}
+{% block og_title %}El Titular de Mañana — {{ bar.name }}{% endblock %}
+{% block og_description %}Cuéntanos algo que hayas hecho hoy y sal en la portada de mañana. En {{ bar.name }} con Nookplay.{% endblock %}
+{% block og_url %}/{{ bar.slug }}/titularmanana{% endblock %}
+
+{% block game_content %}
+<style>
+.tm-intro { font-size: 15px; color: var(--text-secondary); text-align: center; margin-bottom: 18px; line-height: 1.5; }
+.tm-campo { margin-bottom: 16px; }
+.tm-label { font-size: 14px; font-weight: 700; color: var(--text); display: block; margin-bottom: 8px; }
+.tm-input, .tm-area {
+  width: 100%; padding: 13px 15px; font-size: 17px;
+  border: 2px solid var(--border); border-radius: var(--radius-md);
+  font-family: inherit; outline: none; background: var(--bar-bg-subtle); color: var(--text);
+}
+.tm-area { min-height: 96px; resize: none; line-height: 1.4; }
+.tm-input:focus, .tm-area:focus { border-color: var(--bar-primary); }
+.tm-ejemplos { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.tm-ej { font-size: 12.5px; padding: 6px 10px; border-radius: 20px; border: 1.5px solid var(--border); background: transparent; color: var(--text-secondary); cursor: pointer; font-family: inherit; }
+.tm-ej:hover { border-color: var(--bar-primary); color: var(--text); }
+.tm-cuota { font-size: 12.5px; color: var(--text-muted); text-align: center; margin: 10px 0 0; }
+
+.tm-portada { width: 100%; border-radius: var(--radius-md); display: block; box-shadow: 0 10px 30px rgba(0,0,0,.14); border: 1px solid var(--border); background: #FBF7F1; }
+.tm-res-txt { text-align: center; font-size: 14px; color: var(--text-secondary); margin: 14px 0 16px; line-height: 1.5; }
+.tm-descargar { display: block; text-align: center; font-size: 14px; font-weight: 600; color: var(--bar-primary); text-decoration: none; margin: -4px 0 14px; }
+</style>
+
+<!-- FORMULARIO -->
+<div class="screen active" id="s-form">
+  <div class="game-tag" style="display:block; text-align:center; width:fit-content; margin:0 auto 16px;">El Titular de Mañana</div>
+  <p class="tm-intro">Cuéntanos algo que hayas hecho hoy, aunque sea una tontería. Mañana sales en portada.</p>
+
+  <div class="tm-campo">
+    <label class="tm-label" for="tm-nombre">Tu nombre</label>
+    <input type="text" class="tm-input" id="tm-nombre" placeholder="Como quieres salir en el periódico" maxlength="30" autocomplete="off">
+  </div>
+
+  <div class="tm-campo">
+    <label class="tm-label" for="tm-hecho">¿Qué has hecho hoy?</label>
+    <textarea class="tm-area" id="tm-hecho" placeholder="He pedido el café con hielo. He perdido al Catan. Me he dormido en el tren..." maxlength="160"></textarea>
+    <div class="tm-ejemplos">
+      <button class="tm-ej" onclick="ejemplo(this)">He pedido un café con hielo</button>
+      <button class="tm-ej" onclick="ejemplo(this)">He perdido al Catan</button>
+      <button class="tm-ej" onclick="ejemplo(this)">He llegado tarde otra vez</button>
+      <button class="tm-ej" onclick="ejemplo(this)">He encontrado un sitio para aparcar a la primera</button>
+    </div>
+  </div>
+
+  <button class="btn-primary" id="btn-generar" onclick="generar()" style="width:100%;">Imprimir mi portada</button>
+  <p class="tm-cuota">Hasta {{ cuota }} portadas por persona y día.</p>
+  <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
+</div>
+
+<!-- CARGANDO -->
+<div class="screen" id="s-loading">
+  <div class="loading"><div class="loading-spinner"></div><p>Parando las rotativas...</p></div>
+</div>
+
+<!-- RESULTADO -->
+<div class="screen" id="s-result">
+  <div class="game-tag" style="display:block; text-align:center; width:fit-content; margin:0 auto 16px;">El Titular de Mañana</div>
+  <img class="tm-portada" id="r-portada" alt="Tu portada">
+  <p class="tm-res-txt" id="r-txt"></p>
+  <a class="tm-descargar" id="r-descargar" href="#" download="portada.webp">Guardar la portada</a>
+  <button class="btn-share" onclick="doShare()">📤 Compartir mi portada</button>
+  <button class="btn-secondary" onclick="otra()" style="width:100%; margin-bottom:10px;">Otra portada</button>
+  <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
+  <div class="tomorrow">{{ bar.tomorrow_message or "Mañana, otra portada. Haz algo que lo merezca." }}</div>
+</div>
+
+<script>
+const BAR_SLUG = "{{ bar.slug }}";
+const BAR_NAME = "{{ bar.name }}";
+const CODE = new URLSearchParams(window.location.search).get('code') || '';
+let gameData = null;
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function ejemplo(el) {
+  const a = document.getElementById('tm-hecho'); a.value = el.textContent; a.focus();
+}
+
+async function generar() {
+  const nombre = document.getElementById('tm-nombre').value.trim();
+  const hecho = document.getElementById('tm-hecho').value.trim();
+  if (!nombre) { document.getElementById('tm-nombre').focus(); return; }
+  if (hecho.length < 4) { document.getElementById('tm-hecho').focus(); return; }
+  showScreen('s-loading');
+  try {
+    const res = await fetch('/api/titularmanana', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG, nombre, hecho })
+    });
+    const data = await res.json();
+    if (data.error) { const e = new Error(data.error); e.nookAmable = true; throw e; }
+    gameData = data;
+    const img = document.getElementById('r-portada');
+    img.src = data.imagen;
+    document.getElementById('r-descargar').href = data.imagen;
+    document.getElementById('r-txt').textContent = `${data.seccion || 'Sociedad'} · ${data.subtitulo || ''}`;
+    // Precargar la portada para que el botón de compartir la adjunte (iOS exige que esté lista antes del gesto)
+    if (window.nookPrecargarImagen) nookPrecargarImagen('titularmanana', data.imagen);
+    showScreen('s-result');
+    try {
+      await fetch('/api/play', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG, correct: true, game_type: 'titularmanana', choice: 0, elapsed: 0 }) });
+    } catch(e) {}
+    window.scrollTo(0, 0);
+  } catch(e) {
+    showScreen('s-form');
+    nookMostrarFallo((e && e.nookAmable && e.message) || 'No se pudo imprimir la portada ahora mismo. Inténtalo de nuevo en un momento.');
+  }
+}
+function otra() {
+  document.getElementById('tm-hecho').value = '';
+  showScreen('s-form');
+  window.scrollTo(0, 0);
+}
+function doShare() {
+  if (!gameData) return;
+  const txt = `📰 ${gameData.titular}\n\n${gameData.subtitulo || ''}\n\nMi portada de mañana en ${BAR_NAME}. Haz la tuya → nookplay.app`;
+  nookShareWithImage(txt, 'titularmanana');
+}
+</script>
+{% endblock %}
