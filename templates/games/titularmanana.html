@@ -21,9 +21,11 @@
 .tm-ej:hover { border-color: var(--bar-primary); color: var(--text); }
 .tm-cuota { font-size: 12.5px; color: var(--text-muted); text-align: center; margin: 10px 0 0; }
 
-.tm-portada { width: 100%; border-radius: var(--radius-md); display: block; box-shadow: 0 10px 30px rgba(0,0,0,.14); border: 1px solid var(--border); background: #FBF7F1; }
-.tm-res-txt { text-align: center; font-size: 14px; color: var(--text-secondary); margin: 14px 0 16px; line-height: 1.5; }
-.tm-descargar { display: block; text-align: center; font-size: 14px; font-weight: 600; color: var(--bar-primary); text-decoration: none; margin: -4px 0 14px; }
+.tm-portada { width: 100%; border-radius: 6px; display: block; box-shadow: 0 14px 34px rgba(30,15,5,.18); background: #FBF7F1; margin: 0 0 18px; }
+.tm-res-txt { text-align: center; font-size: 14px; color: var(--text-secondary); margin: 0 0 18px; line-height: 1.5; }
+.tm-descargar { display: block; text-align: center; font-size: 14px; font-weight: 600; color: var(--bar-primary); text-decoration: none; margin: 0 0 22px; }
+.tm-otra { width: 100%; padding: 14px; border-radius: var(--radius-md); border: 2px solid var(--border); background: transparent; color: var(--text); font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit; margin: 12px 0 12px; }
+.tm-otra:hover { border-color: var(--bar-primary); }
 </style>
 
 <!-- FORMULARIO -->
@@ -62,9 +64,9 @@
   <div class="game-tag" style="display:block; text-align:center; width:fit-content; margin:0 auto 16px;">El Titular de Mañana</div>
   <img class="tm-portada" id="r-portada" alt="Tu portada">
   <p class="tm-res-txt" id="r-txt"></p>
-  <a class="tm-descargar" id="r-descargar" href="#" download="portada.webp">Guardar la portada</a>
+  <a class="tm-descargar" id="r-descargar" href="#" download="portada.webp">Guardar la portada en el móvil</a>
   <button class="btn-share" onclick="doShare()">📤 Compartir mi portada</button>
-  <button class="btn-secondary" onclick="otra()" style="width:100%; margin-bottom:10px;">Otra portada</button>
+  <button class="tm-otra" onclick="otra()">Hacer otra portada</button>
   <button class="btn-menu" onclick="window.location='/{{ bar.slug }}?code=' + CODE">← Volver al menú</button>
   <div class="tomorrow">{{ bar.tomorrow_message or "Mañana, otra portada. Haz algo que lo merezca." }}</div>
 </div>
@@ -100,7 +102,7 @@ async function generar() {
     const img = document.getElementById('r-portada');
     img.src = data.imagen;
     document.getElementById('r-descargar').href = data.imagen;
-    document.getElementById('r-txt').textContent = `${data.seccion || 'Sociedad'} · ${data.subtitulo || ''}`;
+    document.getElementById('r-txt').textContent = `Mañana, en portada: ${data.nombre || ''}.`;
     // Precargar la portada para que el botón de compartir la adjunte (iOS exige que esté lista antes del gesto)
     if (window.nookPrecargarImagen) nookPrecargarImagen('titularmanana', data.imagen);
     showScreen('s-result');

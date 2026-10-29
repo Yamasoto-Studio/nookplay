@@ -12,8 +12,8 @@ _BASE = os.path.dirname(os.path.abspath(__file__))
 _FONTS = os.path.join(_BASE, 'static', 'fonts')
 _GAMES = os.path.join(_BASE, 'static', 'games')
 
-W, H = 1080, 1240
-MARGEN = 64
+W, H = 1080, 1620
+MARGEN = 72
 PAPEL = (251, 247, 241)
 TINTA = (26, 26, 26)
 GRIS = (107, 96, 89)
@@ -56,21 +56,21 @@ def _wrap(draw, texto, font, ancho):
     return lineas
 
 
-def _ajustar_titular(draw, texto, ancho, max_lineas=3, tam_ini=96, tam_min=56):
-    """Baja el cuerpo del titular hasta que quepa en max_lineas."""
+def _ajustar(draw, texto, fuente, ancho, max_lineas, tam_ini, tam_min, paso=4):
+    """Baja el cuerpo hasta que el texto quepa en max_lineas."""
     tam = tam_ini
     while tam >= tam_min:
-        f = _font('playfair-900.ttf', tam)
+        f = _font(fuente, tam)
         lineas = _wrap(draw, texto, f, ancho)
         if len(lineas) <= max_lineas:
             return f, lineas
-        tam -= 4
-    f = _font('playfair-900.ttf', tam_min)
+        tam -= paso
+    f = _font(fuente, tam_min)
     return f, _wrap(draw, texto, f, ancho)[:max_lineas]
 
 
 def componer_portada(datos, nombre_espacio, color_primario='#C4622D', es_evento=False, manana=True):
-    """Devuelve una imagen PIL (RGB) con la portada.
+    """Devuelve una imagen PIL (RGB) con la portada, en vertical (2:3), una columna.
 
     datos: dict con titular, subtitulo, cita, testigo, seccion, foto, pie.
     """
@@ -80,110 +80,112 @@ def componer_portada(datos, nombre_espacio, color_primario='#C4622D', es_evento=
     x0, x1 = MARGEN, W - MARGEN
     ancho = x1 - x0
 
-    # ── Cabecera: nombre del periódico ──
+    # ── Cabecera ──
     cab = f"El Diario de {nombre_espacio}"
-    f_cab = _font('playfair-900.ttf', 54)
-    while d.textlength(cab, font=f_cab) > ancho and f_cab.size > 30:
-        f_cab = _font('playfair-900.ttf', f_cab.size - 2)
-    y = 56
-    d.text(((W - d.textlength(cab, font=f_cab)) / 2, y), cab, font=f_cab, fill=TINTA)
-    y += f_cab.size + 14
-
-    # Línea de datos: edición, fecha, precio
-    fecha = date.today()
-    f_meta = _font('inter-400.ttf', 22)
-    meta_izq = 'Edición de mañana' if manana else 'Edición de hoy'
-    meta_c = f"{_DIAS[fecha.weekday()]}, {fecha.day} de {_MESES[fecha.month - 1]} de {fecha.year}"
-    meta_der = 'Gratis con tu consumición' if not es_evento else 'Ejemplar gratuito'
-    d.line([(x0, y), (x1, y)], fill=TINTA, width=3)
+    f_cab, cab_lineas = _ajustar(d, cab, 'playfair-900.ttf', ancho, 2, 60, 40, 2)
+    y = 64
+    for ln in cab_lineas:
+        d.text(((W - d.textlength(ln, font=f_cab)) / 2, y), ln, font=f_cab, fill=TINTA)
+        y += int(f_cab.size * 1.1)
     y += 10
+    d.line([(x0, y), (x1, y)], fill=TINTA, width=4)
+    y += 12
+    fecha = date.today()
+    f_meta = _font('inter-400.ttf', 24)
+    meta_izq = 'Edición de mañana' if manana else 'Edición de hoy'
+    meta_der = f"{_DIAS[fecha.weekday()]}, {fecha.day} de {_MESES[fecha.month - 1]} de {fecha.year}"
     d.text((x0, y), meta_izq, font=f_meta, fill=GRIS)
-    d.text(((W - d.textlength(meta_c, font=f_meta)) / 2, y), meta_c, font=f_meta, fill=GRIS)
     d.text((x1 - d.textlength(meta_der, font=f_meta), y), meta_der, font=f_meta, fill=GRIS)
-    y += 34
+    y += 36
     d.line([(x0, y), (x1, y)], fill=TINTA, width=1)
-    y += 26
+    y += 36
 
     # ── Sección ──
-    f_sec = _font('inter-700.ttf', 22)
+    f_sec = _font('inter-700.ttf', 24)
     sec = (datos.get('seccion') or 'Sociedad').upper()
-    sw = d.textlength(sec, font=f_sec) + 28
-    d.rounded_rectangle([x0, y, x0 + sw, y + 38], radius=6, fill=acento)
-    d.text((x0 + 14, y + 7), sec, font=f_sec, fill=(255, 255, 255))
-    y += 60
+    sw = d.textlength(sec, font=f_sec) + 32
+    d.rounded_rectangle([x0, y, x0 + sw, y + 44], radius=8, fill=acento)
+    d.text((x0 + 16, y + 9), sec, font=f_sec, fill=(255, 255, 255))
+    y += 72
 
     # ── Titular ──
-    f_tit, lineas = _ajustar_titular(d, datos.get('titular') or '', ancho)
+    f_tit, lineas = _ajustar(d, datos.get('titular') or '', 'playfair-900.ttf', ancho, 3, 104, 64)
     for ln in lineas:
         d.text((x0, y), ln, font=f_tit, fill=TINTA)
-        y += int(f_tit.size * 1.08)
-    y += 18
+        y += int(f_tit.size * 1.1)
+    y += 20
 
     # ── Subtítulo ──
-    f_sub = _font('playfair-400-italic.ttf', 34)
+    f_sub = _font('playfair-400-italic.ttf', 38)
     for ln in _wrap(d, datos.get('subtitulo') or '', f_sub, ancho)[:3]:
         d.text((x0, y), ln, font=f_sub, fill=GRIS)
-        y += 44
-    y += 22
-    d.line([(x0, y), (x1, y)], fill=LINEA, width=1)
-    y += 24
+        y += 50
+    y += 30
 
-    # ── Foto (icono del catálogo) + columna de texto ──
-    foto_w = 470
+    # ── Foto a todo ancho (icono del catálogo, recortado a formato apaisado) ──
+    foto_h = 400
     foto = None
-    try:
-        foto = Image.open(os.path.join(_GAMES, f"{datos.get('foto') or 'trivia'}.webp")).convert('RGB')
-    except Exception:
+    for cand in (datos.get('foto') or 'trivia', 'trivia'):
         try:
-            foto = Image.open(os.path.join(_GAMES, 'trivia.webp')).convert('RGB')
+            foto = Image.open(os.path.join(_GAMES, f"{cand}.webp")).convert('RGB')
+            break
         except Exception:
             foto = None
-    col_x = x0
     if foto is not None:
-        foto = foto.resize((foto_w, foto_w), Image.LANCZOS)
-        # marco fino de prensa
-        d.rectangle([x0 - 1, y - 1, x0 + foto_w + 1, y + foto_w + 1], outline=LINEA, width=2)
-        img.paste(foto, (x0, y))
-        # pie de foto
-        f_pie = _font('inter-400.ttf', 20)
-        py = y + foto_w + 10
-        for ln in _wrap(d, datos.get('pie') or '', f_pie, foto_w)[:2]:
-            d.text((x0, py), ln, font=f_pie, fill=GRIS)
-            py += 26
-        col_x = x0 + foto_w + 36
-    col_w = x1 - col_x
+        # Fondo: color del icono extendido a todo el ancho; icono centrado
+        fondo = foto.getpixel((6, 6))
+        banda = Image.new('RGB', (ancho, foto_h), fondo)
+        ico = foto.resize((foto_h, foto_h), Image.LANCZOS)
+        banda.paste(ico, ((ancho - foto_h) // 2, 0))
+        img.paste(banda, (x0, y))
+        d.rectangle([x0, y, x1, y + foto_h], outline=LINEA, width=2)
+        y += foto_h + 12
+        f_pie = _font('inter-400.ttf', 23)
+        for ln in _wrap(d, datos.get('pie') or '', f_pie, ancho)[:2]:
+            d.text((x0, y), ln, font=f_pie, fill=GRIS)
+            y += 30
+        y += 26
 
-    # Cita del testigo en la columna derecha
-    f_q = _font('playfair-900.ttf', 110)
-    d.text((col_x - 6, y - 30), '“', font=f_q, fill=acento)
-    f_cita = _font('playfair-400-italic.ttf', 30)
-    cy = y + 62
-    for ln in _wrap(d, datos.get('cita') or '', f_cita, col_w)[:6]:
-        d.text((col_x, cy), ln, font=f_cita, fill=TINTA)
-        cy += 40
-    cy += 10
-    f_test = _font('inter-700.ttf', 20)
-    for ln in _wrap(d, '— ' + (datos.get('testigo') or 'un testigo'), f_test, col_w)[:2]:
-        d.text((col_x, cy), ln, font=f_test, fill=acento)
-        cy += 26
+    # ── Cita del testigo ──
+    d.line([(x0, y), (x0, y + 1)], fill=LINEA)  # no-op visual anchor
+    f_q = _font('playfair-900.ttf', 120)
+    d.text((x0 - 8, y - 36), '“', font=f_q, fill=acento)
+    cx = x0 + 70
+    cw = x1 - cx
+    f_cita, cita_lineas = _ajustar(d, datos.get('cita') or '', 'playfair-400-italic.ttf', cw, 4, 36, 28, 2)
+    cy = y + 10
+    for ln in cita_lineas:
+        d.text((cx, cy), ln, font=f_cita, fill=TINTA)
+        cy += int(f_cita.size * 1.35)
+    cy += 6
+    f_test = _font('inter-700.ttf', 23)
+    for ln in _wrap(d, '— ' + (datos.get('testigo') or 'un testigo'), f_test, cw)[:2]:
+        d.text((cx, cy), ln, font=f_test, fill=acento)
+        cy += 30
+    y = cy + 30
 
-    # Columnas de "texto" simulado bajo la cita (líneas grises, como un periódico)
-    ly = cy + 28
-    bottom_cols = y + (foto_w if foto is not None else 420)
-    while ly < bottom_cols - 8:
-        ancho_l = col_w if (int(ly) // 18) % 7 else int(col_w * 0.6)
-        d.line([(col_x, ly), (col_x + ancho_l, ly)], fill=LINEA, width=6)
-        ly += 18
+    # ── Relleno de columnas (texto simulado) hasta el pie, si queda sitio ──
+    fy = H - 96
+    ly = y + 10
+    if fy - ly > 80:
+        d.line([(x0, y), (x1, y)], fill=LINEA, width=1)
+        ly = y + 26
+        colw = (ancho - 32) // 2
+        i = 0
+        while ly < fy - 28:
+            for cxx in (x0, x0 + colw + 32):
+                wl = colw if (i % 6) else int(colw * 0.55)
+                d.line([(cxx, ly), (cxx + wl, ly)], fill=LINEA, width=6)
+            ly += 20
+            i += 1
 
     # ── Pie de página ──
-    fy = H - 84
     d.line([(x0, fy), (x1, fy)], fill=TINTA, width=2)
-    f_foot = _font('inter-400.ttf', 20)
-    foot = f"Portada escrita a partir de un hecho real · El Titular de Mañana"
-    d.text((x0, fy + 16), foot, font=f_foot, fill=GRIS)
+    f_foot = _font('inter-400.ttf', 22)
+    d.text((x0, fy + 18), 'El Titular de Mañana · portada escrita a partir de un hecho real', font=f_foot, fill=GRIS)
     marca = 'nookplay.app'
-    f_marca = _font('inter-700.ttf', 22)
-    d.text((x1 - d.textlength(marca, font=f_marca), fy + 14), marca, font=f_marca, fill=acento)
+    f_marca = _font('inter-700.ttf', 24)
+    d.text((x1 - d.textlength(marca, font=f_marca), fy + 16), marca, font=f_marca, fill=acento)
     return img
 
 
