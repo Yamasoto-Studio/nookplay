@@ -1541,45 +1541,34 @@ IMPORTANTE: "correcta" es la posición 1-indexada (1 = primera opción). "respue
 # Tu Papel de Hoy generator (identidad del día + misión social)
 # ─────────────────────────────────────────────────────────────────────────────
 
-# Iconos del catálogo utilizables como "foto" de portada en El Titular de Mañana,
-# con una descripción para que la IA elija el que mejor ilustra el titular.
-PORTADA_FOTOS = {
-    'trivia': 'signo de interrogación, duda, examen, pregunta',
-    'crimen': 'lupa y huella, misterio, investigación, desaparición',
-    'conexiones': 'red de nodos, conexiones, relaciones, grupo de amigos',
-    'dilema': 'señal con dos flechas, decisión, encrucijada, elegir',
-    'perfil': 'ficha de persona, identidad, retrato, currículum',
-    'impostor': 'figuras entre las que una es distinta, engaño, sospecha',
-    'veredicto': 'mazo de juez, juicio, sentencia, justicia',
-    'sopa': 'cuadrícula de letras, búsqueda, palabras escondidas',
-    'anagrama': 'letras revueltas, desorden, palabras',
-    'emoji': 'bocadillo con emojis, mensajes, chat, móvil',
-    'letra': 'nota musical y papel, canción, música, concierto',
-    'definicion': 'libro abierto, diccionario, lectura, estudio',
-    'titular': 'periódico, noticia, prensa',
-    'sinopsis': 'claqueta de cine, película, estreno, serie',
-    'constitucion': 'libro con sello, ley, documento oficial, norma',
-    'reinas': 'tablero de ajedrez con corona, estrategia, reina, victoria',
-    'equilibrio': 'sol y luna, equilibrio, día y noche, balance',
-    'carta': 'cuadrícula con figuras, puzzle, rompecabezas, lógica',
-    'orden': 'escalera de bloques, orden, ranking, clasificación',
-    'escalera': 'escalera que sube, ascenso, progreso, subir niveles',
-    'menteagil': 'cronómetro, rapidez, reflejos, velocidad, prisa',
-    'oraculo': 'bola de cristal, destino, predicción, horóscopo, futuro',
-    'muertes': 'lápida con flores, historia, pasado, final absurdo',
-    'donde': 'mapa con chincheta, lugar, viaje, geografía, perderse',
-    'local': 'edificio con bandera, ciudad, barrio, local, bar',
-    'vestuario': 'balón y camiseta, fútbol, deporte, equipo',
-    'prototipo': 'caja de juego de mesa, invento, prototipo, crear',
-    'poema': 'pluma y pergamino, poesía, escribir, declaración',
-    'papel': 'máscara de teatro, rol, disfraz, actuar',
-    'freep': 'cartas de juego, baraja, partida, apuesta',
-    'dosverdades': 'dos caras, verdad y mentira, secreto, confesión',
-    'masomenos': 'balanza con cifras, comparar, números, más o menos',
-    'quienmas': 'dos personas señalándose, reto, amigos, quién fue',
-    'pensamiento': 'dos cabezas con la misma idea, coincidencia, telepatía, pensar igual',
-    'efemeride': 'calendario, fecha, aniversario, día señalado',
-}
+def _solo_emojis(txt):
+    """Extrae los emojis (clusters) de un texto, sin caras ni personas ni banderas."""
+    import unicodedata as _u
+    out, buf = [], ''
+    def _cierra():
+        nonlocal buf
+        if buf:
+            out.append(buf); buf = ''
+    for ch in txt:
+        cp = ord(ch)
+        es_mod = cp in (0xFE0F, 0x200D) or 0x1F3FB <= cp <= 0x1F3FF or 0xE0020 <= cp <= 0xE007F
+        es_emoji = (0x1F300 <= cp <= 0x1FAFF) or (0x2600 <= cp <= 0x27BF) or (0x1F1E6 <= cp <= 0x1F1FF) or cp in (0x2B50, 0x2B55, 0x231A, 0x231B, 0x23F0, 0x23F3, 0x24C2, 0x25B6, 0x25C0, 0x2934, 0x2935, 0x3030, 0x303D, 0x3297, 0x3299, 0x00A9, 0x00AE, 0x203C, 0x2049, 0x2122, 0x2139)
+        if es_mod and buf:
+            if 0x1F3FB <= cp <= 0x1F3FF:
+                continue  # fuera tonos de piel
+            buf += ch
+        elif es_emoji:
+            _cierra(); buf = ch
+        else:
+            _cierra()
+    _cierra()
+    # Fuera caras/personas (1F600–1F64F, 1F466–1F487, 1F9D1–1F9DF) y banderas (1F1E6–1F1FF)
+    def _ok(e):
+        c = ord(e[0])
+        if 0x1F600 <= c <= 0x1F64F or 0x1F466 <= c <= 0x1F487 or 0x1F9D1 <= c <= 0x1F9DF or 0x1F1E6 <= c <= 0x1F1FF:
+            return False
+        return True
+    return [e for e in out if _ok(e)]
 
 
 def generate_titular_manana(bar_slug, nombre, hecho, nombre_espacio, es_evento=False):
@@ -1588,7 +1577,6 @@ def generate_titular_manana(bar_slug, nombre, hecho, nombre_espacio, es_evento=F
     api_key = os.environ.get('ANTHROPIC_API_KEY')
     nombre = ' '.join(str(nombre or '').split())[:30] or 'Alguien'
     hecho = ' '.join(str(hecho or '').split())[:160]
-    fotos = '\n'.join(f'- {k}: {v}' for k, v in PORTADA_FOTOS.items())
     donde = 'del evento' if es_evento else 'del local'
     prompt = f"""Eres el redactor jefe de EL TITULAR DE MAÑANA, el periódico {donde} «{nombre_espacio}». Un cliente te cuenta algo que ha hecho hoy y tú lo conviertes en la PORTADA de mañana: sensacionalista, exagerada y cariñosa, como si fuera la noticia del año.
 
@@ -1602,13 +1590,12 @@ REGLAS:
 2. "subtitulo": 1 frase (máx. 22 palabras) que amplía con un detalle inventado y creíble, en tono de crónica.
 3. "cita": una declaración de un testigo o experto ficticio, 1 frase (máx. 20 palabras), con su atribución corta en "testigo" (ej.: "un camarero que prefiere no dar su nombre", "una experta en la materia"). En un evento, el testigo puede ser alguien del propio evento si los datos internos lo permiten.
 4. "seccion": la sección del periódico donde iría (Sucesos, Sociedad, Deportes, Cultura, Ciencia, Economía, Internacional, Gastronomía...). Una palabra.
-5. "foto": el identificador de UNA imagen de esta lista que mejor ilustre la noticia (devuelve solo el identificador, exacto):
-{fotos}
+5. "emojis": UNO o DOS emojis (nunca más) que ilustren la noticia como si fueran la foto de portada: concretos y reconocibles (🚿 para una ducha, ☕ para un café, 🎲 para una partida, 🅿️ para aparcar). Solo emojis de objetos, animales, comida, lugares, naturaleza o símbolos; NUNCA caras, personas, banderas ni tonos de piel.
 6. "pie": pie de foto de máx. 12 palabras, con gracia, en presente ("Momento exacto en que...").
 7. Todo en español, neutro, apto para todos los públicos.
 
 Responde SOLO con este JSON, sin markdown:
-{{"titular": "...", "subtitulo": "...", "cita": "...", "testigo": "...", "seccion": "...", "foto": "trivia", "pie": "..."}}"""
+{{"titular": "...", "subtitulo": "...", "cita": "...", "testigo": "...", "seccion": "...", "emojis": "🚿", "pie": "..."}}"""
     obj = _parse_ia_json(_post_ia(prompt, 500, api_key))
     out = {
         'titular': ' '.join(str(obj.get('titular') or '').split())[:90],
@@ -1616,11 +1603,9 @@ Responde SOLO con este JSON, sin markdown:
         'cita': ' '.join(str(obj.get('cita') or '').split())[:160],
         'testigo': ' '.join(str(obj.get('testigo') or '').split())[:60],
         'seccion': ' '.join(str(obj.get('seccion') or 'Sociedad').split())[:20],
-        'foto': str(obj.get('foto') or 'trivia').strip(),
+        'emojis': _solo_emojis(str(obj.get('emojis') or ''))[:2] or ['📰'],
         'pie': ' '.join(str(obj.get('pie') or '').split())[:90],
     }
-    if out['foto'] not in PORTADA_FOTOS:
-        out['foto'] = 'trivia'
     if not out['titular']:
         raise Exception('El Titular de Mañana: respuesta sin titular')
     return out
