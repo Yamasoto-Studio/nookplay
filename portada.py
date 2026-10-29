@@ -90,22 +90,22 @@ def componer_portada(datos, nombre_espacio, color_primario='#C4622D', es_evento=
     d.line([(x0, y), (x1, y)], fill=TINTA, width=4)
     y += 12
     fecha = date.today()
-    f_meta = _font('inter-400.ttf', 30)
+    f_meta = _font('inter-400.ttf', 33)
     meta_izq = 'Edición de mañana' if manana else 'Edición de hoy'
     meta_der = f"{_DIAS[fecha.weekday()]}, {fecha.day} de {_MESES[fecha.month - 1]} de {fecha.year}"
     d.text((x0, y), meta_izq, font=f_meta, fill=GRIS)
     d.text((x1 - d.textlength(meta_der, font=f_meta), y), meta_der, font=f_meta, fill=GRIS)
-    y += 40
+    y += 44
     d.line([(x0, y), (x1, y)], fill=TINTA, width=1)
     y += 36
 
     # ── Sección ──
-    f_sec = _font('inter-700.ttf', 27)
+    f_sec = _font('inter-700.ttf', 29)
     sec = (datos.get('seccion') or 'Sociedad').upper()
     sw = d.textlength(sec, font=f_sec) + 32
-    d.rounded_rectangle([x0, y, x0 + sw, y + 44], radius=8, fill=acento)
-    d.text((x0 + 16, y + 9), sec, font=f_sec, fill=(255, 255, 255))
-    y += 72
+    d.rounded_rectangle([x0, y, x0 + sw, y + 48], radius=8, fill=acento)
+    d.text((x0 + 16, y + 10), sec, font=f_sec, fill=(255, 255, 255))
+    y += 76
 
     # ── Titular ──
     f_tit, lineas = _ajustar(d, datos.get('titular') or '', 'playfair-900.ttf', ancho, 3, 104, 64)
@@ -115,7 +115,7 @@ def componer_portada(datos, nombre_espacio, color_primario='#C4622D', es_evento=
     y += 20
 
     # ── Subtítulo ──
-    f_sub, sub_lineas = _ajustar(d, datos.get('subtitulo') or '', 'playfair-400-italic.ttf', ancho, 4, 50, 42, 2)
+    f_sub, sub_lineas = _ajustar(d, datos.get('subtitulo') or '', 'playfair-400-italic.ttf', ancho, 4, 54, 46, 2)
     for ln in sub_lineas:
         d.text((x0, y), ln, font=f_sub, fill=TINTA)
         y += int(f_sub.size * 1.32)
@@ -150,10 +150,10 @@ def componer_portada(datos, nombre_espacio, color_primario='#C4622D', es_evento=
     except Exception:
         pass
     y += foto_h + 14
-    f_pie = _font('inter-400.ttf', 31)
+    f_pie = _font('inter-400.ttf', 34)
     for ln in _wrap(d, datos.get('pie') or '', f_pie, ancho)[:2]:
         d.text((x0, y), ln, font=f_pie, fill=GRIS)
-        y += 40
+        y += 44
     y += 30
 
     # ── Cita del testigo ──
@@ -162,16 +162,16 @@ def componer_portada(datos, nombre_espacio, color_primario='#C4622D', es_evento=
     d.text((x0 - 8, y - 36), '“', font=f_q, fill=acento)
     cx = x0 + 70
     cw = x1 - cx
-    f_cita, cita_lineas = _ajustar(d, datos.get('cita') or '', 'playfair-400-italic.ttf', cw, 5, 48, 40, 2)
+    f_cita, cita_lineas = _ajustar(d, datos.get('cita') or '', 'playfair-400-italic.ttf', cw, 5, 52, 44, 2)
     cy = y + 10
     for ln in cita_lineas:
         d.text((cx, cy), ln, font=f_cita, fill=TINTA)
         cy += int(f_cita.size * 1.35)
     cy += 6
-    f_test = _font('inter-700.ttf', 30)
+    f_test = _font('inter-700.ttf', 33)
     for ln in _wrap(d, '— ' + (datos.get('testigo') or 'un testigo'), f_test, cw)[:3]:
         d.text((cx, cy), ln, font=f_test, fill=acento)
-        cy += 38
+        cy += 42
     y = cy + 40
 
     # ── Pie de página: debajo del contenido, y como mínimo a la altura H ──
@@ -190,8 +190,8 @@ def componer_portada(datos, nombre_espacio, color_primario='#C4622D', es_evento=
             ly += 22
             i += 1
     d.line([(x0, fy), (x1, fy)], fill=TINTA, width=2)
-    f_foot = _font('inter-400.ttf', 27)
-    f_marca = _font('inter-700.ttf', 30)
+    f_foot = _font('inter-400.ttf', 30)
+    f_marca = _font('inter-700.ttf', 33)
     marca = 'nookplay.app'
     mw = d.textlength(marca, font=f_marca)
     d.text((x1 - mw, fy + 22), marca, font=f_marca, fill=acento)
