@@ -495,6 +495,15 @@ if not db.execute("SELECT id FROM games WHERE slug = 'emoji'").fetchone():
     db.commit()
     print('Juego El Emoji añadido.')
 
+# Añadir Tal día como hoy si no existe
+if not db.execute("SELECT id FROM games WHERE slug = 'efemeride'").fetchone():
+    db.execute(
+        "INSERT INTO games (slug, name, description, icon, plan_min, position) VALUES (?,?,?,?,?,?)",
+        ('efemeride', 'Tal día como hoy', 'Tres efemérides de hoy, una es mentira', '/static/games/efemeride.webp', 'starter_free', 36)
+    )
+    db.commit()
+    print('Juego Tal día como hoy añadido.')
+
 # Reordenar juegos por tipo de experiencia (orden lógico de UX)
 # Orden curado del catálogo y grupos (se reaplica en cada arranque: fuente única)
 CATALOGO_ORDEN = [
@@ -507,7 +516,7 @@ CATALOGO_ORDEN = [
     # Lógica y puzzle
     ('reinas', 'logica'), ('equilibrio', 'logica'), ('carta', 'logica'), ('orden', 'logica'), ('escalera', 'logica'), ('menteagil', 'logica'),
     # Curiosidades del mundo
-    ('oraculo', 'curiosidades'), ('muertes', 'curiosidades'), ('donde', 'curiosidades'), ('local', 'curiosidades'), ('vestuario', 'curiosidades'),
+    ('efemeride', 'curiosidades'), ('oraculo', 'curiosidades'), ('muertes', 'curiosidades'), ('donde', 'curiosidades'), ('local', 'curiosidades'), ('vestuario', 'curiosidades'),
     # Crear
     ('prototipo', 'crear'), ('poema', 'crear'), ('papel', 'crear'),
     # A dobles

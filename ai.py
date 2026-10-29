@@ -2316,6 +2316,80 @@ Devuelve SOLO un objeto JSON válido, sin markdown, donde "correcta" es el índi
 # NUEVOS_JUEGOS_AQUI
 # ─────────────────────────────────────────────────────────────────────────────
 
+def generate_efemeride(bar_slug, evitar=None):
+    """TAL DÍA COMO HOY: tres efemérides de la fecha de hoy, una inventada.
+    Tematizable: en un evento, la IA puede añadir una efeméride del propio evento
+    (sacada de los datos internos), marcada como 'del_evento'."""
+    hoy = date.today()
+    meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto',
+             'septiembre', 'octubre', 'noviembre', 'diciembre']
+    fecha_txt = f"{hoy.day} de {meses[hoy.month - 1]}"
+    api_key = os.environ.get('ANTHROPIC_API_KEY')
+    seed = get_day_seed(bar_slug)
+    hay_evento = bool(get_event_theme())
+
+    bloque_evento = ''
+    if hay_evento:
+        bloque_evento = """
+EFEMÉRIDE DEL EVENTO (opcional, solo si hay DATOS INTERNOS con hechos fechables o anécdotas):
+- Añade una CUARTA entrada con "del_evento": true: una efeméride del propio evento o su mundo ("tal día como hoy, hace un año, se fue la luz en el concierto de cierre y el público acabó la canción a capela"). Puede ser real según los datos internos o una invención cómplice y claramente verosímil dentro del evento; en ambos casos "es_real" dice la verdad dentro de ese universo.
+- Si no hay material para ello, NO la inventes: devuelve solo las tres.
+"""
+
+    prompt = f"""Eres el redactor de TAL DÍA COMO HOY, un pasatiempo diario: tres efemérides de la fecha de hoy, dos reales y una inventada. El jugador señala la falsa.
+
+FECHA DE HOY: {fecha_txt}.
+SEED: {seed} (úsalo para variar la elección entre días y espacios).
+
+REGLAS:
+1. Las DOS REALES deben ser hechos famosos y VERIFICABLES ocurridos un {fecha_txt} (de cualquier año): estrenos, inventos, nacimientos o muertes de personas muy conocidas, acontecimientos históricos, récords, lanzamientos. Si no estás seguro de que ocurrió exactamente ese día, elige otro hecho del que sí lo estés. Prefiere hechos conocidos a hechos oscuros. El año debe ser correcto.
+2. La INVENTADA debe sonar exactamente igual de verosímil: mismo tono, mismo nivel de detalle, un año concreto, un nombre real o plausible. Nunca absurda; que haya que pensar. Debe ser inconfundiblemente falsa una vez revelada (no "medio cierta").
+3. Variedad: las tres de épocas y ámbitos distintos (ciencia, cultura pop, deporte, historia, tecnología...). Nada político-partidista reciente, nada morboso.
+4. Si hay un UNIVERSO TEMÁTICO indicado arriba, al menos UNA de las reales debe pertenecer a ese mundo y la inventada puede jugar con él.
+5. Cada entrada lleva "texto" (1 frase, máx. 28 palabras, empieza por el año: "1969 — ...") y "detalle" (1-2 frases que se muestran al resolver: para las reales, un dato más que haga decir "anda"; para la inventada, qué es lo que sí es cierto detrás de la invención).
+6. "remate": una frase final con gracia para la pantalla de resultado, que una las tres de algún modo o celebre la fecha.
+{bloque_evento}
+Responde SOLO con este JSON, sin markdown:
+{{"fecha": "{fecha_txt}", "efemerides": [
+  {{"texto": "1969 — ...", "es_real": true, "detalle": "..."}},
+  {{"texto": "1990 — ...", "es_real": true, "detalle": "..."}},
+  {{"texto": "1977 — ...", "es_real": false, "detalle": "..."}}
+], "remate": "..."}}""" + _bloque_knobs() + _bloque_evitar(evitar)
+
+    intentos = 3 if get_ia_mode() == 'batch' else 2
+    for _ in range(intentos):
+        try:
+            obj = _parse_ia_json(_post_ia(prompt, 1200, api_key))
+            items = []
+            for e in (obj.get('efemerides') or []):
+                if not isinstance(e, dict) or not str(e.get('texto', '')).strip():
+                    continue
+                items.append({
+                    'texto': ' '.join(str(e['texto']).split())[:220],
+                    'es_real': bool(e.get('es_real')),
+                    'detalle': ' '.join(str(e.get('detalle', '')).split())[:320],
+                    'del_evento': bool(e.get('del_evento')),
+                })
+            base = [x for x in items if not x['del_evento']]
+            extra = [x for x in items if x['del_evento']][:1]
+            falsas = [x for x in base if not x['es_real']]
+            reales = [x for x in base if x['es_real']]
+            if len(falsas) != 1 or len(reales) < 2:
+                continue
+            # Orden determinista por seed para que la falsa no vaya siempre en el mismo sitio
+            lista = reales[:2] + falsas
+            rot = seed % 3
+            lista = lista[rot:] + lista[:rot]
+            return {
+                'fecha': fecha_txt,
+                'efemerides': lista + extra,
+                'remate': ' '.join(str(obj.get('remate') or '').split())[:200],
+            }
+        except Exception:
+            continue
+    raise Exception('Tal día como hoy: no se pudo construir una terna válida')
+
+
 def generate_titular(bar_slug, evitar=None):
     today = str(date.today())
     api_key = os.environ.get('ANTHROPIC_API_KEY')
