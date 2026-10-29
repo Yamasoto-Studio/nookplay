@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 from datetime import date, datetime, timedelta
 import sqlite3
-from ai import set_ia_mode, reset_ia_mode, generate_game, generate_impostor, generate_dilema, generate_conexiones, generate_oraculo, generate_donde, generate_carta, generate_reinas, generate_conexion_local, generate_equilibrio, generate_veredicto, generate_perfil, generate_vestuario, generate_trivia, generate_sinopsis, generate_muertes, generate_letra, generate_pensamiento, generate_poema, generate_menteagil, generate_constitucion, generate_orden, generate_titular, generate_definicion, generate_masomenos, generate_escalera, generate_quienmas, generate_resena, generate_papel, generate_prototipo, generate_sopa, generate_anagrama, generate_emoji, generate_efemeride, generate_titular_manana, build_bar_context, set_game_knobs, reset_game_knobs, get_day_seed, set_event_theme, reset_event_theme, set_variant_hint
+from ai import set_ia_mode, reset_ia_mode, generate_game, generate_impostor, generate_dilema, generate_conexiones, generate_oraculo, generate_donde, generate_carta, generate_reinas, generate_conexion_local, generate_equilibrio, generate_veredicto, generate_perfil, generate_vestuario, generate_trivia, generate_sinopsis, generate_muertes, generate_letra, generate_pensamiento, generate_poema, generate_menteagil, generate_constitucion, generate_orden, generate_titular, generate_definicion, generate_masomenos, generate_escalera, generate_quienmas, generate_resena, generate_papel, generate_prototipo, generate_sopa, generate_anagrama, generate_emoji, generate_efemeride, generate_titular_manana, generate_meconoces, build_bar_context, set_game_knobs, reset_game_knobs, get_day_seed, set_event_theme, reset_event_theme, set_variant_hint
 import os
 import smtplib
 from email.mime.text import MIMEText
@@ -489,6 +489,10 @@ def get_historial_reciente(db, game_type, bar_slug=None, dias=10, campo='titulo'
                 for x in data['efemerides']:
                     if isinstance(x, dict) and x.get('texto'):
                         items.append(str(x['texto'])[:90])
+            elif campo == 'meconoces' and isinstance(data.get('preguntas'), list):
+                for x in data['preguntas']:
+                    if isinstance(x, dict) and x.get('q'):
+                        items.append(str(x['q'])[:80])
             elif campo == 'sopa' and isinstance(data.get('palabras'), list):
                 for x in data['palabras']:
                     if isinstance(x, dict) and x.get('palabra'):
@@ -752,7 +756,7 @@ def pregen_daily_games(solo_bar_slug=None, forzar=False):
 def _pregen_daily_games_impl(solo_bar_slug, forzar, today, resumen):
     # Juegos por-bar: los únicos que un evento genera (y en pool si procede)
     POOL_GAME_TYPES = EVENT_GAME_TYPES
-    GAME_TYPES = ['crimen', 'impostor', 'dilema', 'conexiones', 'oraculo', 'donde', 'local', 'veredicto', 'perfil', 'vestuario', 'trivia', 'sinopsis', 'muertes', 'letra', 'pensamiento', 'menteagil', 'constitucion', 'titular', 'definicion', 'masomenos', 'escalera', 'quienmas', 'orden', 'resena', 'papel', 'prototipo', 'sopa', 'anagrama', 'emoji', 'efemeride']
+    GAME_TYPES = ['crimen', 'impostor', 'dilema', 'conexiones', 'oraculo', 'donde', 'local', 'veredicto', 'perfil', 'vestuario', 'trivia', 'sinopsis', 'muertes', 'letra', 'pensamiento', 'menteagil', 'constitucion', 'titular', 'definicion', 'masomenos', 'escalera', 'quienmas', 'orden', 'resena', 'papel', 'prototipo', 'sopa', 'anagrama', 'emoji', 'efemeride', 'meconoces']
 
     db = get_db()
     if solo_bar_slug:
@@ -884,6 +888,13 @@ def _pregen_daily_games_impl(solo_bar_slug, forzar, today, resumen):
                         _ktok = set_game_knobs(_knobs_de(db, bar['id'], 'efemeride'))
                         try:
                             game_data = generate_efemeride(bar['slug'], evitar=ev)
+                        finally:
+                            reset_game_knobs(_ktok)
+                    elif game_type == 'meconoces':
+                        ev = get_historial_reciente(db, 'meconoces', bar['slug'], campo='meconoces')
+                        _ktok = set_game_knobs(_knobs_de(db, bar['id'], 'meconoces'))
+                        try:
+                            game_data = generate_meconoces(bar['slug'], evitar=ev)
                         finally:
                             reset_game_knobs(_ktok)
                     elif game_type == 'vestuario':
@@ -1485,12 +1496,17 @@ def calcular_analytics_bar(db, bar_slug, ventana=None):
 # Única fuente de verdad — la usan el pregen, el panel y la regeneración.
 EVENT_GAME_TYPES = {'crimen', 'impostor', 'dilema', 'conexiones', 'veredicto', 'perfil',
                     'vestuario', 'trivia', 'local', 'orden', 'sinopsis', 'letra',
-                    'quienmas', 'escalera', 'masomenos', 'resena', 'papel', 'prototipo', 'sopa', 'anagrama', 'emoji', 'efemeride'}
+                    'quienmas', 'escalera', 'masomenos', 'resena', 'papel', 'prototipo', 'sopa', 'anagrama', 'emoji', 'efemeride', 'meconoces'}
 
 # ── Manifiesto de mandos creativos: qué expone cada juego en el panel ──
 # Fuente única: el panel pinta los controles desde aquí y los generadores los
 # reciben vía set_game_knobs. Añadir un mando = añadir un campo a este dict.
 GAME_KNOBS = {
+    'meconoces': [
+        {'key': 'foco', 'label': 'Preguntas sobre…', 'type': 'text', 'max': 160,
+         'placeholder': 'Ej: parejas · compañeros de trabajo · la vida en el festival',
+         'hint': 'Hacia dónde tiran las preguntas. Vacío = variadas, con la temática del espacio.'},
+    ],
     'titularmanana': [
         {'key': 'cuota', 'label': 'Titulares por persona y día', 'type': 'select',
          'options': ['', '1', '2', '3', '5', '10'],
@@ -1547,7 +1563,7 @@ GAME_NOMBRES = {
     'crimen': 'El Crimen del Día', 'impostor': 'El Impostor', 'dilema': 'El Dilema',
     'conexiones': 'Conexiones', 'oraculo': 'El Oráculo', 'donde': '¿Dónde está?',
     'local': 'Conexión Local', 'veredicto': 'El Veredicto', 'perfil': 'El Perfil',
-    'resena': 'La Reseña', 'papel': 'Tu Papel de Hoy', 'prototipo': 'El Prototipo', 'sopa': 'La Sopa de Letras', 'anagrama': 'El Anagrama', 'emoji': 'El Emoji', 'efemeride': 'Tal día como hoy', 'titularmanana': 'El Titular de Mañana',
+    'resena': 'La Reseña', 'papel': 'Tu Papel de Hoy', 'prototipo': 'El Prototipo', 'sopa': 'La Sopa de Letras', 'anagrama': 'El Anagrama', 'emoji': 'El Emoji', 'efemeride': 'Tal día como hoy', 'titularmanana': 'El Titular de Mañana', 'meconoces': 'Me conoces',
     'vestuario': 'El Vestuario', 'trivia': 'La Trivia', 'sinopsis': 'La Sinopsis', 'muertes': 'Muertes Célebres',
     'letra': 'Adivina la Letra', 'pensamiento': 'El Mismo Pensamiento',
     'menteagil': 'Mente Ágil', 'constitucion': '¿Tú la has leído?', 'poema': 'El Poema',
@@ -3723,6 +3739,79 @@ def titularmanana_api():
         return jsonify(datos)
     except Exception as e:
         return _error_juego(e)
+
+
+@app.route('/<bar_slug>/meconoces')
+def meconoces_page(bar_slug):
+    db = get_db()
+    bar = db.execute("SELECT * FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
+    if not bar:
+        db.close()
+        return render_template('404.html'), 404
+    products = db.execute("SELECT * FROM bar_products WHERE bar_id = ? AND active = 1 ORDER BY position", (bar['id'],)).fetchall()
+    products_json = json.dumps([dict(p) for p in products])
+    db.close()
+    return render_template('games/meconoces.html', bar=bar, products=products, products_json=products_json)
+
+
+@app.route('/api/meconoces', methods=['POST'])
+def meconoces_api():
+    data = request.get_json() or {}
+    code = (data.get('code') or '').strip().upper()
+    bar_slug = (data.get('bar_slug') or '').strip()
+    today = str(date.today())
+    db = get_db()
+    bar = db.execute("SELECT * FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
+    if not bar:
+        db.close()
+        return jsonify({'error': 'Invalid code'}), 403
+    valid_code = db.execute(
+        "SELECT code FROM access_codes WHERE bar_id = ? AND code = ? AND valid_from <= ? AND valid_until >= ?",
+        (bar['id'], code, today, today)).fetchone()
+    if not valid_code:
+        db.close()
+        return jsonify({'error': 'Invalid code'}), 403
+    bar_id = bar['id']
+    cache_key = f"{bar_slug}_meconoces_{today}"
+    if cache_key in _game_cache:
+        db.close()
+        return jsonify(_game_cache[cache_key])
+    pregenerated = _leer_pregenerado(db, bar_id, 'meconoces', today)
+    if pregenerated:
+        game_data = json.loads(pregenerated['content'])
+        if isinstance(game_data.get('preguntas'), list) and len(game_data['preguntas']) >= 5:
+            _game_cache[cache_key] = game_data
+            db.close()
+            return jsonify(game_data)
+    knobs = _knobs_de(db, bar_id, 'meconoces')
+    db.close()
+    try:
+        _dbev = get_db()
+        _ev = get_historial_reciente(_dbev, 'meconoces', bar_slug, campo='meconoces')
+        _dbev.close()
+        _tok = set_event_theme(_theme_de(bar))
+        _ktok = set_game_knobs(knobs)
+        try:
+            game_data = generate_meconoces(bar_slug, evitar=_ev)
+        finally:
+            reset_game_knobs(_ktok)
+            reset_event_theme(_tok)
+        _persistir_generado(bar_id, 'meconoces', game_data, es_global=False)
+        _game_cache[cache_key] = game_data
+        return jsonify(game_data)
+    except Exception as e:
+        return _error_juego(e)
+
+
+@app.route('/api/meconoces-stats/<bar_slug>')
+def meconoces_stats(bar_slug):
+    """Media de aciertos (choice = aciertos de 5) y parejas que han jugado hoy."""
+    today = str(date.today())
+    db = get_db()
+    row = db.execute("SELECT AVG(choice) AS media, COUNT(*) AS n FROM plays WHERE bar_slug = ? AND game_type = 'meconoces' AND played_on = ? AND choice >= 0",
+                     (bar_slug, today)).fetchone()
+    db.close()
+    return jsonify({'media': round(float(row['media'] or 0), 1), 'parejas': int(row['n'] or 0)})
 
 
 @app.route('/api/emoji-stats/<bar_slug>')

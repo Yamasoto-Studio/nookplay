@@ -513,6 +513,15 @@ if not db.execute("SELECT id FROM games WHERE slug = 'titularmanana'").fetchone(
     db.commit()
     print('Juego El Titular de Mañana añadido.')
 
+# Añadir Me conoces si no existe
+if not db.execute("SELECT id FROM games WHERE slug = 'meconoces'").fetchone():
+    db.execute(
+        "INSERT INTO games (slug, name, description, icon, plan_min, position) VALUES (?,?,?,?,?,?)",
+        ('meconoces', 'Me conoces', '¿Cuánto sabes de quien tienes al lado?', '/static/games/meconoces.webp', 'starter_free', 38)
+    )
+    db.commit()
+    print('Juego Me conoces añadido.')
+
 # Reordenar juegos por tipo de experiencia (orden lógico de UX)
 # Orden curado del catálogo y grupos (se reaplica en cada arranque: fuente única)
 CATALOGO_ORDEN = [
@@ -529,7 +538,7 @@ CATALOGO_ORDEN = [
     # Crear
     ('titularmanana', 'crear'), ('prototipo', 'crear'), ('poema', 'crear'), ('papel', 'crear'),
     # A dobles
-    ('freep', 'dobles'), ('dosverdades', 'dobles'), ('masomenos', 'dobles'), ('quienmas', 'dobles'), ('pensamiento', 'dobles'),
+    ('meconoces', 'dobles'), ('freep', 'dobles'), ('dosverdades', 'dobles'), ('masomenos', 'dobles'), ('quienmas', 'dobles'), ('pensamiento', 'dobles'),
 ]
 for _pos, (_slug, _grupo) in enumerate(CATALOGO_ORDEN, start=1):
     db.execute("UPDATE games SET position = ?, grupo = ? WHERE slug = ?", (_pos, _grupo, _slug))

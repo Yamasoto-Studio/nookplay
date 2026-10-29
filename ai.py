@@ -2658,6 +2658,60 @@ Genera exactamente 6 preguntas, una por peldano, en orden de dificultad crecient
 # Quién es más probable — afirmaciones para señalar a uno de los dos (a dobles)
 # ─────────────────────────────────────────────────────────────────────────────
 
+def generate_meconoces(bar_slug, evitar=None):
+    """ME CONOCES: 5 preguntas sobre una persona, 4 opciones cada una. Primero
+    responde la persona en secreto; luego la otra intenta adivinar."""
+    api_key = os.environ.get('ANTHROPIC_API_KEY')
+    seed = get_day_seed(bar_slug)
+    prompt = f"""Eres el redactor de ME CONOCES, un juego para dos personas con un solo móvil: una responde 5 preguntas sobre sí misma en secreto y la otra intenta adivinar qué ha contestado. Lo divertido es descubrir cuánto os conocéis y discutirlo después.
+
+SEED: {seed} (varía las preguntas entre días y espacios).
+
+Crea 5 PREGUNTAS con estas reglas:
+1. Cada pregunta va sobre la persona que responde, en segunda persona del singular, y es concreta y fácil de contestar en dos segundos: gustos, manías, reacciones, elecciones ("Si te invitan, ¿qué pides?", "Te quedas sin batería en un sitio nuevo: ¿qué haces?", "¿Qué superpoder elegirías para un lunes?").
+2. 4 OPCIONES cortas (máx. 6 palabras), todas plausibles y distintas entre sí; ninguna es "la correcta": son personalidades. Nada de opciones absurdas de relleno.
+3. Variedad: las 5 de ámbitos distintos (comida, tiempo libre, reacciones, pequeñas decisiones, fantasía, dinero del día a día). Mezcla una tierna, una gamberra y una absurda.
+4. Para cada pregunta, "reves": cómo se formula la MISMA pregunta cuando quien adivina la ve ("Si le invitan, ¿qué pide?"), en tercera persona y sin nombres. Mismo sentido exacto.
+5. NEUTRO respecto al género; apto para todos los públicos; nada sexual, ofensivo ni político; sin marcas comerciales.
+6. "mensajes": una frase breve y con gracia por cada número de aciertos de 0 a 5 (5 = os conocéis demasiado; 0 = acabáis de conoceros, ¿verdad?).
+
+Responde SOLO con este JSON, sin markdown:
+{{"preguntas": [
+  {{"q": "Si te invitan a desayunar, ¿qué pides?", "reves": "Si le invitan a desayunar, ¿qué pide?", "opciones": ["Café y tostada", "Lo más caro de la carta", "Algo dulce, siempre", "Solo un café, gracias"]}}
+], "mensajes": {{"0": "...", "1": "...", "2": "...", "3": "...", "4": "...", "5": "..."}}}}""" + _bloque_knobs() + _bloque_evitar(evitar)
+
+    intentos = 3 if get_ia_mode() == 'batch' else 2
+    for _ in range(intentos):
+        try:
+            obj = _parse_ia_json(_post_ia(prompt, 1400, api_key))
+            pregs = []
+            for q in (obj.get('preguntas') or []):
+                if not isinstance(q, dict):
+                    continue
+                ops = q.get('opciones')
+                if not (isinstance(ops, list) and len(ops) == 4 and all(isinstance(o, str) and o.strip() for o in ops)):
+                    continue
+                if not str(q.get('q', '')).strip():
+                    continue
+                pregs.append({
+                    'q': ' '.join(str(q['q']).split())[:140],
+                    'reves': ' '.join(str(q.get('reves') or q['q']).split())[:140],
+                    'opciones': [' '.join(o.split())[:40] for o in ops],
+                })
+            if len(pregs) >= 5:
+                msgs = obj.get('mensajes') or {}
+                defecto = {'0': '0 de 5. Encantados de conoceros, ¿no?', '1': '1 de 5. Hay margen de mejora.',
+                           '2': '2 de 5. Os vais conociendo.', '3': '3 de 5. Buen nivel de confianza.',
+                           '4': '4 de 5. Casi telepatía.', '5': '5 de 5. Os conocéis demasiado.'}
+                for k in defecto:
+                    if not str(msgs.get(k, '')).strip():
+                        msgs[k] = defecto[k]
+                return {'preguntas': pregs[:5], 'mensajes': {k: ' '.join(str(msgs[k]).split())[:90] for k in defecto}}
+        except Exception:
+            continue
+    raise Exception('Me conoces: no se pudieron construir cinco preguntas válidas')
+
+
 def generate_quienmas(bar_slug, evitar=None):
     today = str(date.today())
     api_key = os.environ.get('ANTHROPIC_API_KEY')
