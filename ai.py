@@ -2712,6 +2712,94 @@ Responde SOLO con este JSON, sin markdown:
     raise Exception('Me conoces: no se pudieron construir cinco preguntas válidas')
 
 
+def generate_interrogatorio(bar_slug, evitar=None):
+    """EL INTERROGATORIO: un sospechoso responde a 4 preguntas; una respuesta
+    contradice a las otras tres. El jugador señala la mentira."""
+    api_key = os.environ.get('ANTHROPIC_API_KEY')
+    seed = get_day_seed(bar_slug)
+    prompt = f"""Eres el guionista de EL INTERROGATORIO, un juego de deducción de un minuto. Un personaje sospechoso de un incidente MENOR y cómico (ha desaparecido una tarta, alguien ha cambiado la música, se ha movido una silla) responde a 4 preguntas de un inspector. TRES respuestas son coherentes entre sí; UNA contradice a las demás (una hora que no cuadra, un lugar imposible, un objeto que no podía tener, un detalle que choca con otra respuesta). El jugador tiene que señalar la respuesta falsa.
+
+SEED: {seed} (varía caso, personaje y tipo de contradicción entre días y espacios).
+
+REGLAS:
+1. "caso": el incidente en 1 frase (máx. 22 palabras), con humor. "sospechoso": nombre de pila y un rasgo ("Rita, la del puesto de crepes"). Sin género marcado si puedes evitarlo; nunca personas reales.
+2. 4 "turnos", cada uno con "pregunta" del inspector (máx. 14 palabras) y "respuesta" del sospechoso (máx. 28 palabras, con voz propia: nervios, excusas, detalles concretos de hora, lugar y objetos).
+3. La contradicción debe ser DEDUCIBLE releyendo las cuatro respuestas, nunca por conocimiento externo: dos datos de las respuestas no pueden ser verdad a la vez (ej.: dice que a las 17:00 estaba en la cola del baño y en otra que a las 17:00 vio el final del concierto desde la primera fila). Ni demasiado obvia ni rebuscada: que haya que pensar diez segundos.
+4. "falsa": índice (0-3) del turno con la respuesta falsa. "explicacion": 1-2 frases que señalan exactamente qué dos datos chocan. "cierre": una frase final con gracia (el sospechoso confiesa o se defiende).
+5. Tono ligero, apto para todos, sin violencia ni nada ofensivo. Si hay UNIVERSO TEMÁTICO arriba, el caso, el lugar y el sospechoso viven en él.
+
+Responde SOLO con este JSON, sin markdown:
+{{"caso": "...", "sospechoso": "...", "turnos": [
+  {{"pregunta": "...", "respuesta": "..."}},
+  {{"pregunta": "...", "respuesta": "..."}},
+  {{"pregunta": "...", "respuesta": "..."}},
+  {{"pregunta": "...", "respuesta": "..."}}
+], "falsa": 2, "explicacion": "...", "cierre": "..."}}""" + _bloque_knobs() + _bloque_evitar(evitar)
+    intentos = 3 if get_ia_mode() == 'batch' else 2
+    for _ in range(intentos):
+        try:
+            obj = _parse_ia_json(_post_ia(prompt, 1300, api_key))
+            turnos = [t for t in (obj.get('turnos') or []) if isinstance(t, dict) and str(t.get('pregunta', '')).strip() and str(t.get('respuesta', '')).strip()]
+            f = obj.get('falsa')
+            if len(turnos) != 4 or not isinstance(f, int) or not 0 <= f <= 3:
+                continue
+            return {
+                'caso': ' '.join(str(obj.get('caso') or '').split())[:200],
+                'sospechoso': ' '.join(str(obj.get('sospechoso') or 'El sospechoso').split())[:60],
+                'turnos': [{'pregunta': ' '.join(t['pregunta'].split())[:120], 'respuesta': ' '.join(t['respuesta'].split())[:220]} for t in turnos],
+                'falsa': f,
+                'explicacion': ' '.join(str(obj.get('explicacion') or '').split())[:300],
+                'cierre': ' '.join(str(obj.get('cierre') or '').split())[:160],
+            }
+        except Exception:
+            continue
+    raise Exception('El Interrogatorio: no se pudo construir un caso válido')
+
+
+def generate_testigo(bar_slug, evitar=None):
+    """EL TESTIGO: una escena de 3-4 frases se muestra unos segundos; después,
+    3 preguntas de memoria con 4 opciones sobre detalles de la escena."""
+    api_key = os.environ.get('ANTHROPIC_API_KEY')
+    seed = get_day_seed(bar_slug)
+    prompt = f"""Eres el redactor de EL TESTIGO, un juego de memoria y atención: el jugador lee una ESCENA breve durante unos segundos, la escena desaparece y responde 3 preguntas sobre detalles concretos que acaba de leer.
+
+SEED: {seed} (varía escena y detalles entre días y espacios).
+
+REGLAS:
+1. "escena": 3 o 4 frases (60-90 palabras en total) que describen un momento cotidiano y visual con MUCHOS detalles concretos y memorizables: colores, números, objetos, prendas, horas, nombres de sitios. Ej.: "Una persona con una bufanda amarilla entra a las 11:20 con dos bolsas de papel..." Sin género marcado cuando puedas ("una persona", "alguien"). Sin personas reales.
+2. 3 "preguntas", cada una sobre UN detalle que aparece literalmente en la escena (nunca inferencias ni cosas que no estén), con 4 "opciones" cortas, plausibles y claramente distintas; "respuesta" repite literalmente la opción correcta. Las tres preguntas sobre detalles distintos (un color, un número, un objeto o lugar).
+3. Dificultad media: que alguien atento acierte 3 y alguien que lee por encima acierte 1.
+4. "titulo": nombre corto de la escena (máx. 5 palabras). "mensajes": frase con gracia para 0, 1, 2 y 3 aciertos.
+5. Tono ligero y apto para todos. Si hay UNIVERSO TEMÁTICO arriba, la escena ocurre en él.
+
+Responde SOLO con este JSON, sin markdown:
+{{"titulo": "...", "escena": "...", "preguntas": [
+  {{"pregunta": "¿De qué color era la bufanda?", "opciones": ["Amarilla", "Roja", "Verde", "Azul"], "respuesta": "Amarilla"}}
+], "mensajes": {{"0": "...", "1": "...", "2": "...", "3": "..."}}}}""" + _bloque_knobs() + _bloque_evitar(evitar)
+    intentos = 3 if get_ia_mode() == 'batch' else 2
+    for _ in range(intentos):
+        try:
+            obj = _parse_ia_json(_post_ia(prompt, 1300, api_key))
+            if not str(obj.get('escena', '')).strip():
+                continue
+            if not _validar_lista(obj, 'preguntas', 'opciones', 4, 3, corte=3):
+                continue
+            msgs = obj.get('mensajes') or {}
+            defecto = {'0': '0 de 3. ¿Estabas mirando el móvil?', '1': '1 de 3. Testigo poco fiable.', '2': '2 de 3. Buena memoria.', '3': '3 de 3. Memoria fotográfica.'}
+            for k in defecto:
+                if not str(msgs.get(k, '')).strip():
+                    msgs[k] = defecto[k]
+            return {
+                'titulo': ' '.join(str(obj.get('titulo') or 'La escena').split())[:60],
+                'escena': ' '.join(str(obj['escena']).split())[:700],
+                'preguntas': [{'pregunta': ' '.join(str(q['pregunta']).split())[:140], 'opciones': [' '.join(str(o).split())[:40] for o in q['opciones']], 'correcta': q['correcta']} for q in obj['preguntas']],
+                'mensajes': {k: ' '.join(str(msgs[k]).split())[:90] for k in defecto},
+            }
+        except Exception:
+            continue
+    raise Exception('El Testigo: no se pudo construir una escena válida')
+
+
 def generate_quienmas(bar_slug, evitar=None):
     today = str(date.today())
     api_key = os.environ.get('ANTHROPIC_API_KEY')

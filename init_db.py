@@ -522,13 +522,26 @@ if not db.execute("SELECT id FROM games WHERE slug = 'meconoces'").fetchone():
     db.commit()
     print('Juego Me conoces añadido.')
 
+# Añadir El Interrogatorio y El Testigo si no existen
+for _slug, _name, _desc, _pos in [
+    ('interrogatorio', 'El Interrogatorio', 'Cuatro respuestas, una mentira', 39),
+    ('testigo', 'El Testigo', '¿Qué acabas de ver?', 40),
+]:
+    if not db.execute("SELECT id FROM games WHERE slug = ?", (_slug,)).fetchone():
+        db.execute(
+            "INSERT INTO games (slug, name, description, icon, plan_min, position) VALUES (?,?,?,?,?,?)",
+            (_slug, _name, _desc, f'/static/games/{_slug}.webp', 'starter_free', _pos)
+        )
+        db.commit()
+        print(f'Juego {_name} añadido.')
+
 # Reordenar juegos por tipo de experiencia (orden lógico de UX)
 # Orden curado del catálogo y grupos (se reaplica en cada arranque: fuente única)
 CATALOGO_ORDEN = [
     # Para empezar — la primera fila: universales, con gancho, tematizables
     ('trivia', 'empezar'), ('crimen', 'empezar'), ('resena', 'empezar'), ('conexiones', 'empezar'),
     # Deducción y personas
-    ('perfil', 'deduccion'), ('impostor', 'deduccion'), ('veredicto', 'deduccion'), ('dilema', 'deduccion'),
+    ('perfil', 'deduccion'), ('impostor', 'deduccion'), ('veredicto', 'deduccion'), ('dilema', 'deduccion'), ('interrogatorio', 'deduccion'), ('testigo', 'deduccion'),
     # Palabras y cultura
     ('sopa', 'palabras'), ('anagrama', 'palabras'), ('emoji', 'palabras'), ('letra', 'palabras'), ('definicion', 'palabras'), ('titular', 'palabras'), ('sinopsis', 'palabras'), ('constitucion', 'palabras'),
     # Lógica y puzzle
