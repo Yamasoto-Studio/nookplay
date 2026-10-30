@@ -1,0 +1,3 @@
+{# Línea de créditos unificada. Uso: {% include 'components/credits.html' %}
+   Variante corta para pies pequeños: {% set credits_short = true %} antes del include. #}
+{% if credits_short %}Nookplay · by <a href="https://www.yamasoto.com/" target="_blank" rel="noopener">Yamasoto</a> · Powered by <a href="https://www.reliops.com/" target="_blank" rel="noopener">Reliops</a>{% else %}© 2026 Nookplay · Un proyecto de <a href="https://www.yamasoto.com/" target="_blank" rel="noopener">Yamasoto</a> · Powered by <a href="https://www.reliops.com/" target="_blank" rel="noopener">Reliops</a>{% endif %}

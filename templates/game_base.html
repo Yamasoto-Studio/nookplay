@@ -216,7 +216,7 @@ function showResultPromo() {
   </div>
   <div class="nook-footer">
     <a href="/" class="nook-footer-brand"><img src="/static/logo.svg" alt="Nookplay"></a>
-    <a href="https://www.yamasoto.com/" target="_blank" class="nook-footer-by">by Yamasoto</a>
+    <span class="nook-footer-by">{% set credits_short = true %}{% include 'components/credits.html' %}</span>
   </div>
 </div>
 

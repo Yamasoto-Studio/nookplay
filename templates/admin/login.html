@@ -18,6 +18,7 @@
   .login-btn:hover { opacity: 0.9; }
   .login-error { font-size: 14px; color: #cc2222; text-align: center; margin-top: 12px; min-height: 20px; font-weight: 500; }
   .login-footer { text-align: center; margin-top: 20px; font-size: 12px; color: #A89B91; }
+  .login-footer a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 </style>
 
 <div class="login-wrap">
@@ -42,7 +43,7 @@
       <button type="submit" class="login-btn">Entrar</button>
     </form>
   </div>
-  <div class="login-footer">Nookplay by Yamasoto · Acceso restringido</div>
+  <div class="login-footer">{% include 'components/credits.html' %} · Acceso restringido</div>
 </div>
 
 {% endblock %}

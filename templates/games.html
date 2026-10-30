@@ -175,6 +175,7 @@
     font-size: 12px; color: rgba(255,255,255,0.6); text-decoration: none;
   }
   .footer-by:hover { color: white; }
+  .footer-by a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 
   /* Contact modal (igual que home) */
   .contact-modal-overlay {
@@ -364,7 +365,7 @@
 <!-- FOOTER -->
 <footer class="footer">
   <a href="/"><img src="/static/logo.svg" alt="Nookplay"></a>
-  <a href="https://www.yamasoto.com/" target="_blank" class="footer-by">by Yamasoto</a>
+  <span class="footer-by">{% include 'components/credits.html' %}</span>
 </footer>
 
 <!-- MODAL CONTACTO -->

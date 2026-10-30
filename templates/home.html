@@ -201,6 +201,7 @@
   .footer .wrap { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; font-size: 13px; color: var(--sec); }
   .footer img { width: 100px; height: auto; display: block; }
   .footer a { text-decoration: none; color: var(--sec); }
+  .footer .wrap > div a { text-decoration: underline; text-underline-offset: 2px; }
   .footer a:hover { color: var(--ink); }
   .footer-right { display: flex; align-items: center; gap: 20px; }
   .footer-by img { width: 46px; opacity: .8; }
@@ -408,7 +409,7 @@
       <a href="/admin/login">Panel de gestión</a>
       <a href="https://www.yamasoto.com/" target="_blank" rel="noopener" class="footer-by"><img src="/static/Logo_yamasoto.svg" alt="Yamasoto"></a>
     </div>
-    <div>© 2026 Nookplay by <a href="https://www.yamasoto.com/" target="_blank" rel="noopener">Yamasoto</a></div>
+    <div>{% include 'components/credits.html' %}</div>
   </div>
 </footer>
 
