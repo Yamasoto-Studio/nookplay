@@ -387,9 +387,12 @@
       <img src="/admin/qr/{{ bar.slug }}.png?size=240" alt="QR de {{ bar.name }}" width="120" height="120" style="border-radius:10px; border:1px solid #EFE7DE; flex-shrink:0; image-rendering: pixelated;">
       <div style="flex:1; min-width:200px;">
         <div style="font-size:13px; color:#6B6059; line-height:1.5; margin-bottom:4px;">Apunta a <strong style="color:#1A1A1A;">nookplay.app/{{ bar.slug }}</strong> — es fijo: imprímelo una vez y no cambia nunca, aunque cambies el código de acceso.</div>
+        <div style="font-size:12px; color:#A89B91; line-height:1.5;">¿Quieres que el QR entre directo sin pedir código? Añade <code>?code=TUCODIGO</code> al enlace de descarga (solo tiene sentido con un código fijo).</div>
         <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
           <a href="/admin/qr/{{ bar.slug }}.png?size=1600" download="nookplay-{{ bar.slug }}-qr.png"
-             style="background:#A8410E; color:white; text-decoration:none; border-radius:8px; padding:9px 16px; font-size:13px; font-weight:600; font-family:inherit;">⬇️ Descargar PNG</a>
+             style="background:#A8410E; color:white; text-decoration:none; border-radius:8px; padding:9px 16px; font-size:13px; font-weight:600; font-family:inherit;">⬇️ PNG</a>
+          <a href="/admin/qr/{{ bar.slug }}.svg" download="nookplay-{{ bar.slug }}-qr.svg"
+             style="background:#A8410E; color:white; text-decoration:none; border-radius:8px; padding:9px 16px; font-size:13px; font-weight:600; font-family:inherit;">⬇️ SVG vectorial</a>
           <button type="button" onclick="abrirCartelQR()"
              style="background:transparent; color:#1A1A1A; border:1px solid #E5DDD5; border-radius:8px; padding:9px 14px; font-size:13px; cursor:pointer; font-family:inherit;">🖨️ Cartel para imprimir</button>
         </div>

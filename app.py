@@ -2157,21 +2157,31 @@ def admin_regen_game():
     return jsonify({'ok': True, 'descartadas': len(ids), 'restantes': LIMITE_DIARIO - usadas - 1})
 
 
-@app.route('/admin/qr/<bar_slug>.png')
-@admin_required
-def admin_qr_png(bar_slug):
-    """PNG del QR de acceso del espacio (apunta a nookplay.app/<slug>).
+def _qr_destino(bar_slug):
+    """URL que codifica el QR del espacio. Con ?code=XXXX (opcional, solo letras y
+    cifras) el QR entra directo sin pedir código: útil en eventos con código fijo."""
+    code = (request.args.get('code') or '').strip().upper()
+    if code and code.isalnum() and len(code) <= 12:
+        return f"https://nookplay.app/{bar_slug}?code={code}"
+    return f"https://nookplay.app/{bar_slug}"
 
-    Generado en servidor para resolución de imprenta garantizada, sin depender
-    del navegador ni de CDNs. Cada admin solo puede pedir el QR de su espacio.
-    ?size= píxeles del lado (240 vista previa, hasta 2400 para imprenta)."""
+
+def _qr_autorizado(bar_slug):
     if session.get('admin_role') != 'superadmin' and session.get('admin_bar_slug') != bar_slug:
-        return jsonify({'ok': False, 'error': 'No autorizado'}), 403
+        return False
     db = get_db()
     bar = db.execute("SELECT id FROM bars WHERE slug = ? AND active = 1", (bar_slug,)).fetchone()
     db.close()
-    if not bar:
-        return jsonify({'ok': False, 'error': 'No encontrado'}), 404
+    return bool(bar)
+
+
+@app.route('/admin/qr/<bar_slug>.png')
+@admin_required
+def admin_qr_png(bar_slug):
+    """PNG del QR de acceso del espacio. ?size= píxeles del lado (240 vista previa,
+    hasta 2400 para imprenta). ?code= opcional para entrar directo."""
+    if not _qr_autorizado(bar_slug):
+        return jsonify({'ok': False, 'error': 'No autorizado'}), 403
     try:
         size = max(160, min(2400, int(request.args.get('size', 240))))
     except (TypeError, ValueError):
@@ -2179,10 +2189,9 @@ def admin_qr_png(bar_slug):
     import io as _io
     import qrcode as _qrcode
     qr = _qrcode.QRCode(border=2, error_correction=_qrcode.constants.ERROR_CORRECT_M)
-    qr.add_data(f"https://nookplay.app/{bar_slug}")
+    qr.add_data(_qr_destino(bar_slug))
     qr.make(fit=True)
     img = qr.make_image(fill_color="black", back_color="white")
-    # Reescalar al tamaño pedido (NEAREST mantiene los módulos nítidos, sin difuminar)
     img = img.resize((size, size), resample=0)
     buf = _io.BytesIO()
     img.save(buf, format='PNG')
@@ -2190,6 +2199,39 @@ def admin_qr_png(bar_slug):
     from flask import send_file as _send_file
     resp = _send_file(buf, mimetype='image/png')
     resp.headers['Cache-Control'] = 'no-store'
+    return resp
+
+
+@app.route('/admin/qr/<bar_slug>.svg')
+@admin_required
+def admin_qr_svg(bar_slug):
+    """SVG vectorial del mismo QR, para Illustrator, InDesign o imprenta a cualquier
+    tamaño. Módulos como un solo path, sin fondo (transparente)."""
+    if not _qr_autorizado(bar_slug):
+        return jsonify({'ok': False, 'error': 'No autorizado'}), 403
+    import qrcode as _qrcode
+    qr = _qrcode.QRCode(border=2, error_correction=_qrcode.constants.ERROR_CORRECT_M)
+    qr.add_data(_qr_destino(bar_slug))
+    qr.make(fit=True)
+    m = qr.get_matrix()
+    n = len(m)
+    partes = []
+    for y, fila in enumerate(m):
+        x = 0
+        while x < n:
+            if fila[x]:
+                x0 = x
+                while x < n and fila[x]:
+                    x += 1
+                partes.append(f"M{x0} {y}h{x - x0}v1h-{x - x0}z")
+            else:
+                x += 1
+    svg = (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {n} {n}" shape-rendering="crispEdges">'
+           f'<path d="{"".join(partes)}" fill="#000"/></svg>')
+    from flask import Response as _Response
+    resp = _Response(svg, mimetype='image/svg+xml')
+    resp.headers['Cache-Control'] = 'no-store'
+    resp.headers['Content-Disposition'] = f'attachment; filename="nookplay-{bar_slug}-qr.svg"'
     return resp
 
 
