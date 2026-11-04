@@ -106,6 +106,7 @@ async function init() {
   try {
     const res = await fetch('/api/anagrama', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG }) });
     gameData = await res.json();
+    if (gameData && gameData.error) { const e = new Error(gameData.error); e.nookAmable = true; throw e; }
     rondas = (gameData.rondas || []).filter(r => r && r.palabra && r.letras && r.pista).slice(0, 3);
     if (rondas.length < 1) throw new Error('sin rondas');
     if (gameData.tema) document.getElementById('an-tema').textContent = gameData.tema;

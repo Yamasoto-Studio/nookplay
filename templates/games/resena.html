@@ -86,6 +86,7 @@ async function init() {
       body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG })
     });
     gameData = await res.json();
+    if (gameData && gameData.error) { const e = new Error(gameData.error); e.nookAmable = true; throw e; }
     // Saneado en carga: solo reseñas completas y coherentes
     gameData.resenas = (gameData.resenas || []).filter(r =>
       r && r.texto && Array.isArray(r.opciones) && r.opciones.length >= 2 &&
@@ -95,6 +96,7 @@ async function init() {
     renderRonda(0);
     showScreen('s-juego');
   } catch(e) {
+    if (e && e.nookAmable) throw e;
     document.getElementById('s-loading').innerHTML = `
       <div class="error-msg">No se pudo cargar el juego.<br>
       <button class="btn-secondary" onclick="location.reload()">Reintentar</button></div>`;

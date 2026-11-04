@@ -79,6 +79,7 @@ async function init() {
   try {
     const res = await fetch('/api/interrogatorio', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG }) });
     G = await res.json();
+    if (G && G.error) { const e = new Error(G.error); e.nookAmable = true; throw e; }
     if (!G || !Array.isArray(G.turnos) || G.turnos.length !== 4) throw new Error('bad');
     document.getElementById('g-caso').textContent = G.caso;
     document.getElementById('g-sosp').textContent = G.sospechoso;
@@ -89,7 +90,7 @@ async function init() {
       </button>`).join('');
     showScreen('s-game'); startTime = Date.now();
   } catch(e) {
-    document.getElementById('s-loading').innerHTML = `<div class="error-msg">No se pudo cargar el caso.<br><button class="btn-secondary" onclick="location.reload()">Reintentar</button></div>`;
+    document.getElementById('s-loading').innerHTML = `<div class="error-msg">${(e && e.nookAmable && e.message) || 'No se pudo cargar el juego.'}<br><button class="btn-secondary" onclick="location.reload()">Reintentar</button></div>`;
   }
 }
 function seleccionar(i) {

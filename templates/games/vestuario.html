@@ -168,9 +168,11 @@ async function init() {
       body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG })
     });
     gameData = await res.json();
+    if (gameData && gameData.error) { const e = new Error(gameData.error); e.nookAmable = true; throw e; }
     startTime = Date.now();
     renderPregunta(0);
   } catch(e) {
+    if (e && e.nookAmable) throw e;
     document.getElementById('s-loading').innerHTML = `
       <div class="error-msg">No se pudo cargar el quiz.<br>
       <button class="btn-secondary" onclick="location.reload()">Reintentar</button></div>`;

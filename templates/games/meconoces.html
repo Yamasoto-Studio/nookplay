@@ -151,6 +151,7 @@ async function init() {
     const res = await fetch('/api/meconoces', { method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG }) });
     G = await res.json();
+    if (G && G.error) { const e = new Error(G.error); e.nookAmable = true; throw e; }
     if (!G || !Array.isArray(G.preguntas) || G.preguntas.length < 5) throw new Error('bad');
     showScreen('s-intro');
   } catch(e) {

@@ -92,10 +92,12 @@ async function init() {
       body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG })
     });
     gameData = await res.json();
+    if (gameData && gameData.error) { const e = new Error(gameData.error); e.nookAmable = true; throw e; }
     document.getElementById('co-afirmacion').textContent = gameData.afirmacion;
     showScreen('s-game');
     startTime = Date.now();
   } catch(e) {
+    if (e && e.nookAmable) throw e;
     document.getElementById('s-loading').innerHTML = `<div class="error-msg">No se pudo cargar.<br><button class="btn-secondary" onclick="location.reload()">Reintentar</button></div>`;
   }
 }

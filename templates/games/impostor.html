@@ -84,6 +84,7 @@ async function init() {
       body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG })
     });
     gameData = await res.json();
+    if (gameData && gameData.error) { const e = new Error(gameData.error); e.nookAmable = true; throw e; }
     // Saneado: 'falsa' debe ser un índice válido (resuelve por texto si hace falta)
     if (gameData && Array.isArray(gameData.afirmaciones) && gameData.afirmaciones.length) {
       let f = gameData.falsa;
@@ -98,6 +99,7 @@ async function init() {
     renderGame(gameData);
     startTime = Date.now();
   } catch(e) {
+    if (e && e.nookAmable) throw e;
     document.getElementById('s-loading').innerHTML = `
       <div class="error-msg">No se pudo cargar el reto.<br>
       <button class="btn-secondary" onclick="location.reload()">Reintentar</button></div>`;

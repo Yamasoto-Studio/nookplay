@@ -404,7 +404,7 @@ def get_categoria_impostor(bar_slug):
 # Crime generator
 # ─────────────────────────────────────────────────────────────────────────────
 
-def generate_game(bar_context, bar_slug):
+def generate_game(bar_context, bar_slug, evitar=None):
     """
     bar_context: dict generado por build_bar_context() + productos
     bar_slug: slug del bar para el seed
@@ -476,7 +476,7 @@ IMPORTANTE: "culpable" es el índice base 0 (0 = primer sospechoso) y "culpable_
     import json as _json
     raw = None
     for _intento in range(2):
-        raw = _post_ia(prompt + _bloque_knobs(), 1500, api_key)
+        raw = _post_ia(prompt + _bloque_knobs() + _bloque_evitar(evitar), 1500, api_key)
         try:
             obj = _parse_ia_json(raw)
             sosp = obj.get('sospechosos') or []
@@ -723,7 +723,7 @@ SIGNOS = [
     {"nombre": "Piscis", "emoji": "♓", "fechas": "19 feb – 20 mar"},
 ]
 
-def generate_oraculo(bar_slug):
+def generate_oraculo(bar_slug, evitar=None):
     today = str(date.today())
     from datetime import datetime
     now = datetime.now()
@@ -779,7 +779,7 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
   "frase_del_dia": "Una frase filosófica absurda que vale para todos los signos hoy"
 }"""
 
-    return _post_ia(prompt, 2500, api_key)
+    return _post_ia(prompt + _bloque_evitar(evitar), 2500, api_key)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1251,17 +1251,89 @@ ORDEN_RONDAS = [
             {"texto": "Un ciempiés común", "valor": 30, "dato": "≈30"},
         ],
     },
+    {
+        "pregunta": "Ordena estos animales del más lento al más rápido",
+        "criterio": "Velocidad máxima", "arriba": "Más lento", "abajo": "Más rápido",
+        "items": [
+            {"texto": "Tortuga gigante", "valor": 0.3, "dato": "0,3 km/h"},
+            {"texto": "Persona corriendo (récord)", "valor": 44, "dato": "44 km/h"},
+            {"texto": "Caballo de carreras", "valor": 70, "dato": "70 km/h"},
+            {"texto": "Guepardo", "valor": 110, "dato": "110 km/h"},
+            {"texto": "Halcón peregrino en picado", "valor": 380, "dato": "380 km/h"},
+        ],
+    },
+    {
+        "pregunta": "Ordena estos planetas del más pequeño al más grande",
+        "criterio": "Diámetro", "arriba": "Más pequeño", "abajo": "Más grande",
+        "items": [
+            {"texto": "Mercurio", "valor": 4879, "dato": "4.879 km"},
+            {"texto": "Marte", "valor": 6779, "dato": "6.779 km"},
+            {"texto": "La Tierra", "valor": 12742, "dato": "12.742 km"},
+            {"texto": "Neptuno", "valor": 49244, "dato": "49.244 km"},
+            {"texto": "Júpiter", "valor": 139820, "dato": "139.820 km"},
+        ],
+    },
+    {
+        "pregunta": "Ordena estas películas de la más corta a la más larga",
+        "criterio": "Duración", "arriba": "Más corta", "abajo": "Más larga",
+        "items": [
+            {"texto": "Toy Story", "valor": 81, "dato": "1 h 21 min"},
+            {"texto": "Regreso al futuro", "valor": 116, "dato": "1 h 56 min"},
+            {"texto": "Titanic", "valor": 194, "dato": "3 h 14 min"},
+            {"texto": "El señor de los anillos: El retorno del rey", "valor": 201, "dato": "3 h 21 min"},
+            {"texto": "Lo que el viento se llevó", "valor": 221, "dato": "3 h 41 min"},
+        ],
+    },
+    {
+        "pregunta": "Ordena estos edificios del más bajo al más alto",
+        "criterio": "Altura", "arriba": "Más bajo", "abajo": "Más alto",
+        "items": [
+            {"texto": "Torre de Pisa", "valor": 57, "dato": "57 m"},
+            {"texto": "Sagrada Familia (torre de Jesús)", "valor": 172, "dato": "172 m"},
+            {"texto": "Torre Eiffel", "valor": 330, "dato": "330 m"},
+            {"texto": "Empire State Building", "valor": 443, "dato": "443 m"},
+            {"texto": "Burj Khalifa", "valor": 828, "dato": "828 m"},
+        ],
+    },
+    {
+        "pregunta": "Ordena estos países de menos a más habitantes",
+        "criterio": "Población", "arriba": "Menos habitantes", "abajo": "Más habitantes",
+        "items": [
+            {"texto": "Portugal", "valor": 10.4, "dato": "10 millones"},
+            {"texto": "España", "valor": 48, "dato": "48 millones"},
+            {"texto": "Alemania", "valor": 84, "dato": "84 millones"},
+            {"texto": "Japón", "valor": 124, "dato": "124 millones"},
+            {"texto": "Brasil", "valor": 216, "dato": "216 millones"},
+        ],
+    },
+    {
+        "pregunta": "Ordena estos juegos de mesa del más antiguo al más reciente",
+        "criterio": "Año de publicación", "arriba": "Más antiguo", "abajo": "Más reciente",
+        "items": [
+            {"texto": "Monopoly", "valor": 1935, "dato": "1935"},
+            {"texto": "Scrabble", "valor": 1948, "dato": "1948"},
+            {"texto": "Trivial Pursuit", "valor": 1981, "dato": "1981"},
+            {"texto": "Catan", "valor": 1995, "dato": "1995"},
+            {"texto": "Dixit", "valor": 2008, "dato": "2008"},
+        ],
+    },
+    {
+        "pregunta": "Ordena estos instrumentos del más grave al más agudo",
+        "criterio": "Registro habitual", "arriba": "Más grave", "abajo": "Más agudo",
+        "items": [
+            {"texto": "Contrabajo", "valor": 1, "dato": "el más grave"},
+            {"texto": "Violonchelo", "valor": 2, "dato": "grave"},
+            {"texto": "Viola", "valor": 3, "dato": "medio"},
+            {"texto": "Violín", "valor": 4, "dato": "agudo"},
+            {"texto": "Flautín", "valor": 5, "dato": "el más agudo"},
+        ],
+    },
 ]
 
 
-def generate_orden(bar_slug):
-    seed = get_day_seed(bar_slug)
-    idx = seed % len(ORDEN_RONDAS)
-    ronda = ORDEN_RONDAS[idx]
+def _barajar_orden(ronda, seed):
     n = len(ronda["items"])
-    # Orden correcto: índices de items ordenados por "valor" ascendente (menor arriba)
     orden_correcto = sorted(range(n), key=lambda i: ronda["items"][i]["valor"])
-    # Barajado inicial determinista que NO coincida con el orden correcto
     rot = (seed % (n - 1)) + 1
     barajado = list(range(n))
     barajado = barajado[rot:] + barajado[:rot]
@@ -1281,11 +1353,61 @@ def generate_orden(bar_slug):
     }
 
 
+def generate_orden(bar_slug, evitar=None):
+    """EL ORDEN. En espacios con tema de evento, la IA escribe la ronda (ambientada
+    y distinta cada día); sin tema, rota el banco fijo ORDEN_RONDAS evitando las
+    preguntas recientes."""
+    seed = get_day_seed(bar_slug)
+    if get_event_theme():
+        api_key = os.environ.get('ANTHROPIC_API_KEY')
+        prompt = f"""Eres el redactor de EL ORDEN, un juego de un minuto: cinco cosas que el jugador debe ordenar según un criterio numérico (año, tamaño, duración, precio, distancia, altura, cantidad...).
+
+SEED: {seed} (varía el criterio y los elementos entre días).
+
+REGLAS:
+1. "pregunta": la consigna en imperativo (máx. 12 palabras). "criterio": qué se ordena (ej.: "Año de estreno"). "arriba" y "abajo": etiquetas de los extremos (ej.: "Más antiguo" / "Más reciente").
+2. 5 "items", cada uno con "texto" (máx. 7 palabras), "valor" (número REAL y verificable con el que se ordena; nada inventado) y "dato" (el valor con su unidad para mostrarlo al resolver, ej.: "1969", "8.849 m", "2 h 49 min").
+3. Los 5 valores deben ser claramente distintos entre sí (sin empates ni valores casi iguales) y el orden no debe ser obvio para todo el mundo: que dos o tres parejas hagan dudar.
+4. Si hay UNIVERSO TEMÁTICO arriba, los elementos pertenecen a él, pero con valores que puedas afirmar con seguridad; si de un elemento solo conoces el nombre, no lo uses.
+5. Neutro, apto para todos los públicos, en español.
+
+Responde SOLO con este JSON, sin markdown:
+{{"pregunta": "...", "criterio": "...", "arriba": "...", "abajo": "...", "items": [{{"texto": "...", "valor": 1969, "dato": "1969"}}]}}""" + _bloque_knobs() + _bloque_evitar(evitar)
+        intentos = 3 if get_ia_mode() == 'batch' else 2
+        for _ in range(intentos):
+            try:
+                obj = _parse_ia_json(_post_ia(prompt, 900, api_key))
+                items = []
+                for it in (obj.get('items') or []):
+                    if not isinstance(it, dict) or not str(it.get('texto', '')).strip():
+                        continue
+                    try:
+                        v = float(it.get('valor'))
+                    except (TypeError, ValueError):
+                        continue
+                    items.append({'texto': ' '.join(str(it['texto']).split())[:60], 'valor': v, 'dato': ' '.join(str(it.get('dato') or it['valor']).split())[:30]})
+                vals = [i['valor'] for i in items]
+                if len(items) != 5 or len(set(vals)) != 5:
+                    continue
+                ronda = {'pregunta': ' '.join(str(obj.get('pregunta') or 'Ordena estos elementos').split())[:120],
+                         'criterio': ' '.join(str(obj.get('criterio') or '').split())[:60],
+                         'arriba': ' '.join(str(obj.get('arriba') or 'Menor').split())[:30],
+                         'abajo': ' '.join(str(obj.get('abajo') or 'Mayor').split())[:30],
+                         'items': items}
+                return _barajar_orden(ronda, seed)
+            except Exception:
+                continue
+        # Si la IA falla, cae al banco fijo
+    recientes = {str(e).strip().lower() for e in (evitar or [])}
+    candidatas = [r for r in ORDEN_RONDAS if r['pregunta'].strip().lower() not in recientes] or ORDEN_RONDAS
+    ronda = candidatas[seed % len(candidatas)]
+    return _barajar_orden(ronda, seed)
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Conexión Local — juego hiperlocal generado por IA
 # ─────────────────────────────────────────────────────────────────────────────
 
-def generate_conexion_local(bar_name, bar_city, bar_province, bar_slug):
+def generate_conexion_local(bar_name, bar_city, bar_province, bar_slug, evitar=None):
     today = str(date.today())
     from datetime import datetime
     dia_semana = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"][datetime.now().weekday()]
@@ -1340,7 +1462,7 @@ IMPORTANTE para trivia: opciones y correcta son obligatorios. Para los demás ti
     result = None
     obj = None
     for _intento in range(2):
-        result = _post_ia(prompt, 1200, api_key)
+        result = _post_ia(prompt + _bloque_evitar(evitar), 1200, api_key)
         try:
             obj = _parse_ia_json(result)
             # Solo el tipo trivia lleva opciones; los demás pasan sin anclaje
@@ -3031,7 +3153,7 @@ REGLAS:
 # Mente Ágil generator (psicotécnico, 3 preguntas)
 # ─────────────────────────────────────────────────────────────────────────────
 
-def generate_menteagil(bar_slug):
+def generate_menteagil(bar_slug, evitar=None):
     today = str(date.today())
     api_key = os.environ.get('ANTHROPIC_API_KEY')
     seed = get_day_seed(bar_slug)
@@ -3081,7 +3203,7 @@ Devuelve SOLO un objeto JSON válido, sin markdown:
     # En pre-generación (batch) hay tiempo para un tercer intento; en caliente, dos.
     _intentos = 3 if get_ia_mode() == 'batch' else 2
     for _intento in range(_intentos):
-        raw = _post_ia(prompt, 1100, api_key)
+        raw = _post_ia(prompt + _bloque_evitar(evitar), 1100, api_key)
         try:
             obj = _parse_ia_json(raw)
             pr = [p for p in (obj.get('preguntas') or [])

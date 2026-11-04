@@ -113,6 +113,7 @@ async function init() {
   try {
     const res = await fetch('/api/papel', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG }) });
     gameData = await res.json();
+    if (gameData && gameData.error) { const e = new Error(gameData.error); e.nookAmable = true; throw e; }
     gameData.papeles = (gameData.papeles || []).filter(p => p && p.titulo && p.descripcion && p.mision);
     if (!gameData.papeles.length) throw new Error('sin papeles');
     gameData.preguntas = (gameData.preguntas || []).filter(q => q && q.pregunta && q.a && q.b).slice(0, 3);
@@ -126,6 +127,7 @@ async function init() {
       showScreen('s-juego');
     }
   } catch(e) {
+    if (e && e.nookAmable) throw e;
     document.getElementById('s-loading').innerHTML = `<div class="error-msg">No se pudo repartir tu papel.<br><button class="btn-secondary" onclick="location.reload()">Reintentar</button></div>`;
   }
 }

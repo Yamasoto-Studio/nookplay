@@ -118,6 +118,7 @@ async function init() {
   try {
     const res = await fetch('/api/prototipo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG }) });
     gameData = await res.json();
+    if (gameData && gameData.error) { const e = new Error(gameData.error); e.nookAmable = true; throw e; }
     if (!Array.isArray(gameData.ejes) || gameData.ejes.length !== 3 || !Array.isArray(gameData.piezas) || !gameData.piezas.length) throw new Error('sin piezas');
     const c = copy();
     document.getElementById('pt-h2').textContent = c.h2;

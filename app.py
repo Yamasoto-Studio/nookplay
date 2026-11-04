@@ -222,6 +222,7 @@ def migrate_db():
         "ALTER TABLE plays ADD COLUMN choice INTEGER DEFAULT -1",
         "ALTER TABLE plays ADD COLUMN elapsed INTEGER DEFAULT 0",
         "ALTER TABLE plays ADD COLUMN answer_text TEXT DEFAULT ''",
+        "ALTER TABLE plays ADD COLUMN player_name TEXT DEFAULT ''",
     ]
     for sql in migrations:
         try:
@@ -451,7 +452,7 @@ def generate_weekly_codes():
     db.commit()
     db.close()
 
-def get_historial_reciente(db, game_type, bar_slug=None, dias=10, campo='titulo'):
+def get_historial_reciente(db, game_type, bar_slug=None, dias=30, campo='titulo'):
     """Recupera contenidos recientes de un juego para evitar repeticiones.
     Devuelve una lista de strings (el campo indicado de cada contenido)."""
     import json as _json
@@ -544,11 +545,124 @@ def get_historial_reciente(db, game_type, bar_slug=None, dias=10, campo='titulo'
                 for p in data['preguntas']:
                     if isinstance(p, dict) and p.get('enunciado'):
                         items.append(p['enunciado'][:90])
+            elif campo == 'crimen' and data.get('titular'):
+                items.append(str(data['titular'])[:90] + (' · culpable: ' + str(data.get('culpable') or '')[:40] if data.get('culpable') else ''))
+            elif campo == 'oraculo' and isinstance(data.get('signos'), list):
+                for x in data['signos'][:3]:
+                    if isinstance(x, dict) and x.get('prediccion'):
+                        items.append(str(x['prediccion'])[:70])
+            elif campo == 'menteagil' and isinstance(data.get('ejercicios'), list):
+                for x in data['ejercicios']:
+                    if isinstance(x, dict) and x.get('enunciado'):
+                        items.append(str(x['enunciado'])[:90])
             elif campo in data and data[campo]:
                 items.append(str(data[campo]))
         except Exception:
             continue
-    return items[:30]
+    # Deduplicar conservando orden (lo más reciente primero) y acotar
+    vistos, out = set(), []
+    for it in items:
+        k = _norm_rep(it)
+        if k and k not in vistos:
+            vistos.add(k); out.append(it)
+    return out[:120]
+
+
+def _norm_rep(s):
+    """Normaliza para comparar repeticiones: minúsculas, sin tildes ni signos."""
+    import unicodedata as _u
+    s = _u.normalize('NFKD', str(s or '')).encode('ascii', 'ignore').decode()
+    return ' '.join(''.join(c if c.isalnum() or c.isspace() else ' ' for c in s.lower()).split())
+
+
+# Claves de cada juego que no deben repetirse respecto al historial. Devuelve
+# la lista de textos "identidad" de una pieza recién generada.
+def _claves_pieza(game_type, data):
+    try:
+        if game_type == 'emoji':
+            return [r.get('respuesta') for r in data.get('rondas', []) if isinstance(r, dict)]
+        if game_type == 'anagrama':
+            return [r.get('palabra') for r in data.get('rondas', []) if isinstance(r, dict)]
+        if game_type == 'sopa':
+            return [r.get('palabra') for r in data.get('palabras', []) if isinstance(r, dict)]
+        if game_type == 'trivia':
+            return [q.get('pregunta') for q in data.get('preguntas', []) if isinstance(q, dict)]
+        if game_type in ('sinopsis', 'letra'):
+            return [data.get('respuesta')] if data.get('respuesta') else [o for o in data.get('opciones', []) if isinstance(o, str)][:1]
+        if game_type == 'crimen':
+            return [data.get('titular')]
+        if game_type == 'veredicto':
+            return [data.get('titulo')]
+        if game_type == 'perfil':
+            return [data.get('nombre')]
+        if game_type == 'impostor':
+            return [data.get('tema')]
+        if game_type == 'dilema':
+            return [data.get('situacion')]
+        if game_type == 'definicion':
+            return [data.get('palabra')]
+        if game_type == 'titular':
+            return [data.get('titular')]
+        if game_type == 'donde':
+            return [data.get('lugar')]
+        if game_type == 'muertes':
+            return [data.get('titulo')]
+        if game_type == 'efemeride':
+            return [e.get('texto') for e in data.get('efemerides', []) if isinstance(e, dict)]
+        if game_type == 'meconoces':
+            return [q.get('q') for q in data.get('preguntas', []) if isinstance(q, dict)]
+        if game_type == 'interrogatorio':
+            return [data.get('caso')]
+        if game_type == 'testigo':
+            return [data.get('titulo')]
+        if game_type == 'resena':
+            return [o for o in data.get('objetos', []) if isinstance(o, str)]
+        if game_type == 'quienmas':
+            return [a for a in data.get('afirmaciones', []) if isinstance(a, str)]
+        if game_type == 'vestuario':
+            return [p.get('curiosidad') for p in data.get('preguntas', []) if isinstance(p, dict)]
+        if game_type == 'escalera':
+            return [p.get('enunciado') for p in data.get('preguntas', []) if isinstance(p, dict)]
+        if game_type == 'masomenos':
+            return [r.get('pregunta') for r in data.get('rondas', []) if isinstance(r, dict)]
+        if game_type == 'menteagil':
+            return [e.get('enunciado') for e in data.get('ejercicios', []) if isinstance(e, dict)]
+        if game_type == 'local':
+            return [data.get('titulo')]
+        if game_type == 'orden':
+            return [data.get('pregunta')]
+    except Exception:
+        pass
+    return []
+
+
+def _repite(game_type, data, historial):
+    """True si alguna clave de la pieza nueva ya está en el historial reciente.
+    Devuelve también qué repite, para el log."""
+    if not historial:
+        return False, None
+    hist = {_norm_rep(h) for h in historial}
+    hist_txt = ' | '.join(hist)
+    for c in _claves_pieza(game_type, data):
+        k = _norm_rep(c)
+        if not k or len(k) < 4:
+            continue
+        if k in hist or (len(k) >= 12 and k in hist_txt):
+            return True, c
+    return False, None
+
+
+def generar_sin_repetir(game_type, historial, fn, intentos=3):
+    """Llama a fn() hasta `intentos` veces y descarta las piezas que repiten
+    contenido reciente. Si todas repiten, devuelve la última (mejor algo que nada)."""
+    ultimo = None
+    for i in range(intentos):
+        ultimo = fn()
+        rep, que = _repite(game_type, ultimo, historial)
+        if not rep:
+            return ultimo
+        print(f"[ANTIREP] {game_type}: repetía «{str(que)[:60]}», regenerando ({i + 1}/{intentos})")
+    return ultimo
 
 
 def _theme_de(bar):
@@ -824,20 +938,21 @@ def _pregen_daily_games_impl(solo_bar_slug, forzar, today, resumen):
                     if game_type == 'crimen':
                         ctx = build_bar_context(dict(bar))
                         ctx['productos'] = [p['title'] for p in products]
+                        ev = get_historial_reciente(db, 'crimen', bar['slug'], campo='crimen')
                         _ktok = set_game_knobs(_knobs_de(db, bar['id'], 'crimen'))
                         try:
-                            game_data = generate_game(ctx, bar['slug'])
+                            game_data = generar_sin_repetir('crimen', ev, lambda: generate_game(ctx, bar['slug'], evitar=ev))
                         finally:
                             reset_game_knobs(_ktok)
                     elif game_type == 'impostor':
                         ev = get_historial_reciente(db, 'impostor', bar['slug'], campo='tema')
-                        game_data = generate_impostor(bar['name'], bar['slug'], evitar=ev)
+                        game_data = generar_sin_repetir('impostor', ev, lambda: generate_impostor(bar['name'], bar['slug'], evitar=ev))
                     elif game_type == 'dilema':
                         ev = get_historial_reciente(db, 'dilema', bar['slug'], campo='situacion')
-                        game_data = generate_dilema(bar['name'], bar['slug'], evitar=ev)
+                        game_data = generar_sin_repetir('dilema', ev, lambda: generate_dilema(bar['name'], bar['slug'], evitar=ev))
                     elif game_type == 'conexiones':
                         ev = get_historial_reciente(db, 'conexiones', bar['slug'], campo='conexiones_grupos')
-                        game_data = generate_conexiones(bar['name'], bar['slug'], evitar=ev)
+                        game_data = generar_sin_repetir('conexiones', ev, lambda: generate_conexiones(bar['name'], bar['slug'], evitar=ev))
                     elif game_type == 'oraculo':
                         # Oráculo es único para todos los bares — solo generar una vez
                         existing_oraculo = db.execute(
@@ -846,7 +961,8 @@ def _pregen_daily_games_impl(solo_bar_slug, forzar, today, resumen):
                         ).fetchone()
                         if existing_oraculo:
                             continue
-                        game_data = generate_oraculo(bar['slug'])
+                        ev = get_historial_reciente(db, 'oraculo', None, campo='oraculo')
+                        game_data = generar_sin_repetir('oraculo', ev, lambda: generate_oraculo(bar['slug'], evitar=ev))
                     elif game_type == 'donde':
                         # Dónde es único para todos los bares — solo generar una vez
                         existing_donde = db.execute(
@@ -856,63 +972,64 @@ def _pregen_daily_games_impl(solo_bar_slug, forzar, today, resumen):
                         if existing_donde:
                             continue
                         ev = get_historial_reciente(db, 'donde', None, campo='lugar')
-                        game_data = generate_donde(bar['slug'], evitar=ev)
+                        game_data = generar_sin_repetir('donde', ev, lambda: generate_donde(bar['slug'], evitar=ev))
                     elif game_type == 'local':
                         city = bar['city'] or ''
                         province = bar['province'] or city
                         if not city:
                             continue  # Sin ciudad no se puede generar Conexión Local
-                        game_data = generate_conexion_local(bar['name'], city, province, bar['slug'])
+                        ev = get_historial_reciente(db, 'local', bar['slug'], campo='titulo')
+                        game_data = generar_sin_repetir('local', ev, lambda: generate_conexion_local(bar['name'], city, province, bar['slug'], evitar=ev))
                     elif game_type == 'veredicto':
                         ev = get_historial_reciente(db, 'veredicto', bar['slug'], campo='titulo')
-                        game_data = generate_veredicto(bar['name'], bar['slug'], evitar=ev)
+                        game_data = generar_sin_repetir('veredicto', ev, lambda: generate_veredicto(bar['name'], bar['slug'], evitar=ev))
                     elif game_type == 'perfil':
                         ev = get_historial_reciente(db, 'perfil', bar['slug'], campo='nombre')
-                        game_data = generate_perfil(bar['slug'], evitar=ev)
+                        game_data = generar_sin_repetir('perfil', ev, lambda: generate_perfil(bar['slug'], evitar=ev))
                     elif game_type == 'resena':
                         ev = get_historial_reciente(db, 'resena', bar['slug'], campo='objetos')
-                        game_data = generate_resena(bar['slug'], evitar=ev)
+                        game_data = generar_sin_repetir('resena', ev, lambda: generate_resena(bar['slug'], evitar=ev))
                     elif game_type == 'papel':
                         ev = get_historial_reciente(db, 'papel', bar['slug'], campo='papeles')
-                        game_data = generate_papel(bar['slug'], evitar=ev)
+                        game_data = generar_sin_repetir('papel', ev, lambda: generate_papel(bar['slug'], evitar=ev))
                     elif game_type == 'prototipo':
                         ev = get_historial_reciente(db, 'prototipo', bar['slug'], campo='prototipo')
-                        game_data = generate_prototipo(bar['slug'], preset=_preset_prototipo(db, bar['id']), evitar=ev)
+                        game_data = generar_sin_repetir('prototipo', ev, lambda: generate_prototipo(bar['slug'], preset=_preset_prototipo(db, bar['id']), evitar=ev))
                     elif game_type == 'sopa':
                         ev = get_historial_reciente(db, 'sopa', bar['slug'], campo='sopa')
-                        game_data = generate_sopa(bar['slug'], evitar=ev)
+                        game_data = generar_sin_repetir('sopa', ev, lambda: generate_sopa(bar['slug'], evitar=ev))
                     elif game_type == 'anagrama':
                         ev = get_historial_reciente(db, 'anagrama', bar['slug'], campo='anagrama')
-                        game_data = generate_anagrama(bar['slug'], evitar=ev)
+                        game_data = generar_sin_repetir('anagrama', ev, lambda: generate_anagrama(bar['slug'], evitar=ev))
                     elif game_type == 'emoji':
                         ev = get_historial_reciente(db, 'emoji', bar['slug'], campo='emoji')
-                        game_data = generate_emoji(bar['slug'], evitar=ev)
+                        game_data = generar_sin_repetir('emoji', ev, lambda: generate_emoji(bar['slug'], evitar=ev))
                     elif game_type == 'efemeride':
                         ev = get_historial_reciente(db, 'efemeride', bar['slug'], campo='efemeride')
                         _ktok = set_game_knobs(_knobs_de(db, bar['id'], 'efemeride'))
                         try:
-                            game_data = generate_efemeride(bar['slug'], evitar=ev)
+                            game_data = generar_sin_repetir('efemeride', ev, lambda: generate_efemeride(bar['slug'], evitar=ev))
                         finally:
                             reset_game_knobs(_ktok)
                     elif game_type == 'meconoces':
                         ev = get_historial_reciente(db, 'meconoces', bar['slug'], campo='meconoces')
                         _ktok = set_game_knobs(_knobs_de(db, bar['id'], 'meconoces'))
                         try:
-                            game_data = generate_meconoces(bar['slug'], evitar=ev)
+                            game_data = generar_sin_repetir('meconoces', ev, lambda: generate_meconoces(bar['slug'], evitar=ev))
                         finally:
                             reset_game_knobs(_ktok)
                     elif game_type == 'interrogatorio':
                         ev = get_historial_reciente(db, 'interrogatorio', bar['slug'], campo='interrogatorio')
                         _ktok = set_game_knobs(_knobs_de(db, bar['id'], 'interrogatorio'))
                         try:
-                            game_data = generate_interrogatorio(bar['slug'], evitar=ev)
+                            game_data = generar_sin_repetir('interrogatorio', ev, lambda: generate_interrogatorio(bar['slug'], evitar=ev))
                         finally:
                             reset_game_knobs(_ktok)
                     elif game_type == 'testigo':
                         ev = get_historial_reciente(db, 'testigo', bar['slug'], campo='testigo')
                         _ktok = set_game_knobs(_knobs_de(db, bar['id'], 'testigo'))
                         try:
-                            game_data = generate_testigo(bar['slug'], evitar=ev)
+                            game_data = generar_sin_repetir('testigo', ev, lambda: generate_testigo(bar['slug'], evitar=ev))
                         finally:
                             reset_game_knobs(_ktok)
                     elif game_type == 'vestuario':
@@ -921,7 +1038,7 @@ def _pregen_daily_games_impl(solo_bar_slug, forzar, today, resumen):
                         try:
                             _ktok = set_game_knobs(_knobs_de(get_db(), bar['id'], 'vestuario'))
                             try:
-                                game_data = generate_vestuario(bar['slug'], evitar=ev)
+                                game_data = generar_sin_repetir('vestuario', ev, lambda: generate_vestuario(bar['slug'], evitar=ev))
                             finally:
                                 reset_game_knobs(_ktok)
                         finally:
@@ -932,7 +1049,7 @@ def _pregen_daily_games_impl(solo_bar_slug, forzar, today, resumen):
                         try:
                             _ktok = set_game_knobs(_knobs_de(get_db(), bar['id'], 'trivia'))
                             try:
-                                game_data = generate_trivia(bar['slug'], evitar=ev)
+                                game_data = generar_sin_repetir('trivia', ev, lambda: generate_trivia(bar['slug'], evitar=ev))
                             finally:
                                 reset_game_knobs(_ktok)
                         finally:
@@ -947,7 +1064,7 @@ def _pregen_daily_games_impl(solo_bar_slug, forzar, today, resumen):
                             if existing:
                                 continue
                         ev = get_historial_reciente(db, 'sinopsis', bar['slug'] if _es_evento_bar else None, campo='opciones')
-                        game_data = generate_sinopsis(bar['slug'], evitar=ev)
+                        game_data = generar_sin_repetir('sinopsis', ev, lambda: generate_sinopsis(bar['slug'], evitar=ev))
                     elif game_type == 'muertes':
                         existing = db.execute(
                             "SELECT id FROM generated_games WHERE game_type = 'muertes' AND game_date = ?",
@@ -956,7 +1073,7 @@ def _pregen_daily_games_impl(solo_bar_slug, forzar, today, resumen):
                         if existing:
                             continue
                         ev = get_historial_reciente(db, 'muertes', None, campo='titulo')
-                        game_data = generate_muertes(bar['slug'], evitar=ev)
+                        game_data = generar_sin_repetir('muertes', ev, lambda: generate_muertes(bar['slug'], evitar=ev))
                     elif game_type == 'letra':
                         if not _es_evento_bar:
                             existing = db.execute(
@@ -966,7 +1083,7 @@ def _pregen_daily_games_impl(solo_bar_slug, forzar, today, resumen):
                             if existing:
                                 continue
                         ev = get_historial_reciente(db, 'letra', bar['slug'] if _es_evento_bar else None, campo='opciones')
-                        game_data = generate_letra(bar['slug'], evitar=ev)
+                        game_data = generar_sin_repetir('letra', ev, lambda: generate_letra(bar['slug'], evitar=ev))
                     elif game_type == 'pensamiento':
                         existing = db.execute(
                             "SELECT id FROM generated_games WHERE game_type = 'pensamiento' AND game_date = ?",
@@ -975,7 +1092,7 @@ def _pregen_daily_games_impl(solo_bar_slug, forzar, today, resumen):
                         if existing:
                             continue
                         ev = get_historial_reciente(db, 'pensamiento', None, campo='categoria')
-                        game_data = generate_pensamiento(bar['slug'], evitar=ev)
+                        game_data = generar_sin_repetir('pensamiento', ev, lambda: generate_pensamiento(bar['slug'], evitar=ev))
                     elif game_type == 'menteagil':
                         existing = db.execute(
                             "SELECT id FROM generated_games WHERE game_type = 'menteagil' AND game_date = ?",
@@ -983,7 +1100,8 @@ def _pregen_daily_games_impl(solo_bar_slug, forzar, today, resumen):
                         ).fetchone()
                         if existing:
                             continue
-                        game_data = generate_menteagil(bar['slug'])
+                        ev = get_historial_reciente(db, 'menteagil', None, campo='menteagil')
+                        game_data = generar_sin_repetir('menteagil', ev, lambda: generate_menteagil(bar['slug'], evitar=ev))
                     elif game_type == 'constitucion':
                         existing = db.execute(
                             "SELECT id FROM generated_games WHERE game_type = 'constitucion' AND game_date = ?",
@@ -1000,7 +1118,7 @@ def _pregen_daily_games_impl(solo_bar_slug, forzar, today, resumen):
                         if existing:
                             continue
                         ev = get_historial_reciente(db, 'titular', None, campo='titular')
-                        game_data = generate_titular(bar['slug'], evitar=ev)
+                        game_data = generar_sin_repetir('titular', ev, lambda: generate_titular(bar['slug'], evitar=ev))
                     elif game_type == 'definicion':
                         existing = db.execute(
                             "SELECT id FROM generated_games WHERE game_type = 'definicion' AND game_date = ?",
@@ -1009,7 +1127,7 @@ def _pregen_daily_games_impl(solo_bar_slug, forzar, today, resumen):
                         if existing:
                             continue
                         ev = get_historial_reciente(db, 'definicion', None, campo='palabra')
-                        game_data = generate_definicion(bar['slug'], evitar=ev)
+                        game_data = generar_sin_repetir('definicion', ev, lambda: generate_definicion(bar['slug'], evitar=ev))
                     elif game_type == 'masomenos':
                         if not _es_evento_bar:
                             existing = db.execute(
@@ -1019,7 +1137,7 @@ def _pregen_daily_games_impl(solo_bar_slug, forzar, today, resumen):
                             if existing:
                                 continue
                         ev = get_historial_reciente(db, 'masomenos', bar['slug'] if _es_evento_bar else None, campo='masomenos_preguntas')
-                        game_data = generate_masomenos(bar['slug'], evitar=ev)
+                        game_data = generar_sin_repetir('masomenos', ev, lambda: generate_masomenos(bar['slug'], evitar=ev))
                     elif game_type == 'escalera':
                         if not _es_evento_bar:
                             existing = db.execute(
@@ -1029,11 +1147,12 @@ def _pregen_daily_games_impl(solo_bar_slug, forzar, today, resumen):
                             if existing:
                                 continue
                         ev = get_historial_reciente(db, 'escalera', bar['slug'] if _es_evento_bar else None, campo='escalera_enunciados')
-                        game_data = generate_escalera(bar['slug'], evitar=ev)
+                        game_data = generar_sin_repetir('escalera', ev, lambda: generate_escalera(bar['slug'], evitar=ev))
                     elif game_type == 'orden':
                         if not _es_evento_bar:
                             continue  # bares: El Orden se genera bajo demanda, como siempre
-                        game_data = generate_orden(bar['slug'])
+                        ev = get_historial_reciente(db, 'orden', bar['slug'], campo='pregunta')
+                        game_data = generar_sin_repetir('orden', ev, lambda: generate_orden(bar['slug'], evitar=ev))
                     elif game_type == 'quienmas':
                         if not _es_evento_bar:
                             existing = db.execute(
@@ -1043,7 +1162,7 @@ def _pregen_daily_games_impl(solo_bar_slug, forzar, today, resumen):
                             if existing:
                                 continue
                         ev = get_historial_reciente(db, 'quienmas', bar['slug'] if _es_evento_bar else None, campo='afirmaciones')
-                        game_data = generate_quienmas(bar['slug'], evitar=ev)
+                        game_data = generar_sin_repetir('quienmas', ev, lambda: generate_quienmas(bar['slug'], evitar=ev))
                     
                     import json as _json
                     db.execute(
@@ -3040,6 +3159,7 @@ def register_play():
     choice = data.get('choice', -1)
     elapsed = data.get('elapsed', 0)
     device_id = (data.get('device_id') or '').strip()[:40]
+    player_name = _nombre_limpio(data.get('player_name'))
     today = str(date.today())
 
     db = get_db()
@@ -3062,18 +3182,88 @@ def register_play():
     # Cuando llega el resultado final, se completa esa misma fila en vez de insertar otra.
     if not played:
         db.execute(
-            "INSERT INTO plays (code, bar_slug, played_on, correct, game_type, choice, elapsed, played_at, device_id) VALUES (?,?,?,?,?,?,?,?,?)",
-            (code, bar_slug, today, 1 if correct else 0, game_type, choice, elapsed, now_madrid_iso(), device_id)
+            "INSERT INTO plays (code, bar_slug, played_on, correct, game_type, choice, elapsed, played_at, device_id, player_name) VALUES (?,?,?,?,?,?,?,?,?,?)",
+            (code, bar_slug, today, 1 if correct else 0, game_type, choice, elapsed, now_madrid_iso(), device_id, player_name)
         )
         db.commit()
     elif played['choice'] == -2 and choice != -2:
         db.execute(
-            "UPDATE plays SET correct = ?, choice = ?, elapsed = ?, played_at = ? WHERE id = ?",
-            (1 if correct else 0, choice, elapsed, now_madrid_iso(), played['id'])
+            "UPDATE plays SET correct = ?, choice = ?, elapsed = ?, played_at = ?, player_name = COALESCE(NULLIF(?, ''), player_name) WHERE id = ?",
+            (1 if correct else 0, choice, elapsed, now_madrid_iso(), player_name, played['id'])
         )
+        db.commit()
+    elif player_name:
+        # Repite el mismo juego: no infla, pero si ahora se ha puesto nombre lo guardamos
+        db.execute("UPDATE plays SET player_name = ? WHERE id = ? AND (player_name IS NULL OR player_name = '')", (player_name, played['id']))
         db.commit()
     db.close()
     return jsonify({'ok': True})
+
+def _nombre_limpio(n):
+    """Nombre de jugador opcional: corto, sin datos de contacto ni palabrotas."""
+    n = ' '.join(str(n or '').split())[:16]
+    if not n:
+        return ''
+    if '@' in n or any(ch.isdigit() for ch in n) and sum(ch.isdigit() for ch in n) >= 4:
+        return ''
+    try:
+        if _texto_sospechoso(n):
+            return ''
+    except Exception:
+        pass
+    return n
+
+
+# Qué significa "mejor" en cada juego para la tabla del día: ('campo', orden, etiqueta, formato)
+# choice guarda aciertos (o puntos) y elapsed segundos. Juegos sin marcador no aparecen.
+TABLA_DIA = {
+    'trivia':        ('choice', 'DESC', 'aciertos', '{v}/5'),
+    'anagrama':      ('elapsed', 'ASC', 'tiempo', '{v} s'),
+    'sopa':          ('elapsed', 'ASC', 'tiempo', '{v} s'),
+    'emoji':         ('choice', 'DESC', 'aciertos', '{v}/5'),
+    'escalera':      ('choice', 'DESC', 'escalones', '{v}'),
+    'menteagil':     ('choice', 'DESC', 'aciertos', '{v}/3'),
+    'testigo':       ('choice', 'DESC', 'detalles', '{v}/3'),
+    'meconoces':     ('choice', 'DESC', 'aciertos', '{v}/5'),
+    'vestuario':     ('choice', 'DESC', 'aciertos', '{v}'),
+    'conexiones':    ('elapsed', 'ASC', 'tiempo', '{v} s'),
+    'reinas':        ('elapsed', 'ASC', 'tiempo', '{v} s'),
+    'equilibrio':    ('elapsed', 'ASC', 'tiempo', '{v} s'),
+    'carta':         ('elapsed', 'ASC', 'tiempo', '{v} s'),
+    'orden':         ('elapsed', 'ASC', 'tiempo', '{v} s'),
+    'masomenos':     ('choice', 'DESC', 'puntos', '{v}'),
+    'quienmas':      ('choice', 'DESC', 'coincidencias', '{v}'),
+    'freep':         ('choice', 'DESC', 'puntos', '{v}'),
+}
+
+
+@app.route('/api/tabla/<bar_slug>/<game_type>')
+def tabla_dia(bar_slug, game_type):
+    """Top 5 de hoy en este espacio para un juego, solo partidas con nombre.
+    ?device_id= marca cuál es la fila del que mira. Se vacía cada día."""
+    cfg = TABLA_DIA.get(game_type)
+    if not cfg:
+        return jsonify({'filas': [], 'etiqueta': ''})
+    campo, orden, etiqueta, fmt = cfg
+    today = str(date.today())
+    device_id = (request.args.get('device_id') or '')[:40]
+    db = get_db()
+    cond = "correct = 1 AND elapsed > 0" if campo == 'elapsed' else "choice >= 0"
+    rows = db.execute(
+        f"SELECT player_name, choice, elapsed, device_id FROM plays WHERE bar_slug = ? AND game_type = ? AND played_on = ? AND player_name != '' AND {cond} ORDER BY {campo} {orden}, played_at ASC LIMIT 5",
+        (bar_slug, game_type, today)).fetchall()
+    mi = None
+    if device_id:
+        mi = db.execute(
+            f"SELECT choice, elapsed FROM plays WHERE bar_slug = ? AND game_type = ? AND played_on = ? AND device_id = ? AND {cond}",
+            (bar_slug, game_type, today, device_id)).fetchone()
+    db.close()
+    filas = [{'nombre': r['player_name'], 'valor': fmt.format(v=r[campo]), 'yo': bool(device_id and r['device_id'] == device_id)} for r in rows]
+    out = {'filas': filas, 'etiqueta': etiqueta}
+    if mi and not any(f['yo'] for f in filas):
+        out['mio'] = fmt.format(v=mi[campo])
+    return jsonify(out)
+
 
 @app.route('/api/stats/<bar_slug>/<game_type>')
 def game_stats(bar_slug, game_type):
@@ -5776,7 +5966,8 @@ def orden_api():
             return jsonify(_json.loads(pre['content']))
         _tok = set_event_theme(_theme_de(bar))
         try:
-            game_data = generate_orden(bar_slug)
+            _dbo = get_db(); _evo = get_historial_reciente(_dbo, 'orden', bar_slug, campo='pregunta'); _dbo.close()
+            game_data = generate_orden(bar_slug, evitar=_evo)
         finally:
             reset_event_theme(_tok)
         _persistir_generado(bar['id'], 'orden', game_data, es_global=False)

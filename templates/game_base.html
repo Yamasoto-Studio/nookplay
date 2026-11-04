@@ -12,7 +12,7 @@
   }
 </style>
 
-<link rel="stylesheet" href="/static/css/games.css?v=2">
+<link rel="stylesheet" href="/static/css/games.css?v=3">
 <script>
 (function(){
   // Identificador anónimo de dispositivo (un valor aleatorio en el navegador, SIN datos
@@ -30,6 +30,12 @@
   }
   window.nookDeviceId = nookDeviceId;
 
+  // Nombre de jugador OPCIONAL, guardado solo en este navegador (sin cuenta ni email).
+  // Sirve para la tabla del día del espacio. Se cambia o borra tocándolo.
+  function nookNombre(){ try { return (localStorage.getItem('nook_nombre') || '').slice(0, 16); } catch(e){ return ''; } }
+  function nookSetNombre(n){ try { n = (n || '').trim().slice(0, 16); if (n) localStorage.setItem('nook_nombre', n); else localStorage.removeItem('nook_nombre'); } catch(e){} return nookNombre(); }
+  window.nookNombre = nookNombre; window.nookSetNombre = nookSetNombre;
+
   // Inyecta device_id en TODAS las llamadas /api/ con body JSON, sin tocar cada juego.
   // Sirve para (a) estadísticas de alcance y (b) el pool de variantes de eventos,
   // que necesita saber qué variantes ha visto cada dispositivo.
@@ -41,6 +47,7 @@
         var b = JSON.parse(opts.body);
         if (b && typeof b === 'object' && !b.device_id) {
           b.device_id = nookDeviceId();
+          if (url.indexOf('/api/play') !== -1 && !b.player_name) { b.player_name = nookNombre(); }
           opts = Object.assign({}, opts, { body: JSON.stringify(b) });
         }
         // Marcar como jugado hoy: SOLO en los endpoints de registro de partida
@@ -114,6 +121,8 @@
       d.querySelector('p').textContent = msg || window.NOOK_MSG_ERROR;
       d.querySelector('button').onclick = function(){ location.reload(); };
       document.body.appendChild(d);
+      // Que no quede una rueda girando debajo del aviso
+      document.querySelectorAll('.loading-spinner').forEach(function(sp){ sp.style.display = 'none'; });
     } catch(e){}
   }
   window.nookMostrarFallo = nookMostrarFallo;
@@ -214,6 +223,72 @@ function showResultPromo() {
       {% block game_content %}{% endblock %}
     </div>
   </div>
+  <template id="tabla-dia-tpl">
+<div class="tabla-dia" id="tabla-dia" style="display:none;">
+    <div class="tabla-dia-head"><span>Hoy aquí</span><span class="tabla-dia-et" id="tabla-dia-et"></span></div>
+    <ol class="tabla-dia-list" id="tabla-dia-list"></ol>
+    <div class="tabla-dia-mio" id="tabla-dia-mio" style="display:none;"></div>
+    <div class="tabla-dia-nombre" id="tabla-dia-nombre">
+      <span id="tabla-dia-nombre-txt"></span>
+      <button type="button" onclick="nookPedirNombre()" id="tabla-dia-nombre-btn">Pon tu nombre para salir</button>
+    </div>
+  </div>
+  </template>
+<script>
+(function(){
+  var GT = (document.body.getAttribute('data-game') || (location.pathname.split('/').filter(Boolean).pop() || '')).split('?')[0];
+  var SLUG = location.pathname.split('/').filter(Boolean)[0] || '';
+  function pintarNombre(){
+    var n = window.nookNombre ? nookNombre() : '';
+    var t = document.getElementById('tabla-dia-nombre-txt'), b = document.getElementById('tabla-dia-nombre-btn');
+    if (!t || !b) return;
+    if (n) { t.textContent = 'Juegas como ' + n + ' · '; b.textContent = 'cambiar'; }
+    else { t.textContent = ''; b.textContent = 'Pon tu nombre para salir en la tabla'; }
+  }
+  window.nookPedirNombre = function(){
+    var actual = window.nookNombre ? nookNombre() : '';
+    var n = prompt('Tu nombre o apodo para la tabla de hoy (solo se guarda en este móvil):', actual);
+    if (n === null) return;
+    nookSetNombre(n); pintarNombre();
+    // Reenvía la última partida con el nombre para que entre en la tabla
+    if (window.__nookUltimaPlay) {
+      try { fetch('/api/play', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(window.__nookUltimaPlay) }).then(function(){ window.nookCargarTabla && nookCargarTabla(); }); } catch(e){}
+    } else { window.nookCargarTabla && nookCargarTabla(); }
+  };
+  window.nookCargarTabla = function(){
+    if (!GT || !SLUG) return;
+    var did = window.nookDeviceId ? nookDeviceId() : '';
+    fetch('/api/tabla/' + SLUG + '/' + GT + '?device_id=' + encodeURIComponent(did)).then(function(r){ return r.ok ? r.json() : null; }).then(function(d){
+      if (!d || !d.etiqueta) return;
+      var box = document.getElementById('tabla-dia');
+      if (!box) {
+        var share = document.querySelector('.screen.active .btn-share') || document.querySelector('.btn-share');
+        if (!share) return;
+        var tpl = document.getElementById('tabla-dia-tpl'); if (!tpl) return;
+        share.insertAdjacentHTML('beforebegin', tpl.innerHTML);
+        box = document.getElementById('tabla-dia');
+      }
+      document.getElementById('tabla-dia-et').textContent = d.etiqueta;
+      var ol = document.getElementById('tabla-dia-list');
+      ol.innerHTML = (d.filas || []).map(function(f){
+        return '<li' + (f.yo ? ' class="yo"' : '') + '><span class="n">' + f.nombre.replace(/</g,'&lt;') + (f.yo ? ' (tú)' : '') + '</span><span class="v">' + f.valor + '</span></li>';
+      }).join('') || '<li class="vacio">Sé el primero de hoy.</li>';
+      var mio = document.getElementById('tabla-dia-mio');
+      if (d.mio) { mio.textContent = 'Tu resultado: ' + d.mio + (nookNombre() ? ' · fuera del top 5 por ahora' : ''); mio.style.display = 'block'; } else { mio.style.display = 'none'; }
+      pintarNombre();
+      box.style.display = 'block';
+    }).catch(function(){});
+  };
+  // Guardar la última partida enviada para poder reenviarla con nombre
+  var _f = window.fetch;
+  window.fetch = function(url, opts){
+    try { if (typeof url === 'string' && url.indexOf('/api/play') !== -1 && opts && opts.body) { var b = JSON.parse(opts.body); if (b && b.choice !== -2) window.__nookUltimaPlay = b; } } catch(e){}
+    var p = _f.apply(this, arguments);
+    try { if (typeof url === 'string' && url.indexOf('/api/play') !== -1) { p.then(function(){ setTimeout(function(){ window.nookCargarTabla && nookCargarTabla(); }, 300); }); } } catch(e){}
+    return p;
+  };
+})();
+</script>
   <div class="nook-footer">
     <a href="/" class="nook-footer-brand"><img src="/static/logo.svg" alt="Nookplay"></a>
     <span class="nook-footer-by">{% set credits_short = true %}{% include 'components/credits.html' %}</span>

@@ -93,6 +93,7 @@ async function init() {
   try {
     const res = await fetch('/api/sopa', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: CODE, bar_slug: BAR_SLUG }) });
     gameData = await res.json();
+    if (gameData && gameData.error) { const e = new Error(gameData.error); e.nookAmable = true; throw e; }
     if (!Array.isArray(gameData.grid) || !Array.isArray(gameData.palabras) || !gameData.palabras.length) throw new Error('sin sopa');
     TAM = gameData.tam || gameData.grid.length;
     grid = gameData.grid; palabras = gameData.palabras;
