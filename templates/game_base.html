@@ -12,7 +12,7 @@
   }
 </style>
 
-<link rel="stylesheet" href="/static/css/games.css?v=3">
+<link rel="stylesheet" href="/static/css/games.css?v=4">
 <script>
 (function(){
   // Identificador anónimo de dispositivo (un valor aleatorio en el navegador, SIN datos
@@ -262,10 +262,15 @@ function showResultPromo() {
       if (!d || !d.etiqueta) return;
       var box = document.getElementById('tabla-dia');
       if (!box) {
-        var share = document.querySelector('.screen.active .btn-share') || document.querySelector('.btn-share');
-        if (!share) return;
+        // Al final de la pantalla de resultado: después de «Volver al menú» (y antes del
+        // mensaje de mañana si lo hay). Si no hay botón de menú, antes del de compartir.
+        var scr = document.querySelector('.screen.active') || document;
+        var ancla = scr.querySelector('.tomorrow');
+        var menu = (function(){ var ms = scr.querySelectorAll('.btn-menu'); return ms.length ? ms[ms.length - 1] : null; })();
         var tpl = document.getElementById('tabla-dia-tpl'); if (!tpl) return;
-        share.insertAdjacentHTML('beforebegin', tpl.innerHTML);
+        if (ancla) ancla.insertAdjacentHTML('beforebegin', tpl.innerHTML);
+        else if (menu) menu.insertAdjacentHTML('afterend', tpl.innerHTML);
+        else { var share = scr.querySelector('.btn-share'); if (!share) return; share.insertAdjacentHTML('beforebegin', tpl.innerHTML); }
         box = document.getElementById('tabla-dia');
       }
       document.getElementById('tabla-dia-et').textContent = d.etiqueta;

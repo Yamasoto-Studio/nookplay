@@ -137,7 +137,7 @@
 }
 
 /* Tabla del día (top 5 del espacio, solo con nombre) */
-.tabla-dia { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 12px; text-align: left; }
+.tabla-dia { margin: 30px 0 18px; border-top: 1px solid var(--border); padding-top: 16px; text-align: left; }
 .tabla-dia-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 12px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
 .tabla-dia-et { font-weight: 500; text-transform: none; letter-spacing: 0; }
 .tabla-dia-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; counter-reset: pos; }
