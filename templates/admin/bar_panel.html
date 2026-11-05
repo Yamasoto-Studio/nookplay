@@ -758,6 +758,33 @@
     <div id="regen-global-status" style="font-size:12px; color:#8A7F74; margin-top:8px;"></div>
   </div>
 
+  <!-- Portadas del Titular de Mañana generadas por el público -->
+  <div class="form-card side-card" id="sec-portadas">
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+      <h3 style="margin:0;">📰 Portadas de tu público</h3>
+      <span id="portadas-n" style="font-size:12px; color:var(--text-muted);"></span>
+    </div>
+    <div class="field-hint" style="margin-bottom:12px;">Lo que ha escrito la gente en <strong>El Titular de Mañana</strong>. Se guardan 14 días. Toca una para verla grande o descargarla: son material para tus redes.</div>
+    <div id="portadas-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(120px, 1fr)); gap:10px;"></div>
+    <div id="portadas-vacio" style="display:none; font-size:13px; color:var(--text-muted); padding:8px 0;">Todavía no hay portadas. Aparecerán aquí en cuanto alguien juegue.</div>
+  </div>
+  <script>
+    (function(){
+      fetch('/admin/api/portadas/{{ bar.slug }}').then(r => r.json()).then(d => {
+        const grid = document.getElementById('portadas-grid'), vacio = document.getElementById('portadas-vacio'), n = document.getElementById('portadas-n');
+        const ps = (d && d.portadas) || [];
+        n.textContent = ps.length ? (ps.length + (ps.length === 1 ? ' portada' : ' portadas')) : '';
+        if (!ps.length) { vacio.style.display = 'block'; return; }
+        const fmt = f => { const [y,m,dd] = f.split('-'); return `${dd}/${m}`; };
+        grid.innerHTML = ps.map(p => `
+          <a href="${p.url}" target="_blank" rel="noopener" download style="display:block; text-decoration:none; color:inherit;">
+            <img src="${p.url}" loading="lazy" alt="Portada" style="width:100%; aspect-ratio:2/3; object-fit:cover; object-position:top; border-radius:8px; border:1px solid var(--border); background:#FBF7F1; display:block;">
+            <div style="font-size:11px; color:var(--text-muted); margin-top:4px; text-align:center;">${fmt(p.fecha)}</div>
+          </a>`).join('');
+      }).catch(() => {});
+    })();
+  </script>
+
   <script>
     async function regenGame(slug) {
       if (!confirm('¿Descartar el contenido de HOY de este juego? Se generará uno nuevo (temático) al abrirlo.')) return;

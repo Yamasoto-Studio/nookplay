@@ -1336,6 +1336,32 @@ def admin_backup_download():
     return send_file(destino, as_attachment=True, download_name=nombre)
 
 
+@app.route('/admin/api/portadas/<bar_slug>')
+@admin_required
+def admin_portadas(bar_slug):
+    """Portadas del Titular de Mañana generadas en este espacio (últimos 14 días),
+    más recientes primero. Solo el admin del espacio o superadmin."""
+    if session.get('admin_role') != 'superadmin' and session.get('admin_bar_slug') != bar_slug:
+        return jsonify({'ok': False, 'error': 'No autorizado'}), 403
+    if not _slug_seguro(bar_slug):
+        return jsonify({'ok': False, 'error': 'Slug no válido'}), 400
+    import os as _os
+    carpeta = f'{MEDIA_ROOT}/{bar_slug}/portadas'
+    out = []
+    try:
+        for f in _os.listdir(carpeta):
+            if not f.endswith('.webp'):
+                continue
+            fp = _os.path.join(carpeta, f)
+            out.append({'url': f'/media/{bar_slug}/portadas/{f}', 'fecha': f[:10], 'ts': _os.path.getmtime(fp)})
+    except FileNotFoundError:
+        pass
+    out.sort(key=lambda x: x['ts'], reverse=True)
+    for o in out:
+        o.pop('ts', None)
+    return jsonify({'ok': True, 'portadas': out[:200]})
+
+
 @app.route('/admin/api/scheduler-status')
 @admin_required
 def admin_scheduler_status():
