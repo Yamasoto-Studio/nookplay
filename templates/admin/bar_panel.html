@@ -382,16 +382,18 @@
 
   <!-- QR de acceso: material físico autoservicio -->
   <div class="code-card side-card" id="sec-qr">
+    {% set _qr_code = (event_admin_code if es_evento and event_admin_code else '') %}
     <div class="card-title">📱 Tu QR de Nookplay</div>
     <div style="display:flex; gap:16px; align-items:center; flex-wrap:wrap;">
-      <img src="/admin/qr/{{ bar.slug }}.png?size=240" alt="QR de {{ bar.name }}" width="120" height="120" style="border-radius:10px; border:1px solid #EFE7DE; flex-shrink:0; image-rendering: pixelated;">
+      <img src="/admin/qr/{{ bar.slug }}.png?size=240{% if _qr_code %}&code={{ _qr_code }}{% endif %}" alt="QR de {{ bar.name }}" width="120" height="120" style="border-radius:10px; border:1px solid #EFE7DE; flex-shrink:0; image-rendering: pixelated;">
       <div style="flex:1; min-width:200px;">
-        <div style="font-size:13px; color:#6B6059; line-height:1.5; margin-bottom:4px;">Apunta a <strong style="color:#1A1A1A;">nookplay.app/{{ bar.slug }}</strong> — es fijo: imprímelo una vez y no cambia nunca, aunque cambies el código de acceso.</div>
-        <div style="font-size:12px; color:#A89B91; line-height:1.5;">¿Quieres que el QR entre directo sin pedir código? Añade <code>?code=TUCODIGO</code> al enlace de descarga (solo tiene sentido con un código fijo).</div>
+        {% if _qr_code %}<div style="font-size:13px; color:#6B6059; line-height:1.5; margin-bottom:4px;">Apunta a <strong style="color:#1A1A1A;">nookplay.app/{{ bar.slug }}</strong> con tu código fijo incluido.</div>{% else %}<div style="font-size:13px; color:#6B6059; line-height:1.5; margin-bottom:4px;">Apunta a <strong style="color:#1A1A1A;">nookplay.app/{{ bar.slug }}</strong> — es fijo: imprímelo una vez y no cambia nunca, aunque cambies el código de acceso.</div>{% endif %}
+        {% if _qr_code %}<div style="font-size:12px; color:#2E7D32; line-height:1.5; font-weight:600;">✓ Entra directo: este QR ya lleva tu código fijo ({{ _qr_code }}). Quien lo escanea va a los juegos sin escribir nada. Si cambias el código fijo, tendrás que volver a imprimirlo.</div>
+        {% else %}<div style="font-size:12px; color:#A89B91; line-height:1.5;">¿Quieres que el QR entre directo sin pedir código? Añade <code>?code=TUCODIGO</code> al enlace de descarga (solo tiene sentido con un código fijo).</div>{% endif %}
         <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
-          <a href="/admin/qr/{{ bar.slug }}.png?size=1600" download="nookplay-{{ bar.slug }}-qr.png"
+          <a href="/admin/qr/{{ bar.slug }}.png?size=1600{% if _qr_code %}&code={{ _qr_code }}{% endif %}" download="nookplay-{{ bar.slug }}-qr.png"
              style="background:#A8410E; color:white; text-decoration:none; border-radius:8px; padding:9px 16px; font-size:13px; font-weight:600; font-family:inherit;">⬇️ PNG</a>
-          <a href="/admin/qr/{{ bar.slug }}.svg" download="nookplay-{{ bar.slug }}-qr.svg"
+          <a href="/admin/qr/{{ bar.slug }}.svg{% if _qr_code %}?code={{ _qr_code }}{% endif %}" download="nookplay-{{ bar.slug }}-qr.svg"
              style="background:#A8410E; color:white; text-decoration:none; border-radius:8px; padding:9px 16px; font-size:13px; font-weight:600; font-family:inherit;">⬇️ SVG vectorial</a>
           <button type="button" onclick="abrirCartelQR()"
              style="background:transparent; color:#1A1A1A; border:1px solid #E5DDD5; border-radius:8px; padding:9px 14px; font-size:13px; cursor:pointer; font-family:inherit;">🖨️ Cartel para imprimir</button>
@@ -404,10 +406,12 @@
     // Cartel A5 imprimible: QR grande + copy aprobado, adaptado al tipo de espacio.
     function abrirCartelQR() {
       const esEvento = {{ 'true' if es_evento else 'false' }};
-      const qrUrl = location.origin + '/admin/qr/{{ bar.slug }}.png?size=1200';
+      const codigoFijo = {{ (event_admin_code if es_evento and event_admin_code else '')|tojson }};
+      const qrUrl = location.origin + '/admin/qr/{{ bar.slug }}.png?size=1200' + (codigoFijo ? '&code=' + encodeURIComponent(codigoFijo) : '');
       const logoUrl = location.origin + '/static/logo.svg';
-      const linea1 = esEvento ? 'Juegos del evento, nuevos cada día.' : 'Juegos nuevos cada día.';
-      const linea2 = 'Gratis, sin registro ni descargas.';
+      const linea1 = codigoFijo ? 'Juegos en tu móvil, nuevos cada día.' : (esEvento ? 'Juegos del evento, nuevos cada día.' : 'Juegos nuevos cada día.');
+      const grito = codigoFijo ? '¿Esperas? Juega mientras tanto.' : '¡Escanea y juega ya!';
+      const linea2 = codigoFijo ? 'Gratis.' : 'Gratis, sin registro ni descargas.';
       const dondeCodigo = esEvento
         ? 'Encontrarás el código en tu entrada o en la cartelería.'
         : 'Pide tu código de acceso en barra.';
@@ -426,9 +430,9 @@
         <div class="pre">{{ 'Estás en' if es_evento else 'Aquí tenemos' }}</div>
         <img class="marca-logo" src="${logoUrl}" alt="Nookplay">
         <img class="qr" src="${qrUrl}" alt="QR">
-        <div class="grito">¡Escanea y juega ya!</div>
+        <div class="grito">${grito}</div>
         <div class="sub">${linea1}<br>${linea2}</div>
-        <div class="codigo">🔑 ${dondeCodigo}</div>
+        ${codigoFijo ? '<div class="codigo">📱 Escanea y entra directo. Sin apps ni registro.</div>' : '<div class="codigo">🔑 ' + dondeCodigo + '</div>'}
       </body></html>`);
       w.document.close();
       // Esperar a que carguen TODAS las imágenes (logo y QR) antes de imprimir
@@ -509,8 +513,8 @@
 
       <!-- Códigos por día -->
       <div style="margin-top:18px; padding-top:16px; border-top:1px solid var(--border);">
-        <label style="display:block; font-size:13px; font-weight:600; margin-bottom:5px;">Código de admin (siempre funciona)</label>
-        <div style="font-size:12px; color:var(--text-muted); margin-bottom:10px; line-height:1.5;">Un código permanente para probar el evento cuando quieras, sin depender de las fechas. No lo repartas entre los asistentes.</div>
+        <label style="display:block; font-size:13px; font-weight:600; margin-bottom:5px;">Código fijo del evento (funciona siempre)</label>
+        <div style="font-size:12px; color:var(--text-muted); margin-bottom:10px; line-height:1.5;">Un código que vale cualquier día, antes, durante y después del evento. Úsalo para probar o, si quieres acceso directo por QR, como código único: el QR de arriba lo lleva incluido. Si prefieres un código distinto cada día, no lo repartas y usa los de abajo.</div>
         <div style="display:flex; align-items:center; gap:10px; margin-bottom:18px;">
           <input type="text" id="event-admin-code" value="{{ event_admin_code or '' }}" maxlength="5" placeholder="—————" style="max-width:160px; text-transform:uppercase; letter-spacing:2px; font-family:monospace; font-size:16px; padding:9px 12px; border:1.5px solid var(--border); border-radius:10px; box-sizing:border-box;">
           <button type="button" onclick="document.getElementById('event-admin-code').value = _genCode()" style="background:var(--surface-1, #F0EBE3); color:var(--text-primary,#1A1A1A); border:1px solid var(--border); border-radius:8px; padding:8px 12px; font-size:13px; cursor:pointer; font-family:inherit;">🎲</button>
@@ -518,7 +522,10 @@
 
         <label style="display:block; font-size:13px; font-weight:600; margin-bottom:5px;">Códigos de acceso por día</label>
         {% if event_days %}
-          <div style="font-size:12px; color:var(--text-muted); margin-bottom:10px; line-height:1.5;">Asigna un código a cada día del evento. Puedes fijarlos por adelantado e imprimirlos en las entradas o anunciarlos. Deja vacío un día para dejarlo sin acceso.</div>
+          <div style="font-size:12px; color:var(--text-muted); margin-bottom:10px; line-height:1.5;">Asigna un código a cada día del evento. Puedes fijarlos por adelantado e imprimirlos en las entradas o anunciarlos. {% if event_admin_code %}Con código fijo no hace falta rellenarlos: <strong>{{ event_admin_code }}</strong> ya abre todos los días.{% else %}Deja vacío un día para dejarlo sin acceso.{% endif %}</div>
+          {% if not event_admin_code and (event_days | selectattr('code') | list | length) < (event_days | length) %}
+          <div style="font-size:12.5px; line-height:1.5; padding:10px 12px; margin-bottom:10px; background:#FFF4E5; border:1px solid #F0C98A; border-radius:8px; color:#7A4B00;">⚠️ Hay días del evento sin código y no tienes código fijo: esos días nadie podrá entrar.</div>
+          {% endif %}
           <div id="event-codes-list" style="display:flex; flex-direction:column; gap:8px;">
             {% for d in event_days %}
             <div style="display:flex; align-items:center; gap:10px;">

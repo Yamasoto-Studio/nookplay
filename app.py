@@ -2515,9 +2515,15 @@ def admin_event_codes():
 
 @app.route('/admin/api/create-user', methods=['POST'])
 def admin_create_user():
-    data = request.get_json()
-    if data.get('secret') != os.environ.get('ADMIN_SECRET', 'nookplay-admin-2026'):
+    data = request.get_json(silent=True) or {}
+    # Sin clave por defecto: si ADMIN_SECRET no está definida en el servidor,
+    # la ruta queda cerrada (el repo es público).
+    import hmac as _hmac
+    _secreto = os.environ.get('ADMIN_SECRET') or ''
+    if not _secreto or not _hmac.compare_digest(str(data.get('secret') or ''), _secreto):
         return jsonify({'ok': False}), 403
+    if not data.get('email') or not data.get('password'):
+        return jsonify({'ok': False, 'error': 'Faltan datos'}), 400
     db = get_db()
     try:
         db.execute(
@@ -2727,6 +2733,17 @@ def validate_code():
 # --------------------------------------------------------------------------
 
 
+def _recorte_teaser(texto, n=70):
+    """Avance de portada: una línea, cortada en palabra completa con «…»."""
+    t = ' '.join(str(texto).split())
+    if len(t) <= n:
+        return t
+    corte = t[:n - 1]
+    if ' ' in corte[20:]:
+        corte = corte[:corte.rindex(' ')]
+    return corte.rstrip(' ,;:.-—(«"') + '…'
+
+
 # ─── Pool de variantes (eventos) ───────────────────────────────────────────
 # Un evento con event_pool_size>1 tiene N piezas por juego y día. Cada
 # dispositivo recibe la primera variante que no haya visto; si las vio todas,
@@ -2835,7 +2852,7 @@ def teasers_api():
             obj = _json.loads(row['content'])
             val = obj.get(campo)
             if isinstance(val, str) and val.strip():
-                out[slug] = ' '.join(val.split())[:70]
+                out[slug] = _recorte_teaser(val)
         except Exception:
             continue
     # Trivia: su foco (mando creativo) como gancho
@@ -2843,7 +2860,7 @@ def teasers_api():
         k = _knobs_de(db, bar['id'], 'trivia') or {}
         foco = k.get('Foco de las preguntas')
         if foco:
-            out['trivia'] = foco[:70]
+            out['trivia'] = _recorte_teaser(foco)
     # Eventos con pool: progreso por dispositivo (variantes vistas / variantes de hoy),
     # para que el ✓ de "jugado" no esconda que aún queda contenido nuevo.
     try:
